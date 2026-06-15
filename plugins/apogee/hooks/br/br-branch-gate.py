@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""
+G2b — PreToolUse gate (Edit|Write|MultiEdit|NotebookEdit): no CODE edit off the linked git-flow branch.
+
+Companion to br-edit-gate (G2). Where G2 enforces "an in_progress br step exists", this enforces
+"the work happens on the right git-flow branch". Two rules:
+
+  A. DENY a code edit on a base branch (gitflow production / develop). Work must move to a
+     feature/bugfix branch first.
+  B. DENY a code edit on a feature/bugfix branch that is NOT linked to the active step's epic via
+     `external_ref` (the strict task<->branch link the br bracket was missing). One epic == one
+     work branch; the branch name is recorded on the epic as `external_ref`.
+
+Scope: GLOBAL hook; self-gates to beads projects (a `.beads/` dir above cwd) that are ALSO git-flow
+initialized (`gitflow.branch.*` config present). No-op everywhere else — existing non-gitflow beads
+repos stay untouched.
+Exempt paths (meta/docs): `.beads/`, `workflow/`, `conductor/`, `.claude/`, and edits outside the
+beads root. Escape hatch: env `BR_GATE_OFF=1`.
+Fail-open: any error / missing `br`/`git` / detached HEAD → allow (the Stop gate is the backstop;
+never trap on infra).
+"""
+
+import json
+import os
+import subprocess
+import sys
+
+EXEMPT_TOP = {".beads", "workflow", "conductor", ".claude"}
+
+
+def beads_root(start: str):
+    d = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(d, ".beads")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def _git(root, args):
+    """Run a git command in `root`, return stripped stdout or '' on any failure."""
+    try:
+        r = subprocess.run(["git", "-C", root] + args,
+                           capture_output=True, text=True, timeout=5)
+        return r.stdout.strip() if r.returncode == 0 else ""
+    except Exception:
+        return ""
+
+
+def _br_show(root, issue_id):
+    """`br show <id> --json` → the issue dict, or None on any error."""
+    try:
+        r = subprocess.run(["br", "-q", "show", issue_id, "--json", "--no-color"],
+                           capture_output=True, text=True, timeout=10, cwd=root)
+        obj = json.loads(r.stdout or "null")
+    except Exception:
+        return None
+    if isinstance(obj, list):
+        return obj[0] if obj else None
+    if isinstance(obj, dict) and "error" not in obj:
+        return obj
+    return None
+
+
+def _epic_id(issue):
+    """Resolve the parent-child epic id of an issue dict (direct field → dep edge → id prefix)."""
+    pid = issue.get("parent")
+    if pid:
+        return pid
+    for dep in (issue.get("dependencies") or []):
+        if dep.get("dependency_type") == "parent-child" and dep.get("id"):
+            return dep["id"]
+    iid = issue.get("id") or ""
+    if "." in iid:  # beads hierarchical child id: <epic>.N
+        return iid.rsplit(".", 1)[0]
+    return None
+
+
+def _deny(reason):
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }
+    }))
+
+
+def main() -> None:
+    if os.environ.get("BR_GATE_OFF") == "1":
+        return
+    raw = sys.stdin.read()
+    data = json.loads(raw) if raw.strip() else {}
+
+    cwd = data.get("cwd") or os.getcwd()
+    if not os.path.isdir(cwd):
+        return
+    root = beads_root(cwd)
+    if not root:
+        return  # not a beads project -> no-op
+
+    # Exempt meta/doc paths and edits outside the beads root (mirror br-edit-gate).
+    fp = (data.get("tool_input") or {}).get("file_path") or ""
+    if fp:
+        rel = os.path.relpath(os.path.abspath(fp), root)
+        if rel.startswith(".."):
+            return
+        if rel.split(os.sep)[0] in EXEMPT_TOP:
+            return
+
+    # Only enforce in git-flow-initialized repos (decision: never brick non-gitflow beads repos).
+    if not _git(root, ["config", "--get-regexp", r"^gitflow\.branch\."]):
+        return
+
+    branch = _git(root, ["branch", "--show-current"])
+    if not branch:
+        return  # detached HEAD / mid-rebase -> fail-open
+
+    production = _git(root, ["config", "gitflow.branch.master"]) or "main"
+    develop = _git(root, ["config", "gitflow.branch.develop"]) or "develop"
+    base = {production, develop, "main", "master", "develop"}
+
+    feat_prefix = _git(root, ["config", "gitflow.prefix.feature"]) or "feature/"
+    bugfix_prefix = _git(root, ["config", "gitflow.prefix.bugfix"]) or "bugfix/"
+
+    # ── Rule A: no code edits on a base branch ──
+    if branch in base:
+        _deny(
+            f"On base branch '{branch}'. Code changes must happen on a git-flow work branch, "
+            f"never on {branch}. Start one for the active track via the git-flow skill "
+            f"(`git flow feature start <epic-slug>`, or `bugfix` for a bug track), then link it: "
+            f"`br update <epicId> --external-ref {feat_prefix}<epic-slug> "
+            f"--actor \"${{BR_ACTOR:-assistant}}\"`. (Ad-hoc escape: set BR_GATE_OFF=1.)"
+        )
+        return
+
+    # Link enforcement applies to feature/bugfix branches only; release/hotfix/support pass through.
+    if not (branch.startswith(feat_prefix) or branch.startswith(bugfix_prefix)):
+        return
+
+    # ── Rule B: the work branch must be linked to the active step's epic via external_ref ──
+    try:
+        r = subprocess.run(
+            ["br", "-q", "list", "--status", "in_progress", "--json", "--no-color"],
+            capture_output=True, text=True, timeout=10, cwd=root,
+        )
+        obj = json.loads(r.stdout or "{}")
+    except Exception:
+        return  # fail-open on any br/parse error
+    issues = obj.get("issues", [])
+    if not issues:
+        return  # no active step -> let br-edit-gate (G2) own that denial; don't double-deny
+
+    epic_hint = None
+    for issue in issues:
+        show = _br_show(root, issue.get("id", ""))
+        if not show:
+            continue
+        if show.get("external_ref") == branch:
+            return  # the in_progress issue itself is linked to this branch -> allow
+        epic = _epic_id(show)
+        if epic:
+            if epic_hint is None:
+                epic_hint = epic
+            eshow = _br_show(root, epic)
+            if eshow and eshow.get("external_ref") == branch:
+                return  # the issue's epic is linked to this branch -> allow
+
+    target = epic_hint or "<epicId>"
+    _deny(
+        f"Branch '{branch}' is not linked to the active step's epic. Every git-flow work branch "
+        f"must map 1:1 to a br epic via external_ref. Link it: "
+        f"`br update {target} --external-ref '{branch}' --actor \"${{BR_ACTOR:-assistant}}\"`, "
+        f"or checkout the branch already linked to this epic. (Ad-hoc escape: set BR_GATE_OFF=1.)"
+    )
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        pass  # fail-open
+    sys.exit(0)

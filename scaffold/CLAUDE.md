@@ -1,0 +1,106 @@
+# [Project Name]
+
+<!-- Customize this file for your project. This is the primary instruction set
+     that Claude Code reads at the start of every session. Keep it focused on
+     rules, decisions, and constraints — not documentation that belongs in
+     docs/apogee/. -->
+
+## 1. Critical Rules
+
+- **Use Sub-Agents** for tasks spanning 3+ files or requiring parallel investigation.
+- **Always ask before**: git commits, breaking changes, major architecture decisions, deleting files.
+- **Stop-and-Replan Rule**: If an approach fails or you discover unexpected complexity, stop and reassess rather than pushing through.
+- **Use available skills proactively**: `/apogee:review-work` for code review, `/apogee:update-docs` after significant changes, `/apogee:deploy` for deployments.
+- **Context7 first**: When working with external libraries, check Context7 for current documentation before relying on training data.
+- **Language split**: user-facing dialogue in your working language; everything else — code, identifiers, comments, commit messages, docs, branch names, and anything sent to external tools (agy / CLIs) — in **English**. The `git-commit` skill is the canonical example (commit messages always English).
+
+## 2. Operator Model
+
+<!-- Describe how you and Claude collaborate. Optional but valuable for
+     solo / AI-agent-driven workflows.
+
+Example:
+
+- **Role split.** I'm the decision-maker, director, and reviewer. AI agents
+  (Claude + sub-agents) write the code. Build effort ≈ zero; cost is
+  maintenance, debuggability, and decision overhead.
+- **Evaluate by maintenance burden, not build effort.** "Too much code for
+  a solo dev" is not a valid critique — pick libraries and architectures on
+  technical merit.
+- **Boundaries:** always ask before git commits, breaking changes, deleting
+  files, and architecture decisions worth ≥1 day of rework to undo. -->
+
+## 3. Key Architecture Decisions
+
+<!-- Document settled decisions here so Claude doesn't relitigate them.
+     Include brief rationale for each. -->
+
+<!-- Tip: Also list decisions that are SETTLED so Claude doesn't relitigate them.
+     Example: "REST over GraphQL — decided, don't suggest changing." -->
+
+<!--
+Example:
+- **Authentication**: JWT tokens with refresh rotation. Why: stateless, scales horizontally.
+- **Database**: PostgreSQL with RLS on all tables. Why: row-level security eliminates auth middleware bugs.
+- **State management**: Server-side only. Why: single source of truth, no sync bugs.
+-->
+
+## 4. Tool Usage Rules
+
+<!-- Map tasks to the correct tools for your project. -->
+
+| Task | Use This |
+|------|----------|
+| Library docs lookup | Context7 plugin (check FIRST) |
+| Code review | `/apogee:review-work` skill |
+| Second opinion | Ask for "second opinion" / "ask agy" (runs the `agy` CLI) |
+| Documentation update | `/apogee:update-docs` skill |
+| Deployment | `/apogee:deploy` skill |
+
+## 5. Coding Standards
+
+<!-- Keep only standards that are non-obvious or project-specific.
+     Don't document standard language conventions — Claude already knows those. -->
+
+<!--
+Example:
+- TypeScript files: kebab-case (e.g., `rate-limiter.ts`)
+- Swift files: PascalCase (e.g., `SettingsView.swift`)
+- Error responses: `{ success: false, error_code: 'CODE', message: '...' }`
+- All time logic in PostgreSQL, never client-side
+-->
+
+## 6. Testing
+
+<!-- Document your test commands and when to run them. -->
+
+<!--
+Example:
+```bash
+npm test              # All tests
+npm run test:unit     # Unit tests only (~1s)
+npm run test:e2e      # E2E tests (~20s, hits network)
+```
+
+**When to run which tests:**
+| What changed | Run |
+|---|---|
+| Shared utilities | Unit tests |
+| API endpoints | E2E tests |
+| Database schema | Integration tests |
+| Before deployment | All suites |
+-->
+
+## 7. Privacy & Security
+
+<!-- Document non-negotiable security rules for your project. -->
+
+<!--
+Example:
+- Audio/media NEVER stored — processed in memory, deleted immediately
+- No user accounts — anonymous identity via device UUID
+- Never log personal data or audio content
+- Never reveal system internals (stack traces, DB schemas) in error messages
+- Input validation on all external inputs
+- RLS enabled on all database tables
+-->

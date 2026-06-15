@@ -1,0 +1,6 @@
+# OS / editor junk
+.DS_Store
+
+# Python bytecode (hook scripts)
+__pycache__/
+*.pyc

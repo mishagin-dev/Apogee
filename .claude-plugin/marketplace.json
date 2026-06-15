@@ -1,0 +1,23 @@
+{
+  "name": "apogee",
+  "owner": {
+    "name": "mishagin.dev",
+    "email": "mishagin.a.a@gmail.com"
+  },
+  "metadata": {
+    "description": "Apogee — personal fork of the Claude Code Development Kit (CCDK). Per-project install of the workflow machinery (beads/br gates, git-flow & git-commit enforcement, idea-mcp guards, hard review->docs gate, security scan) plus the prime/plan/merge commands and the docs/apogee doc loop."
+  },
+  "plugins": [
+    {
+      "name": "apogee",
+      "source": "./plugins/apogee",
+      "description": "Claude Code workflow machinery: lifecycle hooks (br/git-flow/idea/review gates), workflow skills (update-docs, review-work, second-opinion, deploy, image-*), and the prime/plan-feature/merge commands. Install once, enable per project.",
+      "version": "1.0.0",
+      "author": {
+        "name": "mishagin.dev (fork of peterkrueck/Claude-Code-Development-Kit)"
+      },
+      "category": "workflows",
+      "license": "MIT"
+    }
+  ]
+}
