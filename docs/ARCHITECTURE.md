@@ -10,7 +10,7 @@ context + repeatable work loop) and to enforce a disciplined workflow via lifecy
 | Layer | What | Where it lives | Delivery |
 |---|---|---|---|
 | **Machinery** | hooks + commands + workflow skills | `plugins/apogee/` | installed once, **enabled** per project (`enabledPlugins`) — never copied |
-| **Content** | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project; `docs/apogee/` gitignored in the host |
+| **Content** | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project; `docs/apogee/` excluded via the host's `.git/info/exclude` |
 | **Preferences** | `language`, `defaultMode`, `effortLevel`, `env`, baseline `permissions` | `~/.claude/settings.json` | stays global (can't be delivered per project) |
 
 See [ADR 0002](decisions/0002-plugin-not-global-hooks.md) for why machinery is a plugin rather than
@@ -35,9 +35,10 @@ Apogee/
 │   └── commands/  # prime.md, plan-feature.md, merge.md  → /apogee:<name>
 ├── scaffold/                         # project CONTENT (copied per project)
 │   ├── CLAUDE.md  GEMINI.md          # convention files (Claude + agy)
-│   └── docs/apogee/                  # gitignored in the host project
+│   └── docs/apogee/                  # excluded via .git/info/exclude in the host project
 │       ├── ai-context/{spec,project-structure,progress,deployment-infrastructure}.md
 │       └── {business,design-brand,legal,open-issues}/
+├── install.sh # online one-liner: clone the toolkit into ~/.apogee + run setup.sh
 ├── setup.sh   # scaffold (copy) + enable plugin (link)
 ├── sync.sh    # re-scaffold new template files into an installed project
 └── docs/      # THIS documentation

@@ -46,7 +46,7 @@ your-project/
 │   └── web/                            # Website graphics (favicon, OG image)
 ��
 ├── docs/
-│   └── apogee/                         # Apogee working memory (gitignored)
+│   └── apogee/                         # Apogee working memory (git-excluded, local-only)
 │       ├── ai-context/                 # Core AI development context
 │       │   ├── spec.md                 # What the product does
 │       │   ├── project-structure.md    # THIS FILE — file tree and tech stack
