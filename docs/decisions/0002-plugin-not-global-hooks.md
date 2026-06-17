@@ -29,6 +29,7 @@ split responsibilities three ways:
    `.git/info/exclude` (zero git footprint from the toolkit).
 3. **Preferences → stay global** in `~/.claude/settings.json`: `language`, `defaultMode`, `effortLevel`,
    `env`, baseline `permissions`. These cannot be delivered per project, so they remain personal.
+   *(Baseline `permissions` amended 2026-06-17 — now delivered per-project; see the Amendment below.)*
 
 Every gate hook **self-gates** (no-ops unless `.beads/`, `.idea/` + a running JetBrains IDE, or git-flow
 config is present), so enabling the plugin globally reproduces the previous behavior minus the
@@ -48,7 +49,8 @@ hooks are tested cleanly (no double-fire / `.git/index.lock` races).
 | Hooks, commands, workflow skills | `apogee` plugin (this repo) |
 | Project docs / CLAUDE.md / GEMINI.md | scaffold → copied into the project |
 | Universal skills (`br`, `git-commit`, `git-flow`, `idea-mcp`) | `~/.claude/skills/` (global, bare names — avoids `/apogee:` namespacing) |
-| Language, mode, effort, env, baseline permissions | `~/.claude/settings.json` (global) |
+| Language, mode, effort, env | `~/.claude/settings.json` (global) |
+| Baseline `permissions`, `plansDirectory`, `autoMemoryDirectory` | per-project `TARGET/.claude/settings.local.json` (git-excluded) — *amended, see below* |
 
 ## Consequences
 
@@ -58,3 +60,15 @@ hooks are tested cleanly (no double-fire / `.git/index.lock` races).
   intentional).
 - Universal skills stay global on purpose: the git-enforcement hooks reference
   `~/.claude/skills/git-commit|git-flow`, and bare names preserve muscle memory.
+
+## Amendment (2026-06-17) — baseline permissions delivered per-project
+
+The original split (§3) kept baseline `permissions` global. In practice the plugin's skills need
+allow-rules — `Bash(br:*)`, `Bash(agy:*)`, and the image-skill commands — to run without prompts, and
+a fresh machine or new project had none, so the toolkit did not work out of the box. `setup.sh` now
+writes a **personal, git-excluded** `TARGET/.claude/settings.local.json` carrying a baseline
+`permissions.allow`, `plansDirectory` (`./.claude/plans`), and an **absolute** `autoMemoryDirectory`
+(`TARGET/.claude/memory` — relative paths are not accepted for that key). The merge is non-clobbering
+(existing keys win, the allow-list is unioned and de-duped). The file is added to `.git/info/exclude`,
+consistent with `docs/apogee/`. Only `language`/`defaultMode`/`effortLevel`/`env` remain irreducibly
+global. Opt out with `setup.sh --no-settings`.

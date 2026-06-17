@@ -36,7 +36,7 @@ your-project/
 │   │       ├── complete.wav
 │   │       └── input-needed.wav
 │   ├── skills/                         # Project-specific skills
-│   └── settings.local.json             # Permissions, hooks, plugins
+│   └── settings.local.json             # Personal, git-excluded: permissions, plansDirectory, autoMemoryDirectory
 │
 ├── assets/                             # Visual assets (processed + source)
 │   ├── app-icon/                       # App icons
