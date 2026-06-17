@@ -5,12 +5,22 @@ copied). `setup.sh` does both halves; the plugin must also be registered once wi
 
 ## One-time: register the marketplace + install the plugin
 
-In an interactive Claude session:
+In an interactive Claude session, register the marketplace from GitHub:
+
+```
+/plugin marketplace add mishagin-dev/Apogee
+/plugin install apogee@apogee
+/reload-plugins
+```
+
+`apogee@apogee` is `<plugin>@<marketplace>`; both names come from the repo's manifests
+(`marketplace.json` → `name: "apogee"`), independent of how the marketplace was added.
+
+For toolkit development, add the local clone instead so on-disk edits are picked up by
+`/plugin marketplace update apogee`:
 
 ```
 /plugin marketplace add /Volumes/DevSpace/Mine/active-projects/Apogee
-/plugin install apogee@apogee
-/reload-plugins
 ```
 
 This makes the `apogee` plugin available system-wide (cached by the marketplace; files are referenced,

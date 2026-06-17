@@ -36,12 +36,19 @@ sync.sh                           # re-scaffold new template files into an insta
 /path/to/Apogee/setup.sh /path/to/your-project --per-project
 ```
 
-Then, once, in an interactive Claude session:
+Then register the marketplace once in an interactive Claude session — from GitHub:
+
+```
+/plugin marketplace add mishagin-dev/Apogee
+/plugin install apogee@apogee
+/reload-plugins
+```
+
+For toolkit development, add your local clone instead so on-disk edits are picked up
+by `/plugin marketplace update`:
 
 ```
 /plugin marketplace add /path/to/Apogee
-/plugin install apogee@apogee
-/reload-plugins
 ```
 
 ## Update
