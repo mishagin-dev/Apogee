@@ -2,21 +2,25 @@
 #
 # setup.sh — install the Apogee toolkit into a project.
 #
-# Two clearly separated halves:
-#   COPY   — project CONTENT is scaffolded (copied) into the target: CLAUDE.md,
-#            docs/apogee/*, doc scaffolding dirs, assets/. Owned by the project.
-#   ENABLE — the MACHINERY (hooks + commands + workflow skills) is NOT copied. It
-#            lives once in the `apogee` plugin (this repo is its local marketplace) and
-#            is merely enabled for the project via `enabledPlugins`. Update once
-#            (bump the plugin, `/plugin marketplace update apogee`) → every enabled
-#            project gets it.
+# Three clearly separated halves:
+#   COPY     — project CONTENT is scaffolded (copied) into the target: CLAUDE.md,
+#              docs/apogee/*, doc scaffolding dirs, assets/. Owned by the project.
+#   ENABLE   — the MACHINERY (hooks + commands + workflow skills) is NOT copied. It
+#              lives once in the `apogee` plugin (this repo is its local marketplace) and
+#              is merely enabled for the project via `enabledPlugins`. Update once
+#              (bump the plugin, `/plugin marketplace update apogee`) → every enabled
+#              project gets it.
+#   SETTINGS — a personal, git-excluded TARGET/.claude/settings.local.json carrying a
+#              baseline permission allow-list (so the plugin's skills run without prompts),
+#              plansDirectory, and an absolute autoMemoryDirectory. Non-clobbering merge.
 #
 # Usage:
-#   ./setup.sh [TARGET_DIR] [--per-project] [--no-scaffold] [--init-tracker]
+#   ./setup.sh [TARGET_DIR] [--per-project] [--no-scaffold] [--no-settings] [--init-tracker]
 #     TARGET_DIR      project to set up (default: current dir)
 #     --per-project   enable the plugin in TARGET/.claude/settings.json only
 #                     (default: enable globally in ~/.claude/settings.json)
 #     --no-scaffold   skip copying docs/CLAUDE.md (only enable the plugin)
+#     --no-settings   skip writing TARGET/.claude/settings.local.json
 #     --init-tracker  offer to run `br init` and `git flow init` so the gates engage
 #
 set -euo pipefail
@@ -30,11 +34,13 @@ SCAFFOLD_DIR="$REPO_DIR/scaffold"
 TARGET="$PWD"
 PER_PROJECT=0
 DO_SCAFFOLD=1
+DO_SETTINGS=1
 INIT_TRACKER=0
 for arg in "$@"; do
   case "$arg" in
     --per-project) PER_PROJECT=1 ;;
     --no-scaffold) DO_SCAFFOLD=0 ;;
+    --no-settings) DO_SETTINGS=0 ;;
     --init-tracker) INIT_TRACKER=1 ;;
     -*) echo "Unknown flag: $arg" >&2; exit 2 ;;
     *)  TARGET="$(cd "$arg" 2>/dev/null && pwd || true)"
@@ -140,6 +146,43 @@ if [[ $CLI_OK -eq 0 ]]; then
 EOF
 fi
 echo
+
+# ---- SETTINGS: personal per-project settings.local.json (gitignored) ----
+# Baseline permission allow-list so the plugin's skills run without prompts, plus
+# project-local plansDirectory and an absolute autoMemoryDirectory. Non-clobbering:
+# existing keys win, the allow-list is unioned, the dirs are set only if absent.
+if [[ $DO_SETTINGS -eq 1 ]]; then
+  echo "→ Writing personal settings.local.json (permissions, plans, memory)…"
+  LOCAL="$TARGET/.claude/settings.local.json"
+  mkdir -p "$(dirname "$LOCAL")"
+  [[ -f "$LOCAL" ]] || echo '{}' > "$LOCAL"
+
+  tmp="$(mktemp)"
+  jq --argjson baseline '["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(deno run:*)","Bash(rembg:*)","Bash(python3:*)","Bash(source:*)"]' \
+     --arg plans "./.claude/plans" \
+     --arg mem   "$TARGET/.claude/memory" \
+     '.permissions.allow = ((.permissions.allow // []) + $baseline | unique)
+      | .plansDirectory //= $plans
+      | .autoMemoryDirectory //= $mem' \
+     "$LOCAL" > "$tmp" && mv "$tmp" "$LOCAL"
+  echo "  • settings.local.json merged ($LOCAL)"
+
+  # keep the personal file out of the host project's git (mirror docs/apogee/)
+  if git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
+    EXCLUDE="$(cd "$TARGET" && git rev-parse --git-path info/exclude)"
+    [[ "$EXCLUDE" = /* ]] || EXCLUDE="$TARGET/$EXCLUDE"
+    mkdir -p "$(dirname "$EXCLUDE")"
+    if [[ ! -f "$EXCLUDE" ]] || ! grep -qxF ".claude/settings.local.json" "$EXCLUDE" 2>/dev/null; then
+      printf '\n# Apogee personal settings (local-only)\n.claude/settings.local.json\n' >> "$EXCLUDE"
+      echo "  • .claude/settings.local.json added to .git/info/exclude."
+    else
+      echo "  • .claude/settings.local.json already excluded."
+    fi
+  else
+    echo "  • $TARGET is not a git repo — skipped .git/info/exclude."
+  fi
+  echo
+fi
 
 # ---- optional: init the work tracker so the gates engage ----
 if [[ $INIT_TRACKER -eq 1 ]]; then

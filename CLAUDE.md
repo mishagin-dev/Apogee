@@ -5,9 +5,12 @@ Read `docs/ARCHITECTURE.md` first.
 
 ## Critical rules
 
-- **Bootstrap stays inert.** Keep this repo WITHOUT `.beads/` and WITHOUT git-flow config so Apogee's
-  own gates self-gate to no-op while you build. If you add `.beads/`, develop with escape envs:
-  `BR_GATE_OFF=1 REVIEW_GATE_OFF=1 IDEA_GATE_OFF=1 TOOL_LANG_OFF=1`.
+- **Beads stays inert; git-flow is enabled.** Keep this repo WITHOUT `.beads/` so the `br` gates
+  self-gate to no-op while you build (if you add it, develop with escape envs:
+  `BR_GATE_OFF=1 REVIEW_GATE_OFF=1 IDEA_GATE_OFF=1 TOOL_LANG_OFF=1`). git-flow IS configured: commit
+  only on gitflow branches via the `git-flow`/`git-commit` skills (the gate denies commits on
+  `main`/`develop`). A release (`git flow release`, tags `<version>`) spans `main` + `develop` + the
+  tag — all three must be pushed together (`git push origin main develop --tags`), by you as usual.
 - **Don't dogfood until stable.** Don't enable the `apogee` plugin globally until it's validated on a
   throwaway project (see `docs/INSTALL.md` + ADR 0002). Strip the global `~/.claude/settings.json`
   hooks block LAST.
@@ -25,6 +28,12 @@ Read `docs/ARCHITECTURE.md` first.
 - Every gate must self-gate (no-op without `.beads/` / `.idea/`+IDE / git-flow) and fail open.
 - After editing hooks: `python3 -m py_compile` the `.py`, `bash -n` the `.sh`, `jq empty` the JSON, and
   verify every `${CLAUDE_PLUGIN_ROOT}` path in `hooks.json` resolves to an existing file.
+
+  ```bash
+  bash -c 'find plugins -name "*.py" | while read -r f; do python3 -m py_compile "$f" || echo "FAIL $f"; done
+  find . -path ./.git -prune -o -name "*.sh"   -print | while read -r f; do bash -n "$f" || echo "FAIL $f"; done
+  find . -path ./.git -prune -o -name "*.json" -print | while read -r f; do jq empty "$f" || echo "FAIL $f"; done'
+  ```
 
 ## Conventions
 

@@ -51,7 +51,7 @@ Env overrides: `APOGEE_HOME` (clone dir), `APOGEE_BRANCH` (default `main`).
 ## Set up a project (local clone)
 
 ```
-./setup.sh [TARGET_DIR] [--per-project] [--no-scaffold] [--init-tracker]
+./setup.sh [TARGET_DIR] [--per-project] [--no-scaffold] [--no-settings] [--init-tracker]
 ```
 
 | Flag | Effect |
@@ -60,6 +60,7 @@ Env overrides: `APOGEE_HOME` (clone dir), `APOGEE_BRANCH` (default `main`).
 | *(default)* | enable the plugin **globally** in `~/.claude/settings.json` (`enabledPlugins["apogee@apogee"]=true`) |
 | `--per-project` | enable only in `TARGET/.claude/settings.json` |
 | `--no-scaffold` | skip copying content; only enable the plugin |
+| `--no-settings` | skip writing `TARGET/.claude/settings.local.json` |
 | `--init-tracker` | offer `br init` and remind to run `git flow init` so the gates engage |
 
 What it does:
@@ -72,6 +73,12 @@ What it does:
   with a notice if the target is not a git repo.
 - **ENABLE (machinery):** writes the `enabledPlugins` entry (global or per-project). No hooks/skills are
   copied — they live in the plugin.
+- **SETTINGS (per-project):** writes/merges a personal `TARGET/.claude/settings.local.json` with a
+  baseline `permissions.allow` (so the plugin's skills run without prompts — `Bash(br:*)`,
+  `Bash(agy:*)`, the image-skill commands), `plansDirectory` (`./.claude/plans`), and an absolute
+  `autoMemoryDirectory` (`TARGET/.claude/memory`). Non-clobbering (existing keys win, allow-list
+  unioned); the file is added to `.git/info/exclude`. Skip with `--no-settings`. See
+  [ADR 0002 Amendment](decisions/0002-plugin-not-global-hooks.md).
 
 > Note: `setup.sh` also *attempts* the `claude plugin …` CLI if present; in headless contexts that CLI
 > is unavailable, so it falls back to writing `enabledPlugins` directly and prints the `/plugin …`

@@ -28,8 +28,11 @@ sync.sh                           # re-scaffold new template files into an insta
 - **Content** (`CLAUDE.md`, `GEMINI.md`, `docs/apogee/*`) is *copied* into each project by `setup.sh`
   and owned by that project. `docs/apogee/` is excluded locally via the host's `.git/info/exclude`
   (no committed `.gitignore` change — zero git footprint in the project).
-- Personal preferences (language, default mode, effort, env, baseline permissions) stay in
-  `~/.claude/settings.json` — they can't be delivered per project.
+- Personal preferences (language, default mode, effort, env) stay in `~/.claude/settings.json` — they
+  can't be delivered per project.
+- Baseline **permissions** (so the plugin's skills run without prompts), `plansDirectory`, and
+  `autoMemoryDirectory` are written per-project into a git-excluded `.claude/settings.local.json` by
+  `setup.sh` (non-clobbering; opt out with `--no-settings`).
 
 ## Install into a project
 

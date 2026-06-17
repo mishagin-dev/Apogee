@@ -11,7 +11,8 @@ context + repeatable work loop) and to enforce a disciplined workflow via lifecy
 |---|---|---|---|
 | **Machinery** | hooks + commands + workflow skills | `plugins/apogee/` | installed once, **enabled** per project (`enabledPlugins`) — never copied |
 | **Content** | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project; `docs/apogee/` excluded via the host's `.git/info/exclude` |
-| **Preferences** | `language`, `defaultMode`, `effortLevel`, `env`, baseline `permissions` | `~/.claude/settings.json` | stays global (can't be delivered per project) |
+| **Preferences** | `language`, `defaultMode`, `effortLevel`, `env` | `~/.claude/settings.json` | stays global (can't be delivered per project) |
+| **Per-project settings** | baseline `permissions.allow`, `plansDirectory`, `autoMemoryDirectory` | `TARGET/.claude/settings.local.json` | **written** (non-clobbering merge) by `setup.sh`; personal, git-excluded ([ADR 0002 Amendment](decisions/0002-plugin-not-global-hooks.md)) |
 
 See [ADR 0002](decisions/0002-plugin-not-global-hooks.md) for why machinery is a plugin rather than
 globally-wired hooks.
