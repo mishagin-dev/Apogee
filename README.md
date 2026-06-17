@@ -12,9 +12,10 @@ plugins/apogee/                   # THE PLUGIN (machinery — installed once, li
   ├── hooks/                      # lifecycle gates: br/git-flow/idea/review + core advisory + lang guard
   ├── skills/                     # workflow skills: update-docs, review-work, second-opinion, deploy, image-*
   └── commands/                   # /apogee:prime, /apogee:plan-feature, /apogee:merge
-scaffold/                         # project CONTENT (copied per project, gitignored in the host)
+scaffold/                         # project CONTENT (copied per project, excluded locally in the host)
   ├── CLAUDE.md  GEMINI.md        # convention files (Claude + agy)
   └── docs/apogee/                # working-memory docs (spec, project-structure, progress, ...)
+install.sh                        # online one-liner: clone the toolkit + run setup.sh
 setup.sh                          # scaffold content (copy) + enable plugin (link)
 sync.sh                           # re-scaffold new template files into an installed project
 ```
@@ -25,11 +26,23 @@ sync.sh                           # re-scaffold new template files into an insta
   once and merely *enabled* per project via `enabledPlugins` — never copied. Update once → every
   enabled project gets it.
 - **Content** (`CLAUDE.md`, `GEMINI.md`, `docs/apogee/*`) is *copied* into each project by `setup.sh`
-  and owned by that project. `docs/apogee/` is added to the host project's `.gitignore`.
+  and owned by that project. `docs/apogee/` is excluded locally via the host's `.git/info/exclude`
+  (no committed `.gitignore` change — zero git footprint in the project).
 - Personal preferences (language, default mode, effort, env, baseline permissions) stay in
   `~/.claude/settings.json` — they can't be delivered per project.
 
 ## Install into a project
+
+Quick (online) — from the project you want to set up:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mishagin-dev/Apogee/main/install.sh | bash
+```
+
+It clones the toolkit into `~/.apogee` (override with `$APOGEE_HOME`) and runs `setup.sh` on the
+current directory. Pass `setup.sh` flags through `bash -s --`, e.g. `… | bash -s -- --per-project`.
+
+Or, with a local clone already on disk:
 
 ```bash
 /path/to/Apogee/setup.sh /path/to/your-project            # enable globally (default)

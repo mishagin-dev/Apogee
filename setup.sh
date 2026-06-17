@@ -84,12 +84,20 @@ if [[ $DO_SCAFFOLD -eq 1 ]]; then
   echo "  • doc/asset scaffolding ensured."
 
   # docs/apogee/ is Apogee's working memory — keep it out of the host project's git.
-  GI="$TARGET/.gitignore"
-  if [[ ! -f "$GI" ]] || ! grep -qxF "docs/apogee/" "$GI" 2>/dev/null; then
-    printf '\n# Apogee toolkit working memory (local-only)\ndocs/apogee/\n' >> "$GI"
-    echo "  • docs/apogee/ added to .gitignore."
+  # Use .git/info/exclude (local, uncommitted) rather than .gitignore so the host's
+  # tracked ignore file stays untouched — zero git footprint in the project.
+  if git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
+    EXCLUDE="$(cd "$TARGET" && git rev-parse --git-path info/exclude)"
+    [[ "$EXCLUDE" = /* ]] || EXCLUDE="$TARGET/$EXCLUDE"
+    mkdir -p "$(dirname "$EXCLUDE")"
+    if [[ ! -f "$EXCLUDE" ]] || ! grep -qxF "docs/apogee/" "$EXCLUDE" 2>/dev/null; then
+      printf '\n# Apogee toolkit working memory (local-only)\ndocs/apogee/\n' >> "$EXCLUDE"
+      echo "  • docs/apogee/ added to .git/info/exclude."
+    else
+      echo "  • docs/apogee/ already excluded."
+    fi
   else
-    echo "  • docs/apogee/ already gitignored."
+    echo "  • $TARGET is not a git repo — skipped .git/info/exclude (docs/apogee/ untracked anyway)."
   fi
   echo
 fi

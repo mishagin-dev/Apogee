@@ -25,8 +25,8 @@ split responsibilities three ways:
 1. **Machinery → plugin** (`plugins/apogee/`): hooks + commands + workflow skills. Installed once,
    enabled per project. Update once → every enabled project gets it.
 2. **Content → scaffold** (`scaffold/`): `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…`, copied into each
-   project by `setup.sh` and owned by it. `docs/apogee/` is added to the host project's `.gitignore`
-   (zero git footprint from the toolkit).
+   project by `setup.sh` and owned by it. `docs/apogee/` is excluded via the host project's
+   `.git/info/exclude` (zero git footprint from the toolkit).
 3. **Preferences → stay global** in `~/.claude/settings.json`: `language`, `defaultMode`, `effortLevel`,
    `env`, baseline `permissions`. These cannot be delivered per project, so they remain personal.
 
