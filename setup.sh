@@ -131,9 +131,12 @@ mkdir -p "$(dirname "$SETTINGS")"
 [[ -f "$SETTINGS" ]] || echo '{}' > "$SETTINGS"
 
 tmp="$(mktemp)"
-jq --arg key "${PLUGIN_NAME}@${MARKETPLACE_NAME}" \
+if ! jq --arg key "${PLUGIN_NAME}@${MARKETPLACE_NAME}" \
    '.enabledPlugins = ((.enabledPlugins // {}) + {($key): true})' \
-   "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
+   "$SETTINGS" > "$tmp"; then
+  rm -f "$tmp"; echo "  ! enabledPlugins merge failed (is $SETTINGS valid JSON?)" >&2; exit 1
+fi
+mv "$tmp" "$SETTINGS"
 echo "  • enabledPlugins[\"${PLUGIN_NAME}@${MARKETPLACE_NAME}\"] = true  ($SETTINGS)"
 
 if [[ $CLI_OK -eq 0 ]]; then
@@ -164,7 +167,7 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
   [[ -f "$LOCAL" ]] || echo '{}' > "$LOCAL"
 
   tmp="$(mktemp)"
-  jq --argjson baseline '["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(deno run:*)","Bash(rembg:*)","Bash(python3:*)","Bash(source:*)","mcp__idea__*","mcp__plugin_context7_context7__*"]' \
+  if ! jq --argjson baseline '["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(deno run:*)","Bash(rembg:*)","Bash(python3:*)","Bash(source:*)","mcp__idea__*","mcp__plugin_context7_context7__*"]' \
      --argjson denylist '["Bash(sudo:*)","Bash(rm -rf:*)","Bash(rm -fr:*)","Bash(rm -r -f:*)","Bash(rm -f -r:*)","Bash(git push --force:*)","Bash(git push -f:*)","Bash(git reset --hard:*)","Bash(git clean -f:*)","Bash(git checkout -- .:*)","Bash(git restore .:*)","Bash(git branch -D:*)"]' \
      --arg plans "./.claude/plans" \
      --arg mem   "$TARGET/.claude/memory" \
@@ -172,7 +175,10 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
       | .permissions.deny  = ((.permissions.deny  // []) + $denylist | unique)
       | .plansDirectory //= $plans
       | .autoMemoryDirectory //= $mem' \
-     "$LOCAL" > "$tmp" && mv "$tmp" "$LOCAL"
+     "$LOCAL" > "$tmp"; then
+    rm -f "$tmp"; echo "  ! settings merge failed (is $LOCAL valid JSON?)" >&2; exit 1
+  fi
+  mv "$tmp" "$LOCAL"
   echo "  • settings.local.json merged ($LOCAL)"
 
   # keep the personal file out of the host project's git (mirror docs/apogee/)

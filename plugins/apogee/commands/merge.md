@@ -143,7 +143,7 @@ Do NOT `git checkout main` or `git merge` — the `enforce-git-flow-skill` gate 
 1. Confirm commits exist (`git log <base>..HEAD --oneline`, where `<base>` is the gitflow develop branch from `gitflow.branch.develop`, falling back to `develop`/`main`). If empty → ask the user whether to just run Step 5 cleanup.
 
 2. Branch on the current branch's gitflow prefix:
-   - `feature/<slug>` or `bugfix/<slug>` → **invoke the `git-flow` skill** to finish it (`git flow feature finish <slug>` / `bugfix finish`). The skill handles the merge to develop and branch deletion — so **Step 5 cleanup is a no-op in this path**.
+   - `feature/<slug>` or `bugfix/<slug>` → **invoke the `git-flow` skill** to finish it (`git flow feature finish <slug>` / `bugfix finish`). (`git-flow` is a *global* Claude Code skill in `~/.claude/skills/`, not bundled in this plugin; if it isn't available, run that `git flow … finish` command directly.) The skill handles the merge to develop and branch deletion — so **Step 5 cleanup is a no-op in this path**.
    - `release/<slug>` or `hotfix/<slug>` → **first refresh the CHANGELOG (Step 4b below), then STOP and surface to the user.** Per the workflow rule, `release finish`/`hotfix finish` run only on explicit user request (they tag and back-merge). Report that the CHANGELOG is updated and the branch is ready to finish, and let the user invoke the `git-flow` skill themselves.
    - Any other prefix (not a gitflow-managed branch) → STOP and ask the user how to proceed; do not guess.
 
@@ -158,7 +158,8 @@ surfacing the branch as ready to finish, so the changelog is committed on the re
 the tag + back-merge. This is the project's changelog generation point — it relies on Apogee's enforced
 Conventional Commits.
 
-1. **Version** = the branch slug after the prefix (`release/1.4.0` -> `1.4.0`).
+1. **Version** = the branch slug after the prefix — extract with `version="${branch##*/}"`
+   (`release/1.4.0` -> `1.4.0`). If it is empty or not version-like, ask the user before proceeding.
 2. **Range** = commits since the last tag:
    ```bash
    last=$(git describe --tags --abbrev=0 2>/dev/null)
@@ -183,9 +184,9 @@ Conventional Commits.
    - <subject>
    ```
    Skip empty sections. Do not rewrite or reorder existing released entries.
-5. **Commit** it on the release branch via the **git-commit skill** (e.g.
-   `docs(changelog): Update for <version>`). Then return to the `release/hotfix` bullet in Step 4 and
-   surface the branch as ready to finish.
+5. **Commit** it on the release branch via the **git-commit skill** (a *global* Claude Code skill; if
+   unavailable, `git commit -F <file>` directly) — e.g. `docs(changelog): Update for <version>`. Then
+   return to the `release/hotfix` bullet in Step 4 and surface the branch as ready to finish.
 
 ### Standard mode
 
