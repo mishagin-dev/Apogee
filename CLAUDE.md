@@ -3,6 +3,13 @@
 This repo IS the toolkit (a Claude Code plugin + local marketplace), not a project that uses it.
 Read `docs/ARCHITECTURE.md` first.
 
+## Operator model
+
+- **Solo, AI-agent-driven.** The user directs and reviews; Claude + sub-agents write the code. Build
+  effort is cheap — the real cost is maintenance, debuggability, and decision overhead.
+- **Judge by maintenance burden, not build effort.** "Too much code for a solo dev" is not a valid
+  critique; pick architectures on technical merit.
+
 ## Critical rules
 
 - **Beads stays inert; git-flow is enabled.** Keep this repo WITHOUT `.beads/` so the `br` gates
