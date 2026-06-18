@@ -144,12 +144,48 @@ Do NOT `git checkout main` or `git merge` — the `enforce-git-flow-skill` gate 
 
 2. Branch on the current branch's gitflow prefix:
    - `feature/<slug>` or `bugfix/<slug>` → **invoke the `git-flow` skill** to finish it (`git flow feature finish <slug>` / `bugfix finish`). The skill handles the merge to develop and branch deletion — so **Step 5 cleanup is a no-op in this path**.
-   - `release/<slug>` or `hotfix/<slug>` → **STOP and surface to the user.** Per the workflow rule, `release finish`/`hotfix finish` run only on explicit user request (they tag and back-merge). Report that the branch is ready to finish and let the user invoke the `git-flow` skill themselves.
+   - `release/<slug>` or `hotfix/<slug>` → **first refresh the CHANGELOG (Step 4b below), then STOP and surface to the user.** Per the workflow rule, `release finish`/`hotfix finish` run only on explicit user request (they tag and back-merge). Report that the CHANGELOG is updated and the branch is ready to finish, and let the user invoke the `git-flow` skill themselves.
    - Any other prefix (not a gitflow-managed branch) → STOP and ask the user how to proceed; do not guess.
 
 3. **Worktree + Git Flow is unsupported by AVH git-flow** (can't `git flow … finish` from a linked worktree). If Pre-flight detected worktree mode here, STOP and tell the user to finish from the main checkout (`<main-repo-path>`), then return to remove the worktree.
 
 4. After the `git-flow` skill reports success, skip to Step 6 (cleanup already done by the skill).
+
+### Step 4b: Refresh CHANGELOG (Git Flow release/hotfix branches only)
+
+On a `release/<version>` or `hotfix/<version>` branch, regenerate the `CHANGELOG.md` entry **before**
+surfacing the branch as ready to finish, so the changelog is committed on the release branch and rides
+the tag + back-merge. This is the project's changelog generation point — it relies on Apogee's enforced
+Conventional Commits.
+
+1. **Version** = the branch slug after the prefix (`release/1.4.0` -> `1.4.0`).
+2. **Range** = commits since the last tag:
+   ```bash
+   last=$(git describe --tags --abbrev=0 2>/dev/null)
+   git log ${last:+$last..}HEAD --no-merges --format='%s'
+   ```
+   (No tag yet -> the whole history is the first release.)
+3. **Group** the Conventional Commit subjects into [Keep a Changelog](https://keepachangelog.com/)
+   sections, stripping the `type(scope):` prefix from each line:
+   - `feat` -> **Added**
+   - `fix` -> **Fixed**
+   - `perf`, `refactor`, `docs` -> **Changed**
+   - `chore`, `style`, `ci`, `test` -> omit (noise), unless user-visible.
+4. **Write** a new section at the top of `CHANGELOG.md` (create the file with a Keep a Changelog +
+   SemVer header if absent):
+   ```markdown
+   ## [<version>] - <YYYY-MM-DD>     # date from `date +%F`
+
+   ### Added
+   - <subject>
+
+   ### Fixed
+   - <subject>
+   ```
+   Skip empty sections. Do not rewrite or reorder existing released entries.
+5. **Commit** it on the release branch via the **git-commit skill** (e.g.
+   `docs(changelog): Update for <version>`). Then return to the `release/hotfix` bullet in Step 4 and
+   surface the branch as ready to finish.
 
 ### Standard mode
 
