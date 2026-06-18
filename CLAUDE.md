@@ -3,6 +3,13 @@
 This repo IS the toolkit (a Claude Code plugin + local marketplace), not a project that uses it.
 Read `docs/ARCHITECTURE.md` first.
 
+## Operator model
+
+- **Solo, AI-agent-driven.** The user directs and reviews; Claude + sub-agents write the code. Build
+  effort is cheap — the real cost is maintenance, debuggability, and decision overhead.
+- **Judge by maintenance burden, not build effort.** "Too much code for a solo dev" is not a valid
+  critique; pick architectures on technical merit.
+
 ## Critical rules
 
 - **Beads stays inert; git-flow is enabled.** Keep this repo WITHOUT `.beads/` so the `br` gates
@@ -45,7 +52,9 @@ Read `docs/ARCHITECTURE.md` first.
   features (one logical change == one `feature/`/`bugfix/` branch via the `git-flow` skill), not
   crammed into one branch. Run them **sequentially** when they touch overlapping files (to avoid
   merge conflicts), or **in parallel** (separate branches/worktrees) when their file sets are
-  disjoint. State the split and the chosen order before starting.
+  disjoint. State the split and the chosen order before starting. When a branch's work is complete,
+  finish it through `/apogee:merge` (docs/clean-tree guardrails, then delegates to the git-flow
+  finish) — not hand-rolled merges; `release`/`hotfix` finish only on explicit request.
 
 ## Decisions
 
