@@ -17,6 +17,9 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
+from gate_common import beads_root, deny  # noqa: E402
+
 EXEMPT_TOP = {".beads", "workflow", "conductor", ".claude"}
 
 DENY_REASON = (
@@ -25,17 +28,6 @@ DENY_REASON = (
     "or `br create \"<title>\" -t task --parent <epic> --json`, then retry the edit. "
     "(Ad-hoc escape: set BR_GATE_OFF=1.)"
 )
-
-
-def beads_root(start: str):
-    d = os.path.abspath(start)
-    while True:
-        if os.path.isdir(os.path.join(d, ".beads")):
-            return d
-        parent = os.path.dirname(d)
-        if parent == d:
-            return None
-        d = parent
 
 
 def main() -> None:
@@ -73,13 +65,7 @@ def main() -> None:
     if total and total > 0:
         return  # an active step exists -> allow
 
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": DENY_REASON,
-        }
-    }))
+    deny(DENY_REASON)
 
 
 if __name__ == "__main__":
