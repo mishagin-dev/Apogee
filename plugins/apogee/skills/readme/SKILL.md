@@ -107,7 +107,6 @@ Read available project files silently (no output to user):
 ```bash
 ls README.md PRODUCT.md package.json pyproject.toml go.mod Cargo.toml Makefile 2>/dev/null
 ls -d src/ lib/ cmd/ app/ 2>/dev/null
-ls -d workflow/ 2>/dev/null
 ls LICENSE CHANGELOG.md 2>/dev/null
 ```
 
