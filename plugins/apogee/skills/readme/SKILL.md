@@ -264,12 +264,11 @@ Write the generated README to `README.md`.
 
 ### Step 5: Review Validation
 
-Validate the README with Apogee's native multi-agent review instead of a separate council. Invoke the
-`review-work` skill, pointing it at `README.md` and the anti-pattern table below as the rubric:
-
-```
-Skill(skill="apogee:review-work", args="Validate README.md as a Rules Auditor: is it clear, non-repetitive, problem-first, and does it serve both skimmers and deep readers? Check it against the README anti-patterns (flywheel echo, framework-first, guru tone, jargon-before-definition, buried trust info, theory-before-try, claim-without-evidence).")
-```
+Validate the README with Apogee's native multi-agent review instead of a separate council. Invoke
+`/apogee:review-work` on `README.md`, using the anti-pattern table below as the rubric: is it clear,
+non-repetitive, problem-first, and does it serve both skimmers and deep readers? Check it against the
+README anti-patterns (flywheel echo, framework-first, guru tone, jargon-before-definition, buried trust
+info, theory-before-try, claim-without-evidence).
 
 If `review-work` is unavailable for any reason, fall back to `/apogee:second-opinion` (the `agy` CLI)
 with the same rubric.
