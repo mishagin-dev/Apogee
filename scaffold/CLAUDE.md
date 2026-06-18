@@ -55,6 +55,7 @@ Example:
 
 | Task | Use This |
 |------|----------|
+| Project onboarding / fill docs | `/apogee:init` (run once on a new project) |
 | Library docs lookup | Context7 plugin (check FIRST) |
 | Code intelligence / refactoring (JetBrains) | idea-mcp `mcp__idea__*` (when the IDE is connected) |
 | Code review | `/apogee:review-work` skill |

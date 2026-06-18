@@ -24,7 +24,7 @@ For toolkit development, add the local clone instead so on-disk edits are picked
 ```
 
 This makes the `apogee` plugin available system-wide (cached by the marketplace; files are referenced,
-never copied into projects). Commands appear namespaced: `/apogee:prime`, `/apogee:plan-feature`,
+never copied into projects). Commands appear namespaced: `/apogee:init`, `/apogee:prime`, `/apogee:plan-feature`,
 `/apogee:merge`; skills as `/apogee:review-work`, `/apogee:update-docs`, `/apogee:second-opinion`, etc.
 
 ## Quick: online one-liner

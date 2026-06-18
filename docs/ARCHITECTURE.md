@@ -67,6 +67,9 @@ managed projects. A project is considered **Apogee-managed** when it has both `.
 
 ## The work loop
 
+One-time bootstrap: `/apogee:init` (research the codebase, fill `docs/apogee/ai-context` + root
+`CLAUDE.md`, seed a flat `CLAUDE.md` in each first-level submodule). Then the recurring loop:
+
 `/apogee:prime` (load `docs/apogee/ai-context` + beads state) → work (gated by `br`/git-flow/idea) →
 `/apogee:review-work` → `/apogee:update-docs` (the Stop gate enforces this order) →
 `/apogee:merge` (verify-only in git-flow repos; delegates to the `git-flow` skill).
