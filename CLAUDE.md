@@ -41,6 +41,11 @@ Read `docs/ARCHITECTURE.md` first.
   `git-flow`, `idea-mcp`) intentionally stay GLOBAL in `~/.claude/skills/` (bare names).
 - Tracker is `br` (beads_rust), not `bd` — ADR 0001. Don't reintroduce `bd` invocations.
 - Attribution to upstream (`peterkrueck/Claude-Code-Development-Kit`) stays; the system name is Apogee.
+- **Decompose complex work.** A complex task or a batch of bugs is split into separate git-flow
+  features (one logical change == one `feature/`/`bugfix/` branch via the `git-flow` skill), not
+  crammed into one branch. Run them **sequentially** when they touch overlapping files (to avoid
+  merge conflicts), or **in parallel** (separate branches/worktrees) when their file sets are
+  disjoint. State the split and the chosen order before starting.
 
 ## Decisions
 

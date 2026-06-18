@@ -67,8 +67,31 @@ The original split (§3) kept baseline `permissions` global. In practice the plu
 allow-rules — `Bash(br:*)`, `Bash(agy:*)`, and the image-skill commands — to run without prompts, and
 a fresh machine or new project had none, so the toolkit did not work out of the box. `setup.sh` now
 writes a **personal, git-excluded** `TARGET/.claude/settings.local.json` carrying a baseline
-`permissions.allow`, `plansDirectory` (`./.claude/plans`), and an **absolute** `autoMemoryDirectory`
-(`TARGET/.claude/memory` — relative paths are not accepted for that key). The merge is non-clobbering
-(existing keys win, the allow-list is unioned and de-duped). The file is added to `.git/info/exclude`,
-consistent with `docs/apogee/`. Only `language`/`defaultMode`/`effortLevel`/`env` remain irreducibly
-global. Opt out with `setup.sh --no-settings`.
+`permissions.allow`, a content-agnostic `permissions.deny`, `plansDirectory` (`./.claude/plans`), and
+an **absolute** `autoMemoryDirectory` (`TARGET/.claude/memory` — relative paths are not accepted for
+that key). The merge is non-clobbering (existing keys win, both the allow- and deny-lists are unioned
+and de-duped). The file is added to `.git/info/exclude`, consistent with `docs/apogee/`. Only
+`language`/`defaultMode`/`effortLevel`/`env` remain irreducibly global. Opt out with
+`setup.sh --no-settings`.
+
+The `permissions.deny` baseline (`sudo`, every `rm -rf` spelling, `git push --force/-f`,
+`git reset --hard`, `git clean -f`, `git checkout -- .`, `git restore .`, `git branch -D`) is
+inherited from upstream CCDK: it is project-independent defense-in-depth that complements — rather than
+duplicates — the hook gates (the gates block commits on `main`/`develop`; the deny-list blocks
+destructive shell that no gate covers, and `deny` stays enforced even under `bypassPermissions`,
+whereas `allow` is a no-op there).
+
+**MCP allow — scoped to the two servers Apogee's own machinery leans on.** The baseline allows
+`mcp__idea__*` and `mcp__plugin_context7_context7__*` (the plugin-bundled Context7), and nothing more.
+Rationale: Apogee never *invokes* MCP tools, but its idea-gates actively push the agent off native
+search onto `mcp__idea__*`, and the "Context7 first" convention pushes it onto Context7 — so these two
+are the MCP tools the toolkit itself provokes. Both have **stable server tokens** (the `idea` server
+is named by the JetBrains plugin; Context7 is installed as a plugin, fixing its token), and a
+wildcard allow only binds a literal `mcp__<server>__` prefix — an unanchored `mcp__*` is silently
+dropped with a warning, so a stable token is required. The rules are **harmless when the server is
+absent** (they simply never match). They are deliberately delivered in the per-project
+`settings.local.json` rather than global `~/.claude/settings.json`: local settings rank *higher* in
+precedence (scope 3 vs 5), and this file is already the project's personal permissions home. Note the
+allow only bites in `acceptEdits`/`default`/`dontAsk` sessions — in `plan` mode read-only MCP tools
+auto-run regardless, and `bypassPermissions` skips allow entirely. Other MCP servers (user-global,
+variable tokens) stay out of the baseline.

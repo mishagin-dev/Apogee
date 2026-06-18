@@ -75,9 +75,12 @@ What it does:
   copied — they live in the plugin.
 - **SETTINGS (per-project):** writes/merges a personal `TARGET/.claude/settings.local.json` with a
   baseline `permissions.allow` (so the plugin's skills run without prompts — `Bash(br:*)`,
-  `Bash(agy:*)`, the image-skill commands), `plansDirectory` (`./.claude/plans`), and an absolute
-  `autoMemoryDirectory` (`TARGET/.claude/memory`). Non-clobbering (existing keys win, allow-list
-  unioned); the file is added to `.git/info/exclude`. Skip with `--no-settings`. See
+  `Bash(agy:*)`, the image-skill commands, plus `mcp__idea__*` and `mcp__plugin_context7_context7__*`,
+  the two MCP servers the toolkit's gates/conventions push the agent toward), a content-agnostic
+  `permissions.deny` (`sudo`, `rm -rf`, destructive git — defense-in-depth alongside the hook gates),
+  `plansDirectory` (`./.claude/plans`), and an absolute `autoMemoryDirectory` (`TARGET/.claude/memory`).
+  Non-clobbering (existing keys win, allow/deny lists unioned); the file is added to
+  `.git/info/exclude`. Skip with `--no-settings`. See
   [ADR 0002 Amendment](decisions/0002-plugin-not-global-hooks.md).
 
 > Note: `setup.sh` also *attempts* the `claude plugin …` CLI if present; in headless contexts that CLI
