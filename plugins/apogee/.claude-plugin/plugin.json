@@ -1,7 +1,7 @@
 {
   "name": "apogee",
-  "version": "1.4.0",
-  "description": "Claude Code workflow machinery: lifecycle hooks (br/git-flow/idea/review gates), workflow skills, and prime/plan-feature/merge commands. Install once, enable per project.",
+  "version": "1.5.0",
+  "description": "Claude Code workflow machinery: lifecycle hooks (br/git-flow/idea/review gates), workflow skills (update-docs, review-work, second-opinion, deploy, doc, readme, image-gen/edit, bg-remove), and the init/prime/plan-feature/merge commands. Install once, enable per project.",
   "author": {
     "name": "mishagin.dev (fork of peterkrueck/Claude-Code-Development-Kit)",
     "email": "mishagin.a.a@gmail.com"

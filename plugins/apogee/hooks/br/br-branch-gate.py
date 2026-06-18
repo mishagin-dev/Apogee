@@ -25,18 +25,10 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
+from gate_common import beads_root, deny  # noqa: E402
+
 EXEMPT_TOP = {".beads", "workflow", "conductor", ".claude"}
-
-
-def beads_root(start: str):
-    d = os.path.abspath(start)
-    while True:
-        if os.path.isdir(os.path.join(d, ".beads")):
-            return d
-        parent = os.path.dirname(d)
-        if parent == d:
-            return None
-        d = parent
 
 
 def _git(root, args):
@@ -78,16 +70,6 @@ def _epic_id(issue):
     return None
 
 
-def _deny(reason):
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": reason,
-        }
-    }))
-
-
 def main() -> None:
     if os.environ.get("BR_GATE_OFF") == "1":
         return
@@ -127,7 +109,7 @@ def main() -> None:
 
     # ── Rule A: no code edits on a base branch ──
     if branch in base:
-        _deny(
+        deny(
             f"On base branch '{branch}'. Code changes must happen on a git-flow work branch, "
             f"never on {branch}. Start one for the active track via the git-flow skill "
             f"(`git flow feature start <epic-slug>`, or `bugfix` for a bug track), then link it: "

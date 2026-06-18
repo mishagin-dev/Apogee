@@ -38,6 +38,10 @@ echo
 if [[ -d "$APOGEE_HOME/.git" ]]; then
   echo "→ Updating existing toolkit clone…"
   git -C "$APOGEE_HOME" fetch --depth 1 origin "$BRANCH"
+  if ! git -C "$APOGEE_HOME" diff --quiet || ! git -C "$APOGEE_HOME" diff --cached --quiet; then
+    echo "Uncommitted changes in $APOGEE_HOME — aborting update (commit/stash or remove the dir)." >&2
+    exit 1
+  fi
   git -C "$APOGEE_HOME" reset --hard -q FETCH_HEAD
 else
   echo "→ Cloning the toolkit…"

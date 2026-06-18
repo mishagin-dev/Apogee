@@ -36,28 +36,8 @@ import re
 import subprocess
 import sys
 
-# ---------------------------------------------------------------------------
-# Response builders
-# ---------------------------------------------------------------------------
-
-def _deny(reason):
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": reason,
-        }
-    }))
-
-
-def _ask(reason):
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "ask",
-            "permissionDecisionReason": reason,
-        }
-    }))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
+from gate_common import deny, ask  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +149,7 @@ def main():
 
     # ── Rule 1: ASK before release/hotfix finish (touches production branch) ──
     if _FLOW_FINISH_RE.search(command):
-        _ask(
+        ask(
             "This command merges into the production branch and creates a release tag. "
             "It must only run on explicit user request — please confirm."
         )
@@ -185,7 +165,7 @@ def main():
         if branch:  # empty = detached HEAD / mid-rebase → fail-open
             type_name, _ = _prefix_type(branch, prefixes)
             if not type_name:
-                _deny(
+                deny(
                     f"In gitflow repos, commits are only allowed on gitflow branches "
                     f"(feature/bugfix/release/hotfix/support). "
                     f"Current branch '{branch}' is not a gitflow branch. "
@@ -198,7 +178,7 @@ def main():
         branch = _current_branch(cwd)
         production = _production_branch(cwd)
         if branch and branch == production:
-            _deny(
+            deny(
                 f"The production branch '{production}' only receives merges via "
                 "`git flow release finish` or `git flow hotfix finish` "
                 "(both require user confirmation). Manual `git merge` here is not allowed."
@@ -211,7 +191,7 @@ def main():
             ref = m.group(1)
             type_name, slug = _prefix_type(ref, prefixes)
             if type_name:
-                _deny(
+                deny(
                     f"Use the git-flow skill (~/.claude/skills/git-flow/SKILL.md) instead: "
                     f"`git flow {type_name} finish {slug}`. "
                     f"Manual `git merge {ref}` on gitflow-prefixed branches is not allowed."
@@ -224,7 +204,7 @@ def main():
         ref = next(g for g in m.groups() if g is not None)
         type_name, slug = _prefix_type(ref, prefixes)
         if type_name:
-            _deny(
+            deny(
                 f"Use the git-flow skill (~/.claude/skills/git-flow/SKILL.md) instead: "
                 f"`git flow {type_name} start {slug}`. "
                 f"Manual branch creation of `{ref}` is not allowed."

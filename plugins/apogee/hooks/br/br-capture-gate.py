@@ -15,6 +15,9 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
+from gate_common import beads_root  # noqa: E402
+
 DIRECTIVE = (
     "A plan was just approved. Before editing any code, RECORD it in beads_rust (br): "
     "create an epic (`br create \"<feature>\" -t epic --slug <id> --json`) and one child step per "
@@ -29,17 +32,6 @@ DIRECTIVE = (
     "br is the capture source of truth; the edit gate blocks code edits until a step is in_progress, "
     "and the branch gate blocks edits on a base branch or a branch not linked to the active epic."
 )
-
-
-def beads_root(start: str):
-    d = os.path.abspath(start)
-    while True:
-        if os.path.isdir(os.path.join(d, ".beads")):
-            return d
-        parent = os.path.dirname(d)
-        if parent == d:
-            return None
-        d = parent
 
 
 def main() -> None:
