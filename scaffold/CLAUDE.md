@@ -13,7 +13,10 @@
 - **Stop-and-Replan Rule**: If an approach fails or you discover unexpected complexity, stop and reassess rather than pushing through.
 - **Use available skills proactively**: `/apogee:review-work` for code review, `/apogee:update-docs` after significant changes, `/apogee:deploy` for deployments.
 - **Context7 first**: When working with external libraries, check Context7 for current documentation before relying on training data.
+- **idea-mcp first** (only when the JetBrains IDE MCP `mcp__idea__*` is connected): prefer IDE tools — symbol search, inspections, refactoring — over terminal equivalents. Ignore entirely when the IDE is absent.
 - **Language split**: user-facing dialogue in your working language; everything else — code, identifiers, comments, commit messages, docs, branch names, and anything sent to external tools (agy / CLIs) — in **English**. The `git-commit` skill is the canonical example (commit messages always English).
+- **Git**: never `git push` (push manually after review); commit only via the `git-commit` skill (never `git commit -m` ad hoc). Exclude unrelated/generated files; never force-add `.gitignore`d files. In git-flow repos, run branch lifecycle through the `git-flow` skill and commit only on `feature/`/`bugfix/` branches — never on `main`/`develop`.
+- **Work honestly**: study existing code and reuse utilities before writing new ones; surface problems and trade-offs openly — never hide failures.
 
 ## 2. Operator Model
 
@@ -53,6 +56,7 @@ Example:
 | Task | Use This |
 |------|----------|
 | Library docs lookup | Context7 plugin (check FIRST) |
+| Code intelligence / refactoring (JetBrains) | idea-mcp `mcp__idea__*` (when the IDE is connected) |
 | Code review | `/apogee:review-work` skill |
 | Second opinion | Ask for "second opinion" / "ask agy" (runs the `agy` CLI) |
 | Documentation update | `/apogee:update-docs` skill |
@@ -62,6 +66,10 @@ Example:
 
 <!-- Keep only standards that are non-obvious or project-specific.
      Don't document standard language conventions — Claude already knows those. -->
+
+- Follow the project's existing style, naming, and idioms; don't introduce new conventions without need.
+- Comments only where the code cannot speak for itself (constraints, non-obvious decisions) — no narrating comments.
+- No dead code, commented-out blocks, or unused imports in the result.
 
 <!--
 Example:
@@ -74,6 +82,8 @@ Example:
 ## 6. Testing
 
 <!-- Document your test commands and when to run them. -->
+
+- Run only targeted tests for what you changed during development; run the full suite only before a release or when explicitly asked.
 
 <!--
 Example:
