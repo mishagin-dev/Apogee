@@ -33,14 +33,8 @@ Read `docs/ARCHITECTURE.md` first.
   `${CLAUDE_PLUGIN_ROOT}` inside sub-scripts. Keep a hook's helpers in its own group dir (e.g.
   `hooks/idea/lib/`, `hooks/br/br-sig.py`).
 - Every gate must self-gate (no-op without `.beads/` / `.idea/`+IDE / git-flow) and fail open.
-- After editing hooks: `python3 -m py_compile` the `.py`, `bash -n` the `.sh`, `jq empty` the JSON, and
-  verify every `${CLAUDE_PLUGIN_ROOT}` path in `hooks.json` resolves to an existing file.
-
-  ```bash
-  bash -c 'find plugins -name "*.py" | while read -r f; do python3 -m py_compile "$f" || echo "FAIL $f"; done
-  find . -path ./.git -prune -o -name "*.sh"   -print | while read -r f; do bash -n "$f" || echo "FAIL $f"; done
-  find . -path ./.git -prune -o -name "*.json" -print | while read -r f; do jq empty "$f" || echo "FAIL $f"; done'
-  ```
+- After editing hooks, run `bash scripts/validate.sh` (py/sh/json syntax, `${CLAUDE_PLUGIN_ROOT}`
+  hook-path resolution, and the `idea_symbols` self-test; CI runs it too).
 
 ## Conventions
 
