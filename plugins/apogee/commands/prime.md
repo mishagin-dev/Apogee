@@ -23,6 +23,8 @@ Parse `$ARGUMENTS` as whitespace-separated tokens:
 3. `docs/apogee/ai-context/progress.md`
 4. *(only if `deploy_mode`)* `docs/apogee/ai-context/deployment-infrastructure.md`
 
+**If a core doc is missing,** it isn't fatal — the project may not be initialized yet. Note which docs are absent and suggest running `/apogee:init` to research the codebase and create them, then continue with whatever context is available.
+
 ## Response
 
 After reading, briefly confirm:
