@@ -11,8 +11,10 @@
 #              (bump the plugin, `/plugin marketplace update apogee`) → every enabled
 #              project gets it.
 #   SETTINGS — a personal, git-excluded TARGET/.claude/settings.local.json carrying a
-#              baseline permission allow-list (so the plugin's skills run without prompts),
-#              plansDirectory, and an absolute autoMemoryDirectory. Non-clobbering merge.
+#              baseline permission allow-list (so the plugin's skills + the MCP servers it
+#              leans on — idea, Context7 — run without prompts), a content-agnostic deny-list
+#              (sudo, rm -rf, destructive git), plansDirectory, and an absolute
+#              autoMemoryDirectory. Non-clobbering merge.
 #
 # Usage:
 #   ./setup.sh [TARGET_DIR] [--per-project] [--no-scaffold] [--no-settings] [--init-tracker]
@@ -148,20 +150,26 @@ fi
 echo
 
 # ---- SETTINGS: personal per-project settings.local.json (gitignored) ----
-# Baseline permission allow-list so the plugin's skills run without prompts, plus
-# project-local plansDirectory and an absolute autoMemoryDirectory. Non-clobbering:
-# existing keys win, the allow-list is unioned, the dirs are set only if absent.
+# Baseline permission allow-list so the plugin's skills (and the MCP servers it nudges the
+# agent toward — idea, plugin-bundled Context7 — both stable-token, harmless when absent)
+# run without prompts in acceptEdits/default sessions, a
+# content-agnostic deny-list (sudo / rm -rf / destructive git — defense-in-depth that
+# complements the hook gates), plus project-local plansDirectory and an absolute
+# autoMemoryDirectory. Non-clobbering: existing keys win, the allow/deny lists are
+# unioned, the dirs are set only if absent.
 if [[ $DO_SETTINGS -eq 1 ]]; then
-  echo "→ Writing personal settings.local.json (permissions, plans, memory)…"
+  echo "→ Writing personal settings.local.json (allow + deny, plans, memory)…"
   LOCAL="$TARGET/.claude/settings.local.json"
   mkdir -p "$(dirname "$LOCAL")"
   [[ -f "$LOCAL" ]] || echo '{}' > "$LOCAL"
 
   tmp="$(mktemp)"
-  jq --argjson baseline '["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(deno run:*)","Bash(rembg:*)","Bash(python3:*)","Bash(source:*)"]' \
+  jq --argjson baseline '["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(deno run:*)","Bash(rembg:*)","Bash(python3:*)","Bash(source:*)","mcp__idea__*","mcp__plugin_context7_context7__*"]' \
+     --argjson denylist '["Bash(sudo:*)","Bash(rm -rf:*)","Bash(rm -fr:*)","Bash(rm -r -f:*)","Bash(rm -f -r:*)","Bash(git push --force:*)","Bash(git push -f:*)","Bash(git reset --hard:*)","Bash(git clean -f:*)","Bash(git checkout -- .:*)","Bash(git restore .:*)","Bash(git branch -D:*)"]' \
      --arg plans "./.claude/plans" \
      --arg mem   "$TARGET/.claude/memory" \
      '.permissions.allow = ((.permissions.allow // []) + $baseline | unique)
+      | .permissions.deny  = ((.permissions.deny  // []) + $denylist | unique)
       | .plansDirectory //= $plans
       | .autoMemoryDirectory //= $mem' \
      "$LOCAL" > "$tmp" && mv "$tmp" "$LOCAL"
