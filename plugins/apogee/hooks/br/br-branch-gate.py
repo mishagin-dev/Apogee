@@ -14,8 +14,10 @@ Companion to br-edit-gate (G2). Where G2 enforces "an in_progress br step exists
 Scope: GLOBAL hook; self-gates to beads projects (a `.beads/` dir above cwd) that are ALSO git-flow
 initialized (`gitflow.branch.*` config present). No-op everywhere else — existing non-gitflow beads
 repos stay untouched.
-Exempt paths (meta/docs): `.beads/`, `workflow/`, `conductor/`, `.claude/`, and edits outside the
-beads root. Escape hatch: env `BR_GATE_OFF=1`.
+Exempt paths (see `gate_common.path_exempt`): meta/doc dirs (`.beads/`, `workflow/`, `conductor/`,
+`.claude/`), edits outside the beads root, git-ignored working files (e.g. `docs/apogee/**`), and any
+`CLAUDE.md` — so bootstrap commands like `/apogee:init` are never blocked on a base branch. Escape
+hatch: env `BR_GATE_OFF=1`.
 Fail-open: any error / missing `br`/`git` / detached HEAD → allow (the Stop gate is the backstop;
 never trap on infra).
 """
@@ -26,9 +28,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
-from gate_common import beads_root, deny  # noqa: E402
-
-EXEMPT_TOP = {".beads", "workflow", "conductor", ".claude"}
+from gate_common import beads_root, deny, path_exempt  # noqa: E402
 
 
 def _git(root, args):
@@ -83,14 +83,10 @@ def main() -> None:
     if not root:
         return  # not a beads project -> no-op
 
-    # Exempt meta/doc paths and edits outside the beads root (mirror br-edit-gate).
+    # Exempt meta/doc paths, git-ignored working files, CLAUDE.md, edits outside the beads root.
     fp = (data.get("tool_input") or {}).get("file_path") or ""
-    if fp:
-        rel = os.path.relpath(os.path.abspath(fp), root)
-        if rel.startswith(".."):
-            return
-        if rel.split(os.sep)[0] in EXEMPT_TOP:
-            return
+    if path_exempt(root, fp):
+        return
 
     # Only enforce in git-flow-initialized repos (decision: never brick non-gitflow beads repos).
     if not _git(root, ["config", "--get-regexp", r"^gitflow\.branch\."]):
@@ -151,7 +147,7 @@ def main() -> None:
                 return  # the issue's epic is linked to this branch -> allow
 
     target = epic_hint or "<epicId>"
-    _deny(
+    deny(
         f"Branch '{branch}' is not linked to the active step's epic. Every git-flow work branch "
         f"must map 1:1 to a br epic via external_ref. Link it: "
         f"`br update {target} --external-ref '{branch}' --actor \"${{BR_ACTOR:-assistant}}\"`, "
