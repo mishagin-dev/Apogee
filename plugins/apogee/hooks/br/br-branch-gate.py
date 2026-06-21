@@ -147,7 +147,7 @@ def main() -> None:
                 return  # the issue's epic is linked to this branch -> allow
 
     target = epic_hint or "<epicId>"
-    _deny(
+    deny(
         f"Branch '{branch}' is not linked to the active step's epic. Every git-flow work branch "
         f"must map 1:1 to a br epic via external_ref. Link it: "
         f"`br update {target} --external-ref '{branch}' --actor \"${{BR_ACTOR:-assistant}}\"`, "
