@@ -7,8 +7,10 @@ edit in a beads project when there is NO in_progress br issue — forcing the ag
 step first (`br update <id> --claim` / `br create … --json`). Once a step is in_progress, edits pass.
 
 Scope: GLOBAL hook, but self-gates to beads projects (a `.beads/` dir above cwd). No-op elsewhere.
-Exempt paths (meta/docs): `.beads/`, `workflow/`, `conductor/`, `.claude/`, and edits outside the
-beads root. Escape hatch: env `BR_GATE_OFF=1`.
+Exempt paths (see `gate_common.path_exempt`): meta/doc dirs (`.beads/`, `workflow/`, `conductor/`,
+`.claude/`), edits outside the beads root, git-ignored working files (e.g. `docs/apogee/**`), and any
+`CLAUDE.md` — so bootstrap commands like `/apogee:init` are never blocked. Escape hatch: env
+`BR_GATE_OFF=1`.
 Fail-open: any error / missing `br` → allow (the Stop gate is the backstop; never trap on infra).
 """
 
@@ -18,9 +20,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
-from gate_common import beads_root, deny  # noqa: E402
-
-EXEMPT_TOP = {".beads", "workflow", "conductor", ".claude"}
+from gate_common import beads_root, deny, path_exempt  # noqa: E402
 
 DENY_REASON = (
     "No active beads_rust step. Every code change must belong to a br step. "
@@ -43,14 +43,10 @@ def main() -> None:
     if not root:
         return  # not a beads project -> no-op
 
-    # Exempt meta/doc paths and edits outside the beads root.
+    # Exempt meta/doc paths, git-ignored working files, CLAUDE.md, edits outside the beads root.
     fp = (data.get("tool_input") or {}).get("file_path") or ""
-    if fp:
-        rel = os.path.relpath(os.path.abspath(fp), root)
-        if rel.startswith(".."):
-            return
-        if rel.split(os.sep)[0] in EXEMPT_TOP:
-            return
+    if path_exempt(root, fp):
+        return
 
     # Is there an in_progress br step?
     try:
