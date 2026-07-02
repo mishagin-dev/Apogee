@@ -23,7 +23,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
-from idea_symbols import is_idea_active  # noqa: E402
+from idea_symbols import has_idea_project, is_idea_active  # noqa: E402
 
 LIMIT = 3
 _IDE_RE = r'jetbrains|intellij|phpstorm|pycharm|goland|webstorm|rubymine|clion|rider|datagrip'
@@ -64,6 +64,8 @@ def main() -> None:
 
     if is_idea_active(cwd, sid):
         sys.exit(0)  # guards already active -> no nudge needed
+    if not has_idea_project(cwd):
+        sys.exit(0)  # IDE isn't serving this tree (no .idea/ or .iml) -> nudge would be futile
     if not _ide_running():
         sys.exit(0)  # no JetBrains IDE -> idea MCP can't be connected
 

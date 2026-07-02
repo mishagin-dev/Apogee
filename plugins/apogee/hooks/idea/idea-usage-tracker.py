@@ -31,6 +31,7 @@ from idea_symbols import get_flag_path, reset_denials  # noqa: E402
 # false-deactivation on normal results; a structured `isError` is the most reliable signal.
 _FAILURE_MARKERS = (
     'unable to determine the target project',   # multi-project disambiguation
+    "doesn't correspond to any open project", 'does not correspond to any open project',
     'failed to connect', 'connection refused', 'econnrefused', 'is not connected',
     'mcp error', 'tool not found', 'unknown tool', 'method not found',
     'no project is open', 'server is not running',
@@ -109,5 +110,38 @@ def main() -> None:
     sys.exit(0)
 
 
+def _run_self_test() -> None:
+    """Self-test for _is_failure (the flag-clearing path). Run: python3 idea-usage-tracker.py --test.
+
+    Guards both directions: the wrong-project / error markers must match, and ordinary tool output
+    (incl. README prose that once collided with over-generic markers) must NOT false-deactivate.
+    """
+    cases = [
+        (None, "doesn't correspond to any open project",          True,  'wrong-project phrase'),
+        (None, 'does not correspond to any open project',         True,  'wrong-project (expanded)'),
+        (None, 'unable to determine the target project',          True,  'disambiguation'),
+        (None, 'no project is open',                              True,  'no project open'),
+        ({'isError': True}, 'anything',                           True,  'structured isError'),
+        ({'status': 'error'}, 'x',                                True,  'structured status=error'),
+        ({'error': 'boom'}, 'x',                                  True,  'structured error field'),
+        (None, 'found 3 symbols: UserService, OrderRepo',         False, 'normal search result'),
+        (None, 'To configure, specify the project path in config.yaml. '
+               'The currently open projects are managed by the IDE.', False,
+         'README prose must NOT false-deactivate'),
+    ]
+    ok = True
+    for raw, resp, expected, label in cases:
+        got = _is_failure(raw, resp)
+        mark = '✓' if got == expected else '✗ FAIL'
+        if got != expected:
+            ok = False
+        print(f'  {mark}  _is_failure({label!r}) = {got}')
+    print('\n' + ('All tests passed.' if ok else 'SOME TESTS FAILED.'))
+    raise SystemExit(0 if ok else 1)
+
+
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == '--test':
+        _run_self_test()
+    else:
+        main()

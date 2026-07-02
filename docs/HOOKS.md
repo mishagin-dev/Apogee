@@ -34,7 +34,7 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 
 | Script | What it does | Self-gate |
 |---|---|---|
-| `idea/idea-nudge.py` | Soft reminder (≤3/session) to make the first idea-mcp call | `.idea/` + IDE |
+| `idea/idea-nudge.py` | Soft reminder (≤3/session) to make the first idea-mcp call | `.idea/` or `.iml` + IDE |
 
 ### Stop
 
@@ -63,7 +63,7 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 | `core/apogee-session-start.py` | Inject a directive to run `/apogee:prime` in a managed project | `.beads/` + `docs/apogee/` |
 | `br/br-prime.sh` | Inject the beads agent guide | `.beads/` |
 | `br/br-snapshot.sh` | Snapshot `br` state signature (baseline for the progress gate) | `.beads/` |
-| `idea/idea-force-activate.py` | Arm idea-mcp enforcement (tentative) when `.idea/` + IDE present | `.idea/` + IDE |
+| `idea/idea-force-activate.py` | Arm idea-mcp enforcement (tentative) when `.idea/`/`.iml` + IDE present | `.idea/` or `.iml` + IDE |
 
 ### SessionEnd
 

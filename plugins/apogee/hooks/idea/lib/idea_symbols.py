@@ -5,6 +5,8 @@ Provides:
   is_code_symbol(pattern)      — True if a Grep pattern is a naked code symbol
   glob_contains_symbol(pattern) — True if a Glob pattern encodes a code symbol
   extract_grep_pattern(cmd)    — extract search term from a shell grep command
+  is_subagent(payload)         — True when a hook call originates inside a subagent
+  has_idea_project(cwd)        — True if cwd is inside a JetBrains project (.idea/ or *.iml)
   get_flag_path(cwd)           — path to the per-project evidence flag file
   is_idea_active(cwd, sid)     — True if idea MCP proved active for this session
   deny(reason)                 — build the PreToolUse deny-response dict
@@ -174,6 +176,47 @@ def extract_grep_pattern(cmd: str) -> str | None:
         return arg
 
     return None
+
+
+# ── Subagent + project detection ─────────────────────────────────────────────
+
+def is_subagent(payload: dict) -> bool:
+    """True when this hook call originates inside a subagent.
+
+    Claude Code includes `agent_id` (and `agent_type`) on the hook input ONLY when the call fires
+    inside a subagent (or via `--agent`). Subagents do not receive `mcp__idea__*` tools, so
+    enforcing idea-first inside them can only deadlock — guards call this first and short-circuit.
+
+    Note: a custom subagent whose frontmatter genuinely declares `mcp__idea__*` would also be
+    carved out, but the payload exposes no tool-availability field, so this pragmatic check is the
+    best available signal; the cost of a false carve-out (minor token waste) is far less than a
+    deadlock.
+    """
+    return bool(payload.get('agent_id') or payload.get('agent_type'))
+
+
+def has_idea_project(cwd: str) -> bool:
+    """True if cwd is inside a JetBrains project the IDE could be serving.
+
+    Walks up from cwd to root, checking each level for either a `.idea/` dir or a top-level `*.iml`
+    module file. The `*.iml` marker covers JetBrains Gateway / remote-dev where `.idea/` lives on the
+    backend but an `.iml` is present locally; checking it at every walk level (not just cwd) lets a
+    subdir of such a project resolve correctly. Used to gate idea-first mode / the activation nudge:
+    a project the IDE doesn't serve shouldn't be gated or nudged.
+    """
+    d = os.path.abspath(cwd)
+    while True:
+        if os.path.isdir(os.path.join(d, '.idea')):
+            return True
+        try:
+            if any(name.endswith('.iml') for name in os.listdir(d)):
+                return True
+        except OSError:
+            pass
+        parent = os.path.dirname(d)
+        if parent == d:
+            return False
+        d = parent
 
 
 # ── Evidence flag helpers ─────────────────────────────────────────────────────
@@ -408,6 +451,50 @@ if __name__ == '__main__':
         if result != expected:
             ok = False
         print(f'  {status}  extract_grep_pattern({cmd!r}) = {result!r}')
+
+    print('\nis_subagent() tests:')
+    sub_cases: list[tuple[dict, bool, str]] = [
+        ({'agent_id': 'abc-123'},                      True,  'agent_id present'),
+        ({'agent_type': 'Explore'},                    True,  'agent_type present'),
+        ({'agent_id': 'x', 'agent_type': 'Plan'},      True,  'both present'),
+        ({},                                           False, 'no agent fields'),
+        ({'session_id': 's', 'cwd': '/p'},             False, 'session fields only'),
+        ({'agent_id': ''},                             False, 'empty agent_id'),
+    ]
+    for payload, expected, label in sub_cases:
+        result = is_subagent(payload)
+        status = '✓' if result == expected else '✗ FAIL'
+        if result != expected:
+            ok = False
+        print(f'  {status}  is_subagent({payload!r}) = {result}  ({label})')
+
+    print('\nhas_idea_project() tests:')
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        d_idea = os.path.join(tmp, 'proj-idea')          # has .idea/
+        os.makedirs(os.path.join(d_idea, '.idea'))
+        d_iml = os.path.join(tmp, 'proj-iml')            # *.iml at root, no .idea/
+        os.makedirs(d_iml)
+        open(os.path.join(d_iml, 'app.iml'), 'w').close()
+        d_iml_sub = os.path.join(d_iml, 'src', 'svc')    # subdir of an .iml-only project
+        os.makedirs(d_iml_sub)
+        d_plain = os.path.join(tmp, 'proj-plain')        # no markers
+        os.makedirs(d_plain)
+        d_sub = os.path.join(d_idea, 'src', 'foo')       # .idea/ found by walking up
+        os.makedirs(d_sub)
+        dir_cases: list[tuple[str, bool, str]] = [
+            (d_idea,    True,  '.idea/ present'),
+            (d_iml,     True,  '*.iml at root, no .idea/'),
+            (d_iml_sub, True,  '*.iml found by walking up (remote-dev subdir)'),
+            (d_plain,   False, 'no markers'),
+            (d_sub,     True,  '.idea/ found by walking up'),
+        ]
+        for d, expected, label in dir_cases:
+            result = has_idea_project(d)
+            status = '✓' if result == expected else '✗ FAIL'
+            if result != expected:
+                ok = False
+            print(f'  {status}  has_idea_project({os.path.basename(d)!r}) = {result}  ({label})')
 
     print('\n' + ('All tests passed.' if ok else 'SOME TESTS FAILED.'))
     raise SystemExit(0 if ok else 1)
