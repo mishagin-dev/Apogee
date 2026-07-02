@@ -18,7 +18,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
-from idea_symbols import deny, is_code_symbol, is_idea_active, register_block  # noqa: E402
+from idea_symbols import deny, is_code_symbol, is_idea_active, is_subagent, register_block  # noqa: E402
 
 _GREP_WORDS = re.compile(r'\b(grep|rg|ripgrep|ag|ack)\b', re.IGNORECASE)
 _SEARCH_PHRASES = re.compile(
@@ -59,6 +59,9 @@ def main() -> None:
         sid = payload.get('session_id', '')
     except Exception:
         sys.exit(0)
+
+    if is_subagent(payload):
+        sys.exit(0)  # subagent context (nested spawn) lacks mcp__idea__* -> deadlock-safe no-op
 
     if not is_idea_active(cwd, sid):
         sys.exit(0)  # mode not active -> deadlock-safe no-op

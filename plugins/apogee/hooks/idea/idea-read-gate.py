@@ -22,7 +22,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
-from idea_symbols import deny, is_idea_active, register_block  # noqa: E402
+from idea_symbols import deny, is_idea_active, is_subagent, register_block  # noqa: E402
 
 BUDGET = 2
 
@@ -59,6 +59,9 @@ def main() -> None:
         sid = payload.get('session_id', '')
     except Exception:
         sys.exit(0)
+
+    if is_subagent(payload):
+        sys.exit(0)  # subagents lack mcp__idea__* -> enforcing here can only deadlock
 
     if not is_idea_active(cwd, sid):
         sys.exit(0)  # mode not active -> deadlock-safe no-op

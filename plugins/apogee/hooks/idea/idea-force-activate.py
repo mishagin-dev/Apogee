@@ -21,7 +21,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
-from idea_symbols import is_idea_active, write_flag, _enforcement_enabled  # noqa: E402
+from idea_symbols import has_idea_project, is_idea_active, write_flag, _enforcement_enabled  # noqa: E402
 
 ACTIVE_SOURCES = {'startup', 'clear'}
 _IDE_RE = r'jetbrains|intellij|phpstorm|pycharm|goland|webstorm|rubymine|clion|rider|datagrip'
@@ -43,17 +43,6 @@ def _ide_running() -> bool:
         return False
 
 
-def _has_idea_dir(cwd: str) -> bool:
-    d = os.path.abspath(cwd)
-    while True:
-        if os.path.isdir(os.path.join(d, '.idea')):
-            return True
-        parent = os.path.dirname(d)
-        if parent == d:
-            return False
-        d = parent
-
-
 def main() -> None:
     try:
         data = json.load(sys.stdin)
@@ -70,7 +59,7 @@ def main() -> None:
         sys.exit(0)
     if is_idea_active(cwd, sid):
         sys.exit(0)  # already active this session
-    if not _has_idea_dir(cwd):
+    if not has_idea_project(cwd):
         sys.exit(0)  # not a JetBrains project -> don't force
     if not _ide_running():
         sys.exit(0)  # IDE not running -> idea MCP can't be connected

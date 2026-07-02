@@ -27,6 +27,7 @@ from idea_symbols import (  # noqa: E402
     extract_grep_pattern,
     is_code_symbol,
     is_idea_active,
+    is_subagent,
     register_block,
 )
 
@@ -71,6 +72,9 @@ def main() -> None:
         session_id = payload.get('session_id', '')
     except Exception:
         sys.exit(0)  # fail-open
+
+    if is_subagent(payload):
+        sys.exit(0)  # subagents lack mcp__idea__* -> enforcing here can only deadlock
 
     # Fast path: not a grep-family command → pass through immediately
     if not _GREP_RE.search(command):

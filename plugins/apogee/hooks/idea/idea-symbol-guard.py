@@ -21,7 +21,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
-from idea_symbols import deny, is_code_symbol, is_idea_active, register_block  # noqa: E402
+from idea_symbols import deny, is_code_symbol, is_idea_active, is_subagent, register_block  # noqa: E402
 
 _DENY_TEMPLATE = """\
 ⛔ IDEA-MCP GUARD: Grep blocked — use IDE semantic search instead.
@@ -46,6 +46,9 @@ def main() -> None:
         session_id = payload.get('session_id', '')
     except Exception:
         sys.exit(0)  # fail-open
+
+    if is_subagent(payload):
+        sys.exit(0)  # subagents lack mcp__idea__* -> enforcing here can only deadlock
 
     if not is_idea_active(cwd, session_id):
         sys.exit(0)  # enforcement not yet activated

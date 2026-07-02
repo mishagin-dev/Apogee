@@ -8,7 +8,7 @@
 #   3. JSON validity  — jq empty every *.json in the repo (excluding .git)
 #   4. Hook paths     — every ${CLAUDE_PLUGIN_ROOT}/<path> in hooks.json must
 #                       resolve to an existing file under plugins/apogee/
-#   5. Self-test      — idea_symbols.py __main__ assertions
+#   5. Self-tests     — idea_symbols.py + idea-usage-tracker.py --test
 #
 # Exits 0 if all stages pass, 1 on any failure.
 #
@@ -106,16 +106,32 @@ fi
 echo "Stage 4 done."
 
 # ---------------------------------------------------------------------------
-# Stage 5: idea_symbols.py self-test
+# Stage 5: self-tests (lib __main__ assertions + hook --test modes)
 # ---------------------------------------------------------------------------
-echo "=== Stage 5: idea_symbols.py self-test ==="
-SELFTEST="${REPO_ROOT}/plugins/apogee/hooks/idea/lib/idea_symbols.py"
-if python3 "${SELFTEST}" > /dev/null 2>&1; then
-    echo "Self-test passed."
-else
-    echo "FAIL selftest ${SELFTEST}"
-    fail=1
-fi
+echo "=== Stage 5: self-tests ==="
+SELFTESTS=(
+    "${REPO_ROOT}/plugins/apogee/hooks/idea/lib/idea_symbols.py"
+)
+# Hook-entry scripts expose a --test mode (their __main__ otherwise runs the live hook on stdin).
+HOOK_SELFTESTS=(
+    "${REPO_ROOT}/plugins/apogee/hooks/idea/idea-usage-tracker.py"
+)
+for f in "${SELFTESTS[@]}"; do
+    if python3 "$f" > /dev/null 2>&1; then
+        echo "ok  $f"
+    else
+        echo "FAIL selftest $f"
+        fail=1
+    fi
+done
+for f in "${HOOK_SELFTESTS[@]}"; do
+    if python3 "$f" --test > /dev/null 2>&1; then
+        echo "ok  $f --test"
+    else
+        echo "FAIL selftest $f --test"
+        fail=1
+    fi
+done
 echo "Stage 5 done."
 
 # ---------------------------------------------------------------------------
