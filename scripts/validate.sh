@@ -115,6 +115,7 @@ SELFTESTS=(
 # Hook-entry scripts expose a --test mode (their __main__ otherwise runs the live hook on stdin).
 HOOK_SELFTESTS=(
     "${REPO_ROOT}/plugins/apogee/hooks/idea/idea-usage-tracker.py"
+    "${REPO_ROOT}/plugins/apogee/hooks/idea/idea-agent-guard.py"
     "${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-flow-skill.py"
     "${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-commit-skill.py"
 )

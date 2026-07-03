@@ -10,6 +10,7 @@ Provides:
   get_flag_path(cwd)           — path to the per-project evidence flag file
   is_idea_active(cwd, sid)     — True if idea MCP proved active for this session
   deny(reason)                 — build the PreToolUse deny-response dict
+  ask(reason)                  — build the PreToolUse ask-response dict (confirmation prompt)
 """
 
 from __future__ import annotations
@@ -374,6 +375,21 @@ def deny(reason: str) -> dict:
         'hookSpecificOutput': {
             'hookEventName': 'PreToolUse',
             'permissionDecision': 'deny',
+            'permissionDecisionReason': reason,
+        }
+    }
+
+
+def ask(reason: str) -> dict:
+    """Build the PreToolUse ask-response payload (surfaces a confirmation prompt instead of a hard
+    deny). Used by idea-agent-guard: a delegation that merely looks like local code search gets
+    confirmed by the user rather than hard-blocked, so legitimate external-research delegations
+    (which can't self-escape via IDEA_GATE_OFF — it doesn't propagate through the Agent tool) are
+    not trapped."""
+    return {
+        'hookSpecificOutput': {
+            'hookEventName': 'PreToolUse',
+            'permissionDecision': 'ask',
             'permissionDecisionReason': reason,
         }
     }
