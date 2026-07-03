@@ -1,3 +1,5 @@
+<!-- apogee:scaffold-stub: replace with real project context via /apogee:init -->
+
 # Technical Specification
 
 <!-- This file documents WHAT the product does — features, API contracts, data flows.

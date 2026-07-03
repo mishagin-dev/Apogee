@@ -95,7 +95,7 @@ Do NOT document:
 
 ### Step 5: Create Missing Files
 
-If `docs/apogee/ai-context/` files don't exist yet, create them from the current codebase state. Analyze the code, tech stack, and project structure to populate each file with accurate current-state documentation.
+A core doc is **missing** when it does not exist **or** still carries the `apogee:scaffold-stub` sentinel (`setup.sh` scaffolds these template stubs — placeholders, not real docs). For each missing doc — absent or an untouched stub — write it from scratch from the current codebase state (analyze code, tech stack, structure) and **drop the sentinel** when filling a stub. Don't "refine" a stub: its content is generic template guidance, not project context.
 
 ## Doc-Specific Rules
 

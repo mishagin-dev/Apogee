@@ -1,3 +1,5 @@
+<!-- apogee:scaffold-stub: replace with real project context via /apogee:init -->
+
 # Deployment & Infrastructure
 
 <!-- Operational reference for hosting, accounts, secrets, and CI/CD.
