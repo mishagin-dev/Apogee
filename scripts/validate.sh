@@ -8,7 +8,7 @@
 #   3. JSON validity  — jq empty every *.json in the repo (excluding .git)
 #   4. Hook paths     — every ${CLAUDE_PLUGIN_ROOT}/<path> in hooks.json must
 #                       resolve to an existing file under plugins/apogee/
-#   5. Self-tests     — idea_symbols.py + idea-usage-tracker.py --test
+#   5. Self-tests     — idea_symbols.py + hook --test modes (idea-usage-tracker, git hooks)
 #
 # Exits 0 if all stages pass, 1 on any failure.
 #
@@ -115,6 +115,8 @@ SELFTESTS=(
 # Hook-entry scripts expose a --test mode (their __main__ otherwise runs the live hook on stdin).
 HOOK_SELFTESTS=(
     "${REPO_ROOT}/plugins/apogee/hooks/idea/idea-usage-tracker.py"
+    "${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-flow-skill.py"
+    "${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-commit-skill.py"
 )
 for f in "${SELFTESTS[@]}"; do
     if python3 "$f" > /dev/null 2>&1; then

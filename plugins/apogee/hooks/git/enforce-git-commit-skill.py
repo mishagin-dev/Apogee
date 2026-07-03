@@ -10,8 +10,12 @@ Fail-open: parse errors silently exit 0 so unrelated Bash calls are never blocke
 """
 
 import json
+import os
 import re
 import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
+from gate_common import strip_payloads  # noqa: E402
 
 DENY_RESPONSE = {
     "hookSpecificOutput": {
@@ -61,11 +65,42 @@ def main() -> None:
     except Exception:
         sys.exit(0)  # fail open
 
+    # Strip quoted/heredoc payloads so an unrelated command mentioning `git commit` (e.g. inside an
+    # `agy -p '...'` prompt) isn't mistaken for a real ad-hoc commit. See gate_common.strip_payloads.
+    command = strip_payloads(command)
+
     if not evaluate(command):
         print(json.dumps(DENY_RESPONSE))
 
     sys.exit(0)
 
 
+def _run_self_test() -> None:
+    """Self-test: ad-hoc commits are denied, the skill path is allowed, and `git commit` mentioned
+    inside an unrelated command's payload is NOT mistaken for a real commit.
+    Run: python3 enforce-git-commit-skill.py --test"""
+    cases = [
+        # (label, command, want_evaluate)  — evaluate True = allow, False = deny
+        ("real commit -m",      "git commit -m 'fix'",                              False),
+        ("skill commit -F",     "git commit -F /tmp/msg",                           True),
+        ("amend --no-edit",     "git commit --amend --no-edit",                     True),
+        ("agy prompt mentions", "agy -p 'remember to git commit daily'",            True),
+        ("heredoc body",        "agy -p 'r' <<'EOF'\nabout git commit\nEOF",         True),
+        ("git-commit in path",  "cat skills/git-commit/SKILL.md",                   True),
+    ]
+    ok = True
+    for label, cmd, want in cases:
+        got = evaluate(strip_payloads(cmd))
+        mark = "✓" if got == want else "✗ FAIL"
+        if got != want:
+            ok = False
+        print(f"  {mark}  {label}: evaluate={got} (want {want})")
+    print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
+    raise SystemExit(0 if ok else 1)
+
+
 if __name__ == "__main__":
-    main()
+    if "--test" in sys.argv:
+        _run_self_test()
+    else:
+        main()

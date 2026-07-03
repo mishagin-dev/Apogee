@@ -9,6 +9,7 @@ hook group depends on them. Importers anchor `sys.path` on their own `__file__`,
 
 import json
 import os
+import re
 import subprocess
 
 # Top-level dirs whose edits never count as trackable code (meta / docs / config).
@@ -85,3 +86,20 @@ def ask(reason):
             "permissionDecisionReason": reason,
         }
     }))
+
+
+def strip_payloads(cmd: str) -> str:
+    """Remove quoted-string and heredoc payloads so git-op regexes only see real commands, not git
+    mentions inside another command's arguments.
+
+    Shared by the git-commit and git-flow enforcement hooks. Without this, `agy -p 'remember to
+    git commit'` (or a heredoc body discussing `git merge`) would false-match the commit/merge
+    rules and block an unrelated tool call — the reported symptom of `/apogee:second-opinion`
+    being denied on `develop`. Real git commands keep their operative verb outside quotes
+    (`git commit -m 'x'` -> `git commit -m `), so detection is preserved.
+    """
+    # Heredoc bodies: <<MARK ... MARK (also <<-MARK and quoted markers), across newlines.
+    cmd = re.sub(r"<<-?\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)['\"]?.*?\n\1(?![\w-])", " ", cmd, flags=re.DOTALL)
+    cmd = re.sub(r'"[^"]*"', " ", cmd)   # double-quoted strings
+    cmd = re.sub(r"'[^']*'", " ", cmd)   # single-quoted strings
+    return cmd
