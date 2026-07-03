@@ -103,3 +103,67 @@ def strip_payloads(cmd: str) -> str:
     cmd = re.sub(r'"[^"]*"', " ", cmd)   # double-quoted strings
     cmd = re.sub(r"'[^']*'", " ", cmd)   # single-quoted strings
     return cmd
+
+
+# ── Self-test (run directly) ──────────────────────────────────────────────────
+#
+# Guards the ceremony-exemption invariant: edits to git-ignored paths (reports, scratch, build
+# outputs) must skip the br/git-flow gates — a deliverable written to an ignored folder needs no
+# br step, no work branch, and no commit. path_exempt/git_ignored are the core of that, and were
+# previously untested; this keeps a future refactor from silently breaking the behavior.
+
+if __name__ == '__main__':
+    import tempfile
+
+    ok = True
+    with tempfile.TemporaryDirectory() as tmp:
+        # Mini git repo with ignore rules. git init / check-ignore need no user config or commits.
+        subprocess.run(["git", "-C", tmp, "init", "-q"], check=True, capture_output=True)
+        with open(os.path.join(tmp, ".gitignore"), "w") as f:
+            f.write("reports/\n*.log\n")
+        os.makedirs(os.path.join(tmp, "src"))
+        os.makedirs(os.path.join(tmp, "reports", "sub"))
+
+        root = tmp
+        join = lambda *parts: os.path.join(root, *parts)
+        # A path guaranteed to be outside the beads root (a sibling of tmp), regardless of where
+        # the OS puts the temp dir.
+        outside = os.path.join(os.path.dirname(root), "apogee-selftest-sibling", "x.md")
+
+        path_cases = [
+            # (label, file_path, expected_exempt)
+            ("ignored report (md)",     join("reports", "research.md"),    True),
+            ("ignored nested dir",      join("reports", "sub", "deep.txt"), True),
+            ("ignored *.log",           join("debug.log"),                 True),
+            ("non-ignored code",        join("src", "foo.py"),             False),
+            ("EXEMPT_TOP .beads",       join(".beads", "issues.json"),     True),
+            ("EXEMPT_TOP .claude",      join(".claude", "x.md"),           True),
+            ("CLAUDE.md",               join("CLAUDE.md"),                 True),
+            ("outside the root",        outside,                           True),
+            ("empty path",              "",                                False),
+        ]
+        print("path_exempt() tests:")
+        for label, fp, want in path_cases:
+            got = path_exempt(root, fp)
+            mark = "✓" if got == want else "✗ FAIL"
+            if got != want:
+                ok = False
+            print(f"  {mark}  {label}: {got} (want {want})")
+
+        print("\ngit_ignored() tests:")
+        ignore_cases = [
+            ("reports/x.md", True),
+            ("debug.log",    True),
+            ("src/foo.py",   False),
+            (".beads/x",     False),
+        ]
+        for rel, want in ignore_cases:
+            got = git_ignored(root, rel)
+            mark = "✓" if got == want else "✗ FAIL"
+            if got != want:
+                ok = False
+            print(f"  {mark}  git_ignored({rel!r}) = {got} (want {want})")
+
+    print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
+    raise SystemExit(0 if ok else 1)
+

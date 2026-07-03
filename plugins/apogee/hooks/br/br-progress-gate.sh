@@ -46,6 +46,9 @@ if [[ -f "$CONFIG" ]]; then
 fi
 [[ ${#PATS[@]} -eq 0 ]] && PATS=("*.py" "*.ts" "*.tsx" "*.js" "*.swift" "*.go" "*.rs" "*.kt" "*.kts" "*.c" "*.cpp" "*.h" "*.java")
 
+# Only TRACKED code files count (git diff --numstat + PATS). Git-ignored outputs (reports, scratch)
+# never land here, so writing a deliverable to an ignored folder demands no br progress. See
+# gate_common.path_exempt.
 CUR_LINES=$(git diff --numstat HEAD -- "${PATS[@]}" 2>/dev/null | awk -F'\t' '$1!="-"{s+=$1+$2} END{print s+0}')
 BASE_NUM="/tmp/claude-baseline-${SID}.numstat"
 BASE_LINES=0

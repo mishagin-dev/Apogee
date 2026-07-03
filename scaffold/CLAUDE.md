@@ -16,6 +16,7 @@
 - **idea-mcp first** (only when the JetBrains IDE MCP `mcp__idea__*` is connected): prefer IDE tools — symbol search, inspections, refactoring — over terminal equivalents. Ignore entirely when the IDE is absent.
 - **Language split**: user-facing dialogue in your working language; everything else — code, identifiers, comments, commit messages, docs, branch names, and anything sent to external tools (agy / CLIs) — in **English**. The `git-commit` skill is the canonical example (commit messages always English).
 - **Git**: never `git push` (push manually after review); commit only via the `git-commit` skill (never `git commit -m` ad hoc). Exclude unrelated/generated files; never force-add `.gitignore`d files. In git-flow repos, run branch lifecycle through the `git-flow` skill and commit only on `feature/`/`bugfix/` branches — never on `main`/`develop`.
+- **Git-ignored deliverables are ceremony-free**: a report, research note, or other output written to a **git-ignored path** (a folder in `.gitignore`, e.g. `reports/`, scratch, build outputs) is a deliverable-on-disk — it needs **no** br step, **no** git-flow branch, and **no** commit. The edit/branch/Stop gates already exempt such paths, so just write the file and stop; don't force it into the workflow or try to commit it.
 - **Work honestly**: study existing code and reuse utilities before writing new ones; surface problems and trade-offs openly — never hide failures.
 
 ## 2. Operator Model
