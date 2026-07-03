@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-07-03
+
+### Fixed
+
+- `/apogee:init` no longer treats scaffold stub docs (the `<!-- apogee:scaffold-stub -->` placeholders) as already-filled project context — stubs now count as missing, so `init` replaces them with real project context instead of skipping.
+- The `git-commit` and `git-flow` enforcement hooks no longer false-match git operations mentioned inside another command's quoted/heredoc payload (e.g. an `agy` prompt discussing `git commit`). Payloads are now stripped before matching, so `/apogee:second-opinion` and similar tool calls are no longer blocked on `develop`.
+- `idea-agent-guard` no longer hard-denies delegations whose prompt merely looks like code search. It now emits an `ask` (the user confirms legitimate external research / non-search work) and narrows the match: a search phrase triggers only with both a code symbol and a local-scope indicator (`in src`, `this repo`, a repo-relative path). Since `IDEA_GATE_OFF` doesn't propagate through the Agent tool, a hard `deny` previously trapped valid delegations such as external CVE research.
+
+### Changed
+
+- The git-ignored path exemption (edit gates skip ignored folders; Stop gates count only tracked code files) is now locked by a `gate_common` self-test wired into `validate.sh`, and the scaffold `CLAUDE.md` tells agents that a deliverable written to a git-ignored path needs no br step, git-flow branch, or commit.
+
 ## [1.7.0] - 2026-07-02
 
 ### Fixed
