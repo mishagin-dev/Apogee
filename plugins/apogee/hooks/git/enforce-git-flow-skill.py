@@ -37,7 +37,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
-from gate_common import deny, ask  # noqa: E402
+from gate_common import deny, ask, strip_payloads  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +139,10 @@ def main():
     except Exception:
         sys.exit(0)  # fail open
 
+    # Drop quoted/heredoc payloads so git-op regexes don't false-match inside another command's
+    # arguments (e.g. `agy -p '...git commit...'` is not a git commit). See _strip_payloads.
+    command = strip_payloads(command)
+
     if "git" not in command:
         sys.exit(0)
 
@@ -213,5 +217,37 @@ def main():
     sys.exit(0)
 
 
+def _run_self_test() -> None:
+    """Self-test: git-op regexes must NOT false-match inside quoted/heredoc payloads.
+    Run: python3 enforce-git-flow-skill.py --test"""
+    cases = [
+        # (label, command, should _COMMIT_RE match after _strip_payloads?)
+        ("real commit -m",        "git commit -m 'fix'",                              True),
+        ("real commit -F",        "git commit -F /tmp/msg",                           True),
+        ("chained commit",        "git add . && git commit",                          True),
+        ("agy prompt mentions",   "agy -p 'remember to git commit daily'",            False),
+        ("agy merge in prompt",   "agy -p 'then git merge feature/x'",                False),
+        ("heredoc body mentions", "agy -p 'r' <<'EOF'\nthink about git commit\nEOF",  False),
+        ("git-commit in path",    "cat skills/git-commit/SKILL.md",                   False),
+    ]
+    ok = True
+    for label, cmd, want in cases:
+        got = bool(_COMMIT_RE.search(strip_payloads(cmd)))
+        mark = "✓" if got == want else "✗ FAIL"
+        if got != want:
+            ok = False
+        print(f"  {mark}  {label}: _COMMIT_RE match={got} (want {want})")
+    if _MERGE_RE.search(strip_payloads("agy -p 'git merge feature/x now'")):
+        print("  ✗ FAIL  _MERGE_RE saw a ref inside an agy prompt")
+        ok = False
+    else:
+        print("  ✓  _MERGE_RE ignores git-merge inside a quoted payload")
+    print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
+    raise SystemExit(0 if ok else 1)
+
+
 if __name__ == "__main__":
-    main()
+    if "--test" in sys.argv:
+        _run_self_test()
+    else:
+        main()

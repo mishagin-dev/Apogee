@@ -23,7 +23,7 @@ Parse `$ARGUMENTS` as whitespace-separated tokens:
 3. `docs/apogee/ai-context/progress.md`
 4. *(only if `deploy_mode`)* `docs/apogee/ai-context/deployment-infrastructure.md`
 
-**If a core doc is missing,** it isn't fatal — the project may not be initialized yet. Note which docs are absent and suggest running `/apogee:init` to research the codebase and create them, then continue with whatever context is available.
+**If a core doc is missing or still a scaffold stub** (it carries the `apogee:scaffold-stub` sentinel — `setup.sh` creates these placeholders), it isn't fatal — the project isn't initialized yet. **Do not load a stub as real context** (it's generic placeholder text): note which docs are absent or stub-only and suggest running `/apogee:init` to research the codebase and fill them, then continue with whatever real context is available.
 
 ## Response
 

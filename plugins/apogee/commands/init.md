@@ -47,7 +47,10 @@ spots. Then exit Plan Mode with the synthesized plan.
 
 **Root docs + CLAUDE.md.** Follow the `/apogee:update-docs` skill's initial-creation path (its
 "Create Missing Files" step) to populate the core docs and refine the root `CLAUDE.md` from the actual
-codebase. Do not restate that skill's ownership/density rules here — defer to it (single source of
+codebase. **A core doc is MISSING when it does not exist OR still carries the `apogee:scaffold-stub`
+sentinel** (`setup.sh` scaffolds these template stubs — placeholders, not real docs). Treat a stub as
+create-from-scratch: replace its entire content with researched project context and drop the sentinel;
+refine only docs that lack it. Do not restate that skill's ownership/density rules here — defer to it (single source of
 truth: each fact in exactly one doc; document only what can't be inferred from the code).
 
 **Submodules (first-level, non-clobbering).** For each submodule path: if `<path>/CLAUDE.md` does

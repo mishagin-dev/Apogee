@@ -1,3 +1,5 @@
+<!-- apogee:scaffold-stub: replace with real project context via /apogee:init -->
+
 # Project Structure
 
 <!-- This file documents the file tree, tech stack, and directory organization.

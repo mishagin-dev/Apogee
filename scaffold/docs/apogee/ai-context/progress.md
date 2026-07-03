@@ -1,3 +1,5 @@
+<!-- apogee:scaffold-stub: replace with real project context via /apogee:init -->
+
 # Progress
 
 <!-- Track what's done, what's in progress, and what's next.
