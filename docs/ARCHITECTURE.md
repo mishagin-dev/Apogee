@@ -23,7 +23,7 @@ globally-wired hooks.
 Apogee/
 ├── .claude-plugin/marketplace.json   # local marketplace "apogee" → exposes the plugin
 ├── plugins/apogee/                   # THE PLUGIN (machinery)
-│   ├── .claude-plugin/plugin.json    # name: apogee, version, hooks: ./hooks/hooks.json
+│   ├── .claude-plugin/plugin.json    # name: apogee, version (hooks/hooks.json auto-loads by convention)
 │   ├── hooks/
 │   │   ├── hooks.json                # lifecycle wiring; all paths via ${CLAUDE_PLUGIN_ROOT}
 │   │   ├── br/    # beads_rust gates: edit/branch/capture/prime/progress/snapshot + br-sig
