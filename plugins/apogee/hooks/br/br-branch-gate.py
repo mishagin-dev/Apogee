@@ -16,8 +16,10 @@ initialized (`gitflow.branch.*` config present). No-op everywhere else — exist
 repos stay untouched.
 Exempt paths (see `gate_common.path_exempt`): meta/doc dirs (`.beads/`, `workflow/`, `conductor/`,
 `.claude/`), edits outside the beads root, git-ignored working files (e.g. `docs/apogee/**`), and any
-`CLAUDE.md` — so bootstrap commands like `/apogee:init` are never blocked on a base branch. Escape
-hatch: env `BR_GATE_OFF=1`.
+`CLAUDE.md` — so bootstrap commands like `/apogee:init` are never blocked on a base branch. Code-only:
+a non-code file (docs, configs, images — see `gate_common.is_code_file`) is never branch-scoped work,
+so service commands (`/apogee:update-docs`, `/apogee:readme`, `/apogee:doc`, image-*) and ordinary
+doc/config edits pass on any branch. Escape hatch: env `BR_GATE_OFF=1`.
 Fail-open: any error / missing `br`/`git` / detached HEAD → allow (the Stop gate is the backstop;
 never trap on infra).
 """
@@ -28,7 +30,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
-from gate_common import beads_root, deny, path_exempt  # noqa: E402
+from gate_common import beads_root, deny, is_code_file, path_exempt  # noqa: E402
 
 
 def _git(root, args):
@@ -86,6 +88,11 @@ def main() -> None:
     # Exempt meta/doc paths, git-ignored working files, CLAUDE.md, edits outside the beads root.
     fp = (data.get("tool_input") or {}).get("file_path") or ""
     if path_exempt(root, fp):
+        return
+
+    # Code-only: non-code files aren't branch-scoped work, so service commands and doc/config edits
+    # pass on any branch (incl. base branches).
+    if not is_code_file(fp):
         return
 
     # Only enforce in git-flow-initialized repos (decision: never brick non-gitflow beads repos).
