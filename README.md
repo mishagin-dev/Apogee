@@ -93,5 +93,4 @@ projects. Escape hatches: `BR_GATE_OFF=1`, `REVIEW_GATE_OFF=1`, `IDEA_GATE_OFF=1
 
 Built and statically validated (manifests, hook scripts, scaffold). **Pending:** live plugin
 validation in a real session (`/plugin marketplace add` → `install` → `/reload-plugins`), then stripping
-the legacy global `hooks` block from `~/.claude/settings.json` (do this LAST), then cleaning up the old
-`Maestro/` bootstrap folder.
+the legacy global `hooks` block from `~/.claude/settings.json` (do this LAST).
