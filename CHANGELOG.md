@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-07-04
+
+### Fixed
+
+- Removed the redundant `hooks` key from `plugin.json` — the plugin loader auto-loads `hooks/hooks.json` by convention, so declaring it in the manifest too caused a "Duplicate hooks file detected" load error on `/reload-plugins`.
+
 ## [1.8.0] - 2026-07-04
 
 ### Added
