@@ -9,8 +9,10 @@ step first (`br update <id> --claim` / `br create … --json`). Once a step is i
 Scope: GLOBAL hook, but self-gates to beads projects (a `.beads/` dir above cwd). No-op elsewhere.
 Exempt paths (see `gate_common.path_exempt`): meta/doc dirs (`.beads/`, `workflow/`, `conductor/`,
 `.claude/`), edits outside the beads root, git-ignored working files (e.g. `docs/apogee/**`), and any
-`CLAUDE.md` — so bootstrap commands like `/apogee:init` are never blocked. Escape hatch: env
-`BR_GATE_OFF=1`.
+`CLAUDE.md` — so bootstrap commands like `/apogee:init` are never blocked. Code-only: a non-code file
+(docs, configs, images — see `gate_common.is_code_file`) never needs a br step, so service commands
+(`/apogee:update-docs`, `/apogee:readme`, `/apogee:doc`, image-*) and ordinary doc/config edits pass
+freely. Escape hatch: env `BR_GATE_OFF=1`.
 Fail-open: any error / missing `br` → allow (the Stop gate is the backstop; never trap on infra).
 """
 
@@ -20,7 +22,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
-from gate_common import beads_root, deny, path_exempt  # noqa: E402
+from gate_common import beads_root, deny, is_code_file, path_exempt  # noqa: E402
 
 DENY_REASON = (
     "No active beads_rust step. Every code change must belong to a br step. "
@@ -46,6 +48,11 @@ def main() -> None:
     # Exempt meta/doc paths, git-ignored working files, CLAUDE.md, edits outside the beads root.
     fp = (data.get("tool_input") or {}).get("file_path") or ""
     if path_exempt(root, fp):
+        return
+
+    # Code-only: non-code files (docs, configs, images) aren't br-tracked work, so service commands
+    # and ordinary doc/config edits pass without a br step.
+    if not is_code_file(fp):
         return
 
     # Is there an in_progress br step?

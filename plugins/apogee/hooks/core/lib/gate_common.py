@@ -15,6 +15,17 @@ import subprocess
 # Top-level dirs whose edits never count as trackable code (meta / docs / config).
 EXEMPT_TOP = {".beads", "workflow", "conductor", ".claude"}
 
+# Extensions treated as source CODE by the br edit/branch gates: only these require a br step / a
+# git-flow work branch. Everything else (docs, markdown, configs, images, data, no extension) is a
+# non-code edit and passes freely — so service commands (update-docs, readme, doc, image-*) and
+# ordinary doc/config edits never hit the br ceremony. Mirrors the default PATS in review-docs-gate.sh
+# and br-progress-gate.sh — keep these sets in sync.
+CODE_EXTENSIONS = frozenset({
+    "py", "ts", "tsx", "js",
+    "swift", "go", "rs", "kt", "kts",
+    "c", "cpp", "h", "java",
+})
+
 
 def beads_root(start: str):
     """Walk up from `start` to the nearest ancestor containing a `.beads/` dir, or None."""
@@ -64,6 +75,20 @@ def path_exempt(root, fp):
     if os.path.basename(abs_fp) == "CLAUDE.md":
         return True
     return git_ignored(root, rel)
+
+
+def is_code_file(fp):
+    """True if `fp`'s extension marks it as source code — the only edits the br gates track.
+
+    Non-code files (docs, markdown, configs, images, data, extension-less) return False, so the br
+    edit/branch gates skip them: a README tweak, a doc update, or any service-command write to a
+    non-code file needs no br step and no git-flow work branch. Mirrors the Stop-gate PATS; see
+    CODE_EXTENSIONS.
+    """
+    if not fp:
+        return False
+    ext = os.path.splitext(fp)[1].lstrip(".").lower()
+    return ext in CODE_EXTENSIONS
 
 
 def deny(reason):
@@ -163,6 +188,34 @@ if __name__ == '__main__':
             if got != want:
                 ok = False
             print(f"  {mark}  git_ignored({rel!r}) = {got} (want {want})")
+
+    print("\nis_code_file() tests:")
+    code_cases = [
+        # code -> br gates enforce
+        ("src/app.py",     True),
+        ("lib/foo.ts",     True),
+        ("View.tsx",       True),
+        ("main.go",        True),
+        ("kernel.c",       True),
+        ("header.h",       True),
+        ("App.java",       True),
+        ("svc.rs",         True),
+        # non-code -> br gates skip (service commands / doc & config edits pass freely)
+        ("README.md",      False),
+        ("docs/spec.md",   False),
+        ("CLAUDE.md",      False),
+        ("config.yaml",    False),
+        ("data.json",      False),
+        ("logo.png",       False),
+        ("Makefile",       False),
+        ("",               False),
+    ]
+    for fp, want in code_cases:
+        got = is_code_file(fp)
+        mark = "✓" if got == want else "✗ FAIL"
+        if got != want:
+            ok = False
+        print(f"  {mark}  is_code_file({fp!r}) = {got} (want {want})")
 
     print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
     raise SystemExit(0 if ok else 1)
