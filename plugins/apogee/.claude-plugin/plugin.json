@@ -6,6 +6,5 @@
     "name": "mishagin.dev (fork of peterkrueck/Claude-Code-Development-Kit)",
     "email": "mishagin.a.a@gmail.com"
   },
-  "license": "MIT",
-  "hooks": "./hooks/hooks.json"
+  "license": "MIT"
 }
