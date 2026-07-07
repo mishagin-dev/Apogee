@@ -23,7 +23,7 @@ DENY_RESPONSE = {
         "permissionDecision": "deny",
         "permissionDecisionReason": (
             "Commits must go through the git-commit skill "
-            "(~/.claude/skills/git-commit/SKILL.md): "
+            "(plugins/apogee/skills/git-commit/SKILL.md): "
             "run scripts/gather-context.sh, compose and validate the message "
             "with scripts/check-message.sh, then commit with "
             "`git commit -F <tempfile>`."
