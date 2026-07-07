@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-07-07
+
+### Added
+
+- New `/apogee:release` command owns the Apogee release lifecycle end to end: decides the SemVer bump from Conventional Commits since the last tag, bumps `plugin.json` and `marketplace.json` in lockstep, refreshes this changelog, and gates on `scripts/validate.sh` before committing — then stops and surfaces the exact `git flow release|hotfix finish` for you to run. `/apogee:merge`'s release/hotfix path now defers to it instead of generating the changelog itself.
+- `scripts/validate.sh` gained a Stage 6 that fails CI if `plugin.json`, `marketplace.json`, and this changelog's top entry disagree — a hard backstop for the version lockstep.
+
+### Changed
+
+- The universal skills `br`, `git-commit`, `git-flow`, and `idea-mcp` are now bundled inside the plugin (`plugins/apogee/skills/`), namespaced `apogee:<name>`, instead of living only in `~/.claude/skills/` — a project that installs `apogee` now gets them automatically. ADR 0002 amended accordingly.
+
 ## [1.8.1] - 2026-07-04
 
 ### Fixed
