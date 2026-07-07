@@ -11,7 +11,7 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 | Matcher | Script (`hooks/…`) | What it does | Self-gate | Escape |
 |---|---|---|---|---|
 | `Bash` | `git/enforce-git-commit-skill.py` | Only `git commit -F <file>` / `--amend --no-edit` allowed; blocks ad-hoc `git commit -m` | any `git commit` | use the `git-commit` skill |
-| `Bash` | `git/enforce-git-flow-skill.py` | ASK on `release`/`hotfix finish`; deny commits/merges off git-flow branches | git-flow config | — |
+| `Bash` | `git/enforce-git-flow-skill.py` | ASK on `release`/`hotfix finish`; ASK on `feature`/`bugfix start` while another such branch is still open; deny commits/merges off git-flow branches | git-flow config | — |
 | `Bash` | `lang/tool-lang-guard.py` | Deny an `agy`/`gemini` command whose prompt contains Cyrillic (external AI is a tool → English) | command invokes `agy`/`gemini` | `TOOL_LANG_OFF=1` |
 | `Bash` | `idea/idea-bash-grep-guard.py` | Deny `grep`/`rg`/`ag`/`ack` used for symbol search (use idea-mcp) | `.idea/` + IDE | `IDEA_GATE_OFF=1` |
 | `Grep` | `idea/idea-symbol-guard.py` | Deny native symbol search via Grep | `.idea/` + IDE | `IDEA_GATE_OFF=1` |
@@ -29,18 +29,20 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 | `mcp__idea__.*` | `idea/idea-usage-tracker.py` | Mark idea-mcp enforcement CONFIRMED on first successful idea call | `.idea/` + IDE |
 | `ExitPlanMode` | `br/br-capture-gate.py` | Seed the approved plan into `br` (epic + steps) before edits | `.beads/` |
 | `Skill` | `review/skill-run-tracker.py` | Drop markers when `/…:review-work` / `/…:update-docs` run (tolerant of plugin namespacing) | always |
+| `Edit\|Write\|MultiEdit\|NotebookEdit` | `review/track-file-touch.sh` | Log touched files to a per-session manifest, scoping `review-docs-gate`'s diff | always |
 
 ### UserPromptSubmit
 
 | Script | What it does | Self-gate |
 |---|---|---|
 | `idea/idea-nudge.py` | Soft reminder (≤3/session) to make the first idea-mcp call | `.idea/` or `.iml` + IDE |
+| `git/unfinished-branch-nudge.py` | Soft reminder (≤3/session) that a `feature/`/`bugfix/` branch is still open, or already fully merged into develop and just needs `git flow ... finish` to delete it | git-flow config + an open branch |
 
 ### Stop
 
 | Script | What it does | Self-gate | Escape |
 |---|---|---|---|
-| `review/review-docs-gate.sh` | HARD-block session end until `/…:review-work` then `/…:update-docs` ran (marker-verified, ordered) | `.beads/` + diff ≥ threshold | `REVIEW_GATE_OFF=1` |
+| `review/review-docs-gate.sh` | HARD-block session end until `/…:review-work` then `/…:update-docs` ran (marker-verified, ordered); diff is scoped to this session's touched-file manifest, so other sessions'/pre-existing dirty state never counts | `.beads/` + diff ≥ threshold | `REVIEW_GATE_OFF=1` |
 | `br/br-progress-gate.sh` | Block if code changed but `br` state didn't (via `br-sig.py` signature) | `.beads/` | `BR_GATE_OFF=1` |
 
 ### Notification
