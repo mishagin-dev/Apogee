@@ -38,8 +38,11 @@ Read `docs/ARCHITECTURE.md` first.
 
 ## Conventions
 
-- Plugin/command/skill names are namespaced `/apogee:<name>`. Universal skills (`br`, `git-commit`,
-  `git-flow`, `idea-mcp`) intentionally stay GLOBAL in `~/.claude/skills/` (bare names).
+- Plugin/command/skill names are namespaced `/apogee:<name>`, including the four universal skills
+  (`br`, `git-commit`, `git-flow`, `idea-mcp`), bundled under `plugins/apogee/skills/` since the
+  ADR 0002 amendment (2026-07-07) — a project that installs the plugin gets them automatically, no
+  separate global setup step. The old global `~/.claude/skills/` copies are left in place until
+  manually cleaned up post-release (see the amendment for why).
 - Tracker is `br` (beads_rust), not `bd` — ADR 0001. Don't reintroduce `bd` invocations.
 - Attribution to upstream (`peterkrueck/Claude-Code-Development-Kit`) stays; the system name is Apogee.
 - **Decompose complex work.** A complex task or a batch of bugs is split into separate git-flow

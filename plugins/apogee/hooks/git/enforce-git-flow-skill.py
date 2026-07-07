@@ -196,7 +196,7 @@ def main():
             type_name, slug = _prefix_type(ref, prefixes)
             if type_name:
                 deny(
-                    f"Use the git-flow skill (~/.claude/skills/git-flow/SKILL.md) instead: "
+                    f"Use the git-flow skill (plugins/apogee/skills/git-flow/SKILL.md) instead: "
                     f"`git flow {type_name} finish {slug}`. "
                     f"Manual `git merge {ref}` on gitflow-prefixed branches is not allowed."
                 )
@@ -209,7 +209,7 @@ def main():
         type_name, slug = _prefix_type(ref, prefixes)
         if type_name:
             deny(
-                f"Use the git-flow skill (~/.claude/skills/git-flow/SKILL.md) instead: "
+                f"Use the git-flow skill (plugins/apogee/skills/git-flow/SKILL.md) instead: "
                 f"`git flow {type_name} start {slug}`. "
                 f"Manual branch creation of `{ref}` is not allowed."
             )

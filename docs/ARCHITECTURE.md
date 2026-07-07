@@ -32,8 +32,9 @@ Apogee/
 │   │   ├── review/# review-docs-gate, skill-run-tracker
 │   │   ├── core/  # security-scan, snapshot-baseline, notify, cleanup, gated, apogee-session-start + config/ + sounds/
 │   │   └── lang/  # tool-lang-guard (English-only for external-AI CLIs)
-│   ├── skills/    # update-docs, review-work, second-opinion, deploy, image-gen, image-edit, bg-remove
-│   └── commands/  # prime.md, plan-feature.md, merge.md  → /apogee:<name>
+│   ├── skills/    # update-docs, review-work, second-opinion, deploy, image-gen, image-edit,
+│   │              #   bg-remove, doc, readme, br, git-commit, git-flow, idea-mcp
+│   └── commands/  # init.md, prime.md, plan-feature.md, release.md, merge.md  → /apogee:<name>
 ├── scaffold/                         # project CONTENT (copied per project)
 │   ├── CLAUDE.md  GEMINI.md          # convention files (Claude + agy)
 │   └── docs/apogee/                  # excluded via .git/info/exclude in the host project
