@@ -76,10 +76,25 @@ _COMMIT_RE = re.compile(
     r"(?<![\w/.-])git(?![\w-])[^|;&\n]*(?<![\w/.-])commit(?![\w-])"
 )
 
-# Matches a `git merge` invocation; capture group 1 = the merged ref.
+# Matches a `git merge` invocation; named group "rest" = everything after the `merge` keyword.
 _MERGE_RE = re.compile(
-    r"(?<![\w/.-])git(?![\w-])[^|;&\n]*\bmerge\b[^|;&\n]*\s(\S+)\s*$"
+    r"(?<![\w/.-])git(?![\w-])[^|;&\n]*\bmerge\b(?P<rest>[^|;&\n]*)"
 )
+
+
+def _merged_gitflow_ref(rest, prefixes):
+    """Scan the args following `merge` for a token matching a gitflow prefix.
+
+    A real merge command carries flags before AND/OR after the ref (`--no-ff`, `-m <msg>`), so
+    the ref is not reliably the first or last whitespace token -- e.g. `git merge feature/x
+    --no-ff -m "..."` (this repo's own merge.md template) has `-m` as the last token once the
+    quoted message is stripped. Check every token instead of assuming a fixed position.
+    """
+    for tok in rest.split():
+        type_name, slug = _prefix_type(tok, prefixes)
+        if type_name:
+            return tok, type_name, slug
+    return None, None, None
 
 # Matches manual branch creation on a gitflow-prefixed name.
 _CREATE_RE = re.compile(
@@ -133,9 +148,13 @@ def main():
         new_type = m.group(1)
         open_branches = _open_work_branches(cwd, prefixes)
         if open_branches:
-            names = ", ".join(f"{t}/{s}" for t, s in open_branches)
+            names = ", ".join(
+                f"{t}/{s}" + (" (already merged into develop -- just needs `git flow "
+                              f"{t} finish {s}` to clean it up)" if merged else "")
+                for t, s, merged in open_branches
+            )
             ask(
-                f"Starting a new {new_type} branch while {names} is still open (unfinished). "
+                f"Starting a new {new_type} branch while {names} is still open. "
                 f"Finish it first via /apogee:merge (or the git-flow skill) before starting the "
                 f"next one -- unless this new work is genuinely more urgent or higher-priority "
                 f"than what's open. Confirm to proceed anyway."
@@ -175,8 +194,7 @@ def main():
         # Rule 6: DENY merge of a gitflow-prefixed ref on any branch
         m = _MERGE_RE.search(command)
         if m:
-            ref = m.group(1)
-            type_name, slug = _prefix_type(ref, prefixes)
+            ref, type_name, slug = _merged_gitflow_ref(m.group("rest"), prefixes)
             if type_name:
                 deny(
                     f"Use the git-flow skill (plugins/apogee/skills/git-flow/SKILL.md) instead: "
@@ -225,6 +243,27 @@ def _run_self_test() -> None:
         ok = False
     else:
         print("  ✓  _MERGE_RE ignores git-merge inside a quoted payload")
+
+    # Rule 6 must catch the ref even when flags follow it (--no-ff, -m "msg") -- not just when
+    # the ref happens to be the last token. This is the exact shape merge.md's own template uses.
+    test_prefixes = {"feature": "feature/", "bugfix": "bugfix/", "release": "release/",
+                      "hotfix": "hotfix/", "support": "support/"}
+    merge_cases = [
+        ("ref then --no-ff",       "git merge feature/x --no-ff",                             "feature/x"),
+        ("ref then -m message",    'git merge feature/x --no-ff -m "Merge branch feature/x"', "feature/x"),
+        ("--no-ff then ref",       "git merge --no-ff feature/x",                             "feature/x"),
+        ("non-gitflow ref",        "git merge some-other-branch --no-ff",                     None),
+    ]
+    for label, cmd, want_ref in merge_cases:
+        m = _MERGE_RE.search(strip_payloads(cmd))
+        got_ref = None
+        if m:
+            got_ref, _, _ = _merged_gitflow_ref(m.group("rest"), test_prefixes)
+        mark = "✓" if got_ref == want_ref else "✗ FAIL"
+        if got_ref != want_ref:
+            ok = False
+        print(f"  {mark}  {label}: detected ref={got_ref} (want {want_ref})")
+
     print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
     raise SystemExit(0 if ok else 1)
 

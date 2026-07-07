@@ -36,7 +36,7 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 | Script | What it does | Self-gate |
 |---|---|---|
 | `idea/idea-nudge.py` | Soft reminder (≤3/session) to make the first idea-mcp call | `.idea/` or `.iml` + IDE |
-| `git/unfinished-branch-nudge.py` | Soft reminder (≤3/session) that a `feature/`/`bugfix/` branch is still open before starting new work | git-flow config + an open branch |
+| `git/unfinished-branch-nudge.py` | Soft reminder (≤3/session) that a `feature/`/`bugfix/` branch is still open, or already fully merged into develop and just needs `git flow ... finish` to delete it | git-flow config + an open branch |
 
 ### Stop
 

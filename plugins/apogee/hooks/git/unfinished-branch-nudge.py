@@ -52,12 +52,28 @@ def main() -> None:
     except Exception:
         pass
 
-    names = ", ".join(f"{t}/{s}" for t, s in open_branches)
+    merged = [(t, s) for t, s, m in open_branches if m]
+    unfinished = [(t, s) for t, s, m in open_branches if not m]
+
+    parts = []
+    if merged:
+        names = ", ".join(f"{t}/{s}" for t, s in merged)
+        parts.append(
+            f"Branch(es) candidate for cleanup (fully merged into develop already, likely via a "
+            f"manual merge rather than `git flow ... finish`): {names}. Just run `git flow {merged[0][0]} "
+            f"finish {merged[0][1]}` (or the equivalent for each) to delete them -- no new work needed."
+        )
+    if unfinished:
+        names = ", ".join(f"{t}/{s}" for t, s in unfinished)
+        parts.append(
+            f"Unfinished branch(es) still open: {names}. Finish it first via /apogee:merge (or "
+            f"the git-flow skill)."
+        )
     directive = (
-        f"Unfinished branch(es) still open: {names}. Before starting new work, mention this to "
-        f"the user and finish it first via /apogee:merge (or the git-flow skill) -- unless the "
-        f"user's new request is genuinely more urgent or higher-priority than what's open, in "
-        f"which case proceed but say so explicitly."
+        " ".join(parts)
+        + " Mention this to the user before starting new work -- unless the user's new request "
+        "is genuinely more urgent or higher-priority than what's open, in which case proceed but "
+        "say so explicitly."
     )
 
     print(json.dumps({
