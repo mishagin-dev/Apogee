@@ -10,20 +10,24 @@ Rules enforced (in evaluation order):
 1. ASK — git flow release|hotfix finish
    These merge into the production branch; require explicit user confirmation.
 
-2. DENY — git commit outside a gitflow branch
+2. ASK — git flow feature|bugfix start while another feature/bugfix branch is still open
+   One logical change per branch, finished before the next starts (see CLAUDE.md "Decompose
+   complex work"). The user confirms whether the new work is genuinely more urgent.
+
+3. DENY — git commit outside a gitflow branch
    Commits are only allowed on feature/bugfix/release/hotfix/support branches.
 
-3. DENY — manual git merge while ON the production branch
+4. DENY — manual git merge while ON the production branch
    The production branch only receives merges via `git flow release/hotfix finish`.
 
-4. DENY — manual branch creation on a gitflow-prefixed name
+5. DENY — manual branch creation on a gitflow-prefixed name
    git checkout -b feature/..., git switch -c release/..., git branch hotfix/...
 
-5. DENY — manual git merge of a gitflow-prefixed ref
+6. DENY — manual git merge of a gitflow-prefixed ref
    git merge feature/..., git merge release/...
 
 Allows:
-  - git flow <anything except release|hotfix finish>
+  - git flow <anything except release|hotfix finish, feature|bugfix start>
   - git commit -F <file> on a gitflow branch
   - git merge <non-gitflow-ref> on a non-production branch
   - any non-git Bash call
@@ -33,62 +37,21 @@ Allows:
 import json
 import os
 import re
-import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
 from gate_common import deny, ask, strip_payloads  # noqa: E402
 
-
-# ---------------------------------------------------------------------------
-# Git helpers
-# ---------------------------------------------------------------------------
-
-def _run(args, cwd):
-    """Run a command and return stripped stdout, or '' on any failure."""
-    try:
-        r = subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=3)
-        return r.stdout.strip() if r.returncode == 0 else ""
-    except Exception:
-        return ""
-
-
-def _is_gitflow_repo(cwd):
-    return bool(_run(["git", "-C", cwd, "config", "--get-regexp", r"^gitflow\.branch\."], cwd))
-
-
-def _get_prefixes(cwd):
-    """Return {type_name: prefix_string} for this repo, falling back to AVH defaults."""
-    prefixes = {
-        "feature": "feature/",
-        "bugfix":  "bugfix/",
-        "release": "release/",
-        "hotfix":  "hotfix/",
-        "support": "support/",
-    }
-    out = _run(["git", "-C", cwd, "config", "--get-regexp", r"^gitflow\.prefix\."], cwd)
-    for line in out.splitlines():
-        parts = line.split(None, 1)
-        if len(parts) == 2:
-            prefixes[parts[0].rsplit(".", 1)[-1]] = parts[1]
-    return prefixes
-
-
-def _current_branch(cwd):
-    return _run(["git", "-C", cwd, "branch", "--show-current"], cwd)
-
-
-def _production_branch(cwd):
-    # AVH stores the production branch under gitflow.branch.master regardless of its name.
-    return _run(["git", "-C", cwd, "config", "gitflow.branch.master"], cwd) or "main"
-
-
-def _prefix_type(ref, prefixes):
-    """Return (type_name, slug) if ref starts with a gitflow prefix, else (None, None)."""
-    for type_name, prefix in prefixes.items():
-        if ref.startswith(prefix):
-            return type_name, ref[len(prefix):]
-    return None, None
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+from gitflow_common import (  # noqa: E402
+    run as _run,
+    is_gitflow_repo as _is_gitflow_repo,
+    get_prefixes as _get_prefixes,
+    current_branch as _current_branch,
+    production_branch as _production_branch,
+    prefix_type as _prefix_type,
+    open_work_branches as _open_work_branches,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -100,8 +63,13 @@ _FLOW_FINISH_RE = re.compile(
     r"(?<![\w/.-])git(?![\w-])\s+flow\s+(release|hotfix)\s+finish\b"
 )
 
-# Matches any `git flow ...` command (used to short-circuit rules 2-5).
+# Matches any `git flow ...` command (used to short-circuit rules 3-6).
 _FLOW_RE = re.compile(r"(?<![\w/.-])git(?![\w-])\s+flow\b")
+
+# Matches standalone `git flow feature|bugfix start ...`; capture group 1 = the type.
+_FLOW_START_RE = re.compile(
+    r"(?<![\w/.-])git(?![\w-])\s+flow\s+(feature|bugfix)\s+start\b"
+)
 
 # Matches a `git commit` invocation (not inside a path like skills/git-commit/...).
 _COMMIT_RE = re.compile(
@@ -159,11 +127,26 @@ def main():
         )
         sys.exit(0)
 
+    # ── Rule 2: ASK before starting a new feature/bugfix while another is still open ──
+    m = _FLOW_START_RE.search(command)
+    if m:
+        new_type = m.group(1)
+        open_branches = _open_work_branches(cwd, prefixes)
+        if open_branches:
+            names = ", ".join(f"{t}/{s}" for t, s in open_branches)
+            ask(
+                f"Starting a new {new_type} branch while {names} is still open (unfinished). "
+                f"Finish it first via /apogee:merge (or the git-flow skill) before starting the "
+                f"next one -- unless this new work is genuinely more urgent or higher-priority "
+                f"than what's open. Confirm to proceed anyway."
+            )
+        sys.exit(0)
+
     # ── All other `git flow` commands are allowed ──
     if _FLOW_RE.search(command):
         sys.exit(0)
 
-    # ── Rule 2: DENY git commit outside a gitflow branch ──
+    # ── Rule 3: DENY git commit outside a gitflow branch ──
     if _COMMIT_RE.search(command):
         branch = _current_branch(cwd)
         if branch:  # empty = detached HEAD / mid-rebase → fail-open
@@ -177,7 +160,7 @@ def main():
                 )
         sys.exit(0)
 
-    # ── Rule 3: DENY manual git merge while ON the production branch ──
+    # ── Rule 4: DENY manual git merge while ON the production branch ──
     if _MERGE_RE.search(command):
         branch = _current_branch(cwd)
         production = _production_branch(cwd)
@@ -189,7 +172,7 @@ def main():
             )
             sys.exit(0)
 
-        # Rule 5: DENY merge of a gitflow-prefixed ref on any branch
+        # Rule 6: DENY merge of a gitflow-prefixed ref on any branch
         m = _MERGE_RE.search(command)
         if m:
             ref = m.group(1)
@@ -202,7 +185,7 @@ def main():
                 )
         sys.exit(0)
 
-    # ── Rule 4: DENY manual branch creation on gitflow-prefixed names ──
+    # ── Rule 5: DENY manual branch creation on gitflow-prefixed names ──
     m = _CREATE_RE.search(command)
     if m:
         ref = next(g for g in m.groups() if g is not None)
