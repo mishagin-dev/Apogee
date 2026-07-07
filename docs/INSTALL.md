@@ -91,11 +91,18 @@ What it does:
 
 The plugin is the single source. To ship a change:
 
-1. Edit `plugins/apogee/…` and bump `plugins/apogee/.claude-plugin/plugin.json` `version`.
-2. In any session: `/plugin marketplace update apogee` then `/reload-plugins`.
+1. Edit `plugins/apogee/…`.
+2. Cut a release with the `/apogee:release` command (Apogee's own dev workflow): it decides the
+   SemVer bump, keeps `plugins/apogee/.claude-plugin/plugin.json` `version` and
+   `.claude-plugin/marketplace.json` `plugins[0].version` in lockstep, refreshes the CHANGELOG, and
+   gates on `scripts/validate.sh` — then surfaces the `git flow release finish` for you to run.
+3. After finishing and pushing: in any session, `/plugin marketplace update apogee` then
+   `/reload-plugins`.
 
 Local marketplaces **do not auto-update**, so upgrades are always intentional. Every project with
-`apogee@apogee` enabled then runs the new version — no per-project copying.
+`apogee@apogee` enabled then runs the new version — no per-project copying. `scripts/validate.sh`
+also asserts the two manifests and the CHANGELOG agree, so a version bump that misses one of them
+fails CI.
 
 ## Sync new scaffold templates into a project
 
