@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-07-07
+
+### Added
+
+- The `git-flow` skill gained a "Publishing the release" procedure: after `finish` + push, detect the remote host (`github.com` → `gh`, `gitlab` → `glab`) and defer to CI if it already auto-publishes releases on tag push; otherwise create the release directly, with notes drafted from the CHANGELOG entry and rewritten into a short polished announcement. `/apogee:release`'s Step 8 now points at it.
+- `/apogee:plan-feature` and `/apogee:prime` now size their context load to whether a task was given: a specified task skips `progress.md` (no "what's next" framing needed), no task loads it as before. `/plan-feature <task>` now front-loads the same grounding a separate `/prime` call used to, so the two no longer need to be run back-to-back.
+
 ## [1.10.1] - 2026-07-07
 
 ### Fixed
