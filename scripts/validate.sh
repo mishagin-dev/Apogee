@@ -10,6 +10,8 @@
 #                       resolve to an existing file under plugins/apogee/
 #   5. Self-tests     — idea_symbols.py + gate_common.py + hook --test modes
 #                       (idea-usage-tracker, idea-agent-guard, git hooks)
+#   6. Version lockstep — plugin.json version == marketplace.json plugins[0].version
+#                       == CHANGELOG.md's top-most ## [x.y.z] header
 #
 # Exits 0 if all stages pass, 1 on any failure.
 #
@@ -18,6 +20,9 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOKS_JSON="${REPO_ROOT}/plugins/apogee/hooks/hooks.json"
 PLUGIN_ROOT="${REPO_ROOT}/plugins/apogee"
+PLUGIN_JSON="${REPO_ROOT}/plugins/apogee/.claude-plugin/plugin.json"
+MARKETPLACE_JSON="${REPO_ROOT}/.claude-plugin/marketplace.json"
+CHANGELOG="${REPO_ROOT}/CHANGELOG.md"
 
 fail=0
 
@@ -138,6 +143,34 @@ for f in "${HOOK_SELFTESTS[@]}"; do
     fi
 done
 echo "Stage 5 done."
+
+# ---------------------------------------------------------------------------
+# Stage 6: version lockstep (plugin.json <-> marketplace.json <-> CHANGELOG.md)
+# ---------------------------------------------------------------------------
+echo "=== Stage 6: version lockstep ==="
+plugin_version="$(jq -r '.version' "${PLUGIN_JSON}" 2>/dev/null)"
+marketplace_version="$(jq -r '.plugins[0].version' "${MARKETPLACE_JSON}" 2>/dev/null)"
+changelog_version="$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' "${CHANGELOG}" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+
+if [ -z "${plugin_version}" ] || [ "${plugin_version}" = "null" ]; then
+    echo "FAIL version: could not read .version from ${PLUGIN_JSON}"
+    fail=1
+elif [ -z "${marketplace_version}" ] || [ "${marketplace_version}" = "null" ]; then
+    echo "FAIL version: could not read .plugins[0].version from ${MARKETPLACE_JSON}"
+    fail=1
+elif [ -z "${changelog_version}" ]; then
+    echo "FAIL version: could not find a '## [x.y.z]' header in ${CHANGELOG}"
+    fail=1
+elif [ "${plugin_version}" != "${marketplace_version}" ]; then
+    echo "FAIL version: plugin.json (${plugin_version}) != marketplace.json (${marketplace_version})"
+    fail=1
+elif [ "${plugin_version}" != "${changelog_version}" ]; then
+    echo "FAIL version: plugin.json (${plugin_version}) != CHANGELOG.md top entry (${changelog_version})"
+    fail=1
+else
+    echo "ok  all three at ${plugin_version}"
+fi
+echo "Stage 6 done."
 
 # ---------------------------------------------------------------------------
 # Summary

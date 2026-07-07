@@ -48,7 +48,7 @@ hooks are tested cleanly (no double-fire / `.git/index.lock` races).
 |---|---|
 | Hooks, commands, workflow skills | `apogee` plugin (this repo) |
 | Project docs / CLAUDE.md / GEMINI.md | scaffold → copied into the project |
-| Universal skills (`br`, `git-commit`, `git-flow`, `idea-mcp`) | `~/.claude/skills/` (global, bare names — avoids `/apogee:` namespacing) |
+| Universal skills (`br`, `git-commit`, `git-flow`, `idea-mcp`) | `apogee` plugin (`plugins/apogee/skills/`, namespaced `apogee:<name>`) — *amended 2026-07-07, see below* |
 | Language, mode, effort, env | `~/.claude/settings.json` (global) |
 | Baseline `permissions`, `plansDirectory`, `autoMemoryDirectory` | per-project `TARGET/.claude/settings.local.json` (git-excluded) — *amended, see below* |
 
@@ -58,8 +58,8 @@ hooks are tested cleanly (no double-fire / `.git/index.lock` races).
 - Updating the toolkit = bump `plugins/apogee/.claude-plugin/plugin.json` `version`, then
   `/plugin marketplace update apogee` (local marketplaces do not auto-update — upgrades are always
   intentional).
-- Universal skills stay global on purpose: the git-enforcement hooks reference
-  `~/.claude/skills/git-commit|git-flow`, and bare names preserve muscle memory.
+- Universal skills are now bundled in the plugin rather than staying global — this line is
+  superseded by the Amendment below (2026-07-07).
 
 ## Amendment (2026-06-17) — baseline permissions delivered per-project
 
@@ -95,3 +95,23 @@ precedence (scope 3 vs 5), and this file is already the project's personal permi
 allow only bites in `acceptEdits`/`default`/`dontAsk` sessions — in `plan` mode read-only MCP tools
 auto-run regardless, and `bypassPermissions` skips allow entirely. Other MCP servers (user-global,
 variable tokens) stay out of the baseline.
+
+## Amendment (2026-07-07) — universal skills bundled into the plugin
+
+The original split (§3, boundary table) kept `br`, `git-commit`, `git-flow`, and `idea-mcp` global
+on purpose, to avoid `/apogee:` namespacing and preserve bare-name muscle memory. In practice this
+meant a project that installed the `apogee` plugin still needed these 4 skills set up separately in
+`~/.claude/skills/` — the plugin was not actually self-contained.
+
+These 4 skills now live in `plugins/apogee/skills/{br,git-commit,git-flow,idea-mcp}/`, namespaced
+`apogee:br`, `apogee:git-commit`, `apogee:git-flow`, `apogee:idea-mcp` like every other plugin
+skill. A project that installs `apogee` now gets all of them automatically — no separate global
+setup step, no drift between what the plugin assumes and what a fresh machine actually has.
+
+**Transition:** the global originals at `~/.claude/skills/{br,git-commit,git-flow,idea-mcp}/` are
+left in place for now — they are not deleted as part of this change. They will be removed by hand
+once this release has shipped and other projects on the same machine have upgraded to the plugin
+version that bundles these skills; deleting them immediately would strand any other project still
+relying on the global copies. Until that cleanup, both copies coexist harmlessly (hook
+*enforcement* never keyed on skill name/location — it regex-matches the raw `git commit`/`git
+flow` Bash command — so this duplication does not double-fire or otherwise break anything).
