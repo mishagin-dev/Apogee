@@ -80,9 +80,11 @@ tags (release/hotfix), back-merges, and deletes the branch**.
 - **No remote here** — never pass `-p`/`--push`, `publish`, or `track`.
 - **Commits only inside gitflow branches.** Never commit directly on `main` or
   `develop`; always start a feature/bugfix/hotfix/release first.
-- **`release finish` / `hotfix finish` — user request only.** These touch the
-  production branch. Never run them autonomously; wait for the user to ask.
-  The enforcement hook will surface a confirmation prompt in any case.
+- **`release finish` / `hotfix finish` — run once the user has asked for it.** These touch the
+  production branch, so never start one unprompted. Once a release/hotfix/finish has actually been
+  requested, run the command directly rather than stopping for a second, separate confirmation —
+  the enforcement hook already ASKs before it executes (it touches the production branch), and
+  that ASK is the real safety gate, not a redundant wait layered on top of it in your own prose.
 
 ## beads link (CCDK / beads_rust projects)
 
@@ -109,15 +111,17 @@ The link is the convention the branch gate (below) enforces:
 ## Enforcement hook (active)
 
 A PreToolUse hook (`plugins/apogee/hooks/git/enforce-git-flow-skill.py`) is wired via
-`hooks.json`. In gitflow-enabled repos it enforces five rules:
+`hooks.json`. In gitflow-enabled repos it enforces six rules:
 
 1. **ASK** — `git flow release finish` / `git flow hotfix finish`: surfaces a
    confirmation prompt (touches production branch).
-2. **DENY** — `git commit` on a non-gitflow branch (`main`, `develop`, etc.).
-3. **DENY** — `git merge` while the current branch is the production branch.
-4. **DENY** — manual branch creation with a gitflow-prefixed name
+2. **ASK** — `git flow feature|bugfix start` while another `feature/`/`bugfix/` branch is
+   already open: one logical change per branch, finished before the next starts.
+3. **DENY** — `git commit` on a non-gitflow branch (`main`, `develop`, etc.).
+4. **DENY** — `git merge` while the current branch is the production branch.
+5. **DENY** — manual branch creation with a gitflow-prefixed name
    (`git checkout -b feature/...`, `git switch -c release/...`, etc.).
-5. **DENY** — `git merge` of a gitflow-prefixed ref from any branch.
+6. **DENY** — `git merge` of a gitflow-prefixed ref from any branch.
 
 In repos without gitflow config the hook is completely inert.
 
@@ -127,6 +131,60 @@ it **denies code edits** on a base branch (`main`/`develop`), and on a
 feature/bugfix branch whose `external_ref` link (see "beads link" above) does not
 match the active step's epic. It is active only in repos that are **both** beads
 and gitflow initialized; inert elsewhere. Escape hatch: `BR_GATE_OFF=1`.
+
+## Publishing the release (gh/glab)
+
+`finish` creates the tag locally; it does not publish a Release on the hosting platform. After
+the tag is pushed, follow these steps to get an actual GitHub/GitLab Release out of it — CI gets
+first refusal, `gh`/`glab` are the fallback.
+
+1. **Detect host + tool:**
+   ```bash
+   git config --get remote.origin.url
+   ```
+   `github.com` in the URL → tool is `gh`. `gitlab` in the URL (covers `gitlab.com` and
+   self-hosted instances) → tool is `glab`. Neither → STOP: unsupported host, note that the
+   release needs to be created by hand if desired.
+
+2. **Detect existing CI auto-publish** — if the repo already publishes releases on tag push,
+   don't duplicate it:
+   - GitHub: grep `.github/workflows/*.yml` for a workflow triggered on tag push (`on: push:
+     tags:` or `on: release:`) that also creates a release (mentions `softprops/action-gh-release`,
+     `gh release create`, `actions/create-release`, or a `.goreleaser.yml` at the repo root).
+   - GitLab: grep `.gitlab-ci.yml` for a `release:` job (GitLab CI's native release keyword).
+   - Found → STOP here: "CI publishes releases automatically once the tag is pushed."
+
+3. **Verify the tag is already on the remote** (never push from this step):
+   ```bash
+   git ls-remote --tags origin <tag>
+   ```
+   Empty → STOP: "tag not pushed yet — this is pending until `git push ... --tags` happens."
+
+4. **Check the CLI is installed:** `command -v gh` / `command -v glab`. Missing → STOP: "install
+   gh/glab to automate this, or create the release by hand."
+
+5. **Idempotency check** — don't recreate or error on a release that already exists:
+   ```bash
+   gh release view <tag>
+   glab release view <tag>
+   ```
+   Exit 0 → a release for this tag already exists. STOP: note it, nothing to do.
+
+6. **Draft the notes, then create the release.** If `CHANGELOG.md` has a `## [<tag>]` section,
+   extract its body and rewrite it into a short, polished release announcement — a lead sentence
+   summarizing the release's focus, then the highlights organized sensibly. Don't pipe the raw
+   changelog bullets through verbatim; this is a short writing task, not a file copy. Write the
+   result to a temp file, then:
+   ```bash
+   gh release create <tag> --notes-file <file> --verify-tag
+   glab release create <tag> -F <file>
+   ```
+   No `## [<tag>]` section found → `gh release create <tag> --generate-notes --verify-tag`
+   (GitHub generates notes from the commit history via its API); `glab` has no equivalent flag,
+   so draft notes the same way from `git log <prev-tag>..<tag> --oneline` instead.
+
+   `--verify-tag` refuses to invent a new tag from `HEAD` if the expected tag is somehow missing
+   on the remote — this step only ever references a tag `git flow ... finish` already created.
 
 ## Troubleshooting
 

@@ -253,3 +253,7 @@ Once the user confirms `finish` succeeded (merge to `main` + annotated tag + bac
    /reload-plugins
    ```
    Local marketplaces don't auto-update — this step is what actually ships the bump to users.
+3. **Publish the release on GitHub.** Follow the `apogee:git-flow` skill's "Publishing the
+   release (gh/glab)" procedure: it defers to CI if one already auto-publishes on tag push,
+   otherwise creates the Release itself via `gh` (Apogee's origin is `github.com`) with notes
+   drafted from the CHANGELOG entry just written.
