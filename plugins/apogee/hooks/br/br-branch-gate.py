@@ -14,6 +14,11 @@ Companion to br-edit-gate (G2). Where G2 enforces "an in_progress br step exists
 Scope: GLOBAL hook; self-gates to beads projects (a `.beads/` dir above cwd) that are ALSO git-flow
 initialized (`gitflow.branch.*` config present). No-op everywhere else — existing non-gitflow beads
 repos stay untouched.
+Submodule-aware: the branch/git-flow state checked is whichever repo actually CONTAINS the edited
+file (via `gate_common.git_root_for`), not the beads workspace root. A file inside a git submodule
+has its own independent branch/HEAD, nested under (but separate from) the outer/super-repo that
+holds `.beads/` — checking the super-repo's branch there would be enforcing discipline on the wrong
+repo, and force pointless "umbrella" branches in the super-repo just to unblock submodule edits.
 Exempt paths (see `gate_common.path_exempt`): meta/doc dirs (`.beads/`, `workflow/`, `conductor/`,
 `.claude/`), edits outside the beads root, git-ignored working files (e.g. `docs/apogee/**`), and any
 `CLAUDE.md` — so bootstrap commands like `/apogee:init` are never blocked on a base branch. Code-only:
@@ -30,7 +35,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "lib"))
-from gate_common import beads_root, deny, is_code_file, path_exempt  # noqa: E402
+from gate_common import beads_root, deny, git_root_for, is_code_file, path_exempt  # noqa: E402
 
 
 def _git(root, args):
@@ -95,26 +100,40 @@ def main() -> None:
     if not is_code_file(fp):
         return
 
+    # The repo whose branch/git-flow state actually matters is whichever one CONTAINS `fp` -- a
+    # submodule nested under the beads root has its own independent branch/HEAD, distinct from the
+    # outer/super-repo `root` points at. Checking `root` here for a submodule-contained edit would
+    # enforce discipline on the wrong repo (see module docstring).
+    git_root = git_root_for(fp, root)
+
     # Only enforce in git-flow-initialized repos (decision: never brick non-gitflow beads repos).
-    if not _git(root, ["config", "--get-regexp", r"^gitflow\.branch\."]):
+    if not _git(git_root, ["config", "--get-regexp", r"^gitflow\.branch\."]):
         return
 
-    branch = _git(root, ["branch", "--show-current"])
+    branch = _git(git_root, ["branch", "--show-current"])
     if not branch:
         return  # detached HEAD / mid-rebase -> fail-open
 
-    production = _git(root, ["config", "gitflow.branch.master"]) or "main"
-    develop = _git(root, ["config", "gitflow.branch.develop"]) or "develop"
+    production = _git(git_root, ["config", "gitflow.branch.master"]) or "main"
+    develop = _git(git_root, ["config", "gitflow.branch.develop"]) or "develop"
     base = {production, develop, "main", "master", "develop"}
 
-    feat_prefix = _git(root, ["config", "gitflow.prefix.feature"]) or "feature/"
-    bugfix_prefix = _git(root, ["config", "gitflow.prefix.bugfix"]) or "bugfix/"
+    feat_prefix = _git(git_root, ["config", "gitflow.prefix.feature"]) or "feature/"
+    bugfix_prefix = _git(git_root, ["config", "gitflow.prefix.bugfix"]) or "bugfix/"
+
+    # realpath both sides before comparing/relpath-ing: git_root comes from `git rev-parse
+    # --show-toplevel` (symlink-resolved), root from os.path.abspath (not resolved) -- on macOS
+    # (/tmp -> /private/tmp, /var -> /private/var) that mismatch alone would make them compare
+    # unequal and produce a nonsense "../../../.." relative path.
+    real_git_root, real_root = os.path.realpath(git_root), os.path.realpath(root)
+    where = ("" if real_git_root == real_root
+             else f" (submodule at {os.path.relpath(real_git_root, real_root)})")
 
     # ── Rule A: no code edits on a base branch ──
     if branch in base:
         deny(
-            f"On base branch '{branch}'. Code changes must happen on a git-flow work branch, "
-            f"never on {branch}. Start one for the active track via the git-flow skill "
+            f"On base branch '{branch}'{where}. Code changes must happen on a git-flow work "
+            f"branch, never on {branch}. Start one for the active track via the git-flow skill "
             f"(`git flow feature start <epic-slug>`, or `bugfix` for a bug track), then link it: "
             f"`br update <epicId> --external-ref {feat_prefix}<epic-slug> "
             f"--actor \"${{BR_ACTOR:-assistant}}\"`. (Ad-hoc escape: set BR_GATE_OFF=1.)"
@@ -155,8 +174,8 @@ def main() -> None:
 
     target = epic_hint or "<epicId>"
     deny(
-        f"Branch '{branch}' is not linked to the active step's epic. Every git-flow work branch "
-        f"must map 1:1 to a br epic via external_ref. Link it: "
+        f"Branch '{branch}'{where} is not linked to the active step's epic. Every git-flow work "
+        f"branch must map 1:1 to a br epic via external_ref. Link it: "
         f"`br update {target} --external-ref '{branch}' --actor \"${{BR_ACTOR:-assistant}}\"`, "
         f"or checkout the branch already linked to this epic. (Ad-hoc escape: set BR_GATE_OFF=1.)"
     )
