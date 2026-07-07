@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.1] - 2026-07-07
+
+### Fixed
+
+- `/apogee:release`'s own prose told the agent to stop and wait for the user to invoke `release finish`/`hotfix finish` themselves, duplicating the `enforce-git-flow-skill` hook's ASK confirmation with a second, redundant wait. The agent now runs `finish` directly once a release has been requested and `validate.sh` is green — the hook's ASK (it touches the production branch) is the actual safety gate. Only `git push` remains a distinct, explicit, manual step.
+- `br-branch-gate.py` checked the outer workspace repo's branch even when the edited file lived inside a git submodule, which has its own independent branch/HEAD. This wrongly denied edits inside a submodule that was already properly on its own work branch (whenever the outer repo sat on `develop`/`main`), forcing pointless "umbrella" branches in the outer repo just to unblock the edit. The gate now resolves and checks whichever repo actually contains the edited file (`gate_common.git_root_for`).
+
 ## [1.10.0] - 2026-07-07
 
 ### Added
