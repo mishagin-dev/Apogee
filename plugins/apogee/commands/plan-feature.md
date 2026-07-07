@@ -4,7 +4,24 @@ Plan a feature with parallel research and a Gemini second opinion before exiting
 
 **Usage:** `/plan-feature [feature description]`
 
-If no description is given, plan the next feature based on prior session context (typically loaded by `/prime`).
+---
+
+## Load context first
+
+Always load core context before Phase 1 research starts — the same files `/prime` loads, sized
+the same way `/prime` sizes them (a given task doesn't need "what's next" framing; planning with
+nothing given does). Skipping this doesn't save work: Phase 1's Explore agents would just rescan
+the codebase from scratch, unstructured, instead of starting from these three already-written docs.
+
+1. `docs/apogee/ai-context/spec.md`
+2. `docs/apogee/ai-context/project-structure.md`
+3. `docs/apogee/ai-context/progress.md` — only if `$ARGUMENTS` is empty (no feature was specified).
+
+If a doc is missing or still a scaffold stub (`apogee:scaffold-stub` sentinel), it isn't real
+context — note it, suggest `/apogee:init`, and continue with whatever's real.
+
+If `$ARGUMENTS` is empty after loading: propose the next feature from `progress.md`'s priorities
+or known issues, and confirm it with the user before treating it as the feature to plan.
 
 ---
 
