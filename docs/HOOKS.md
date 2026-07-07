@@ -29,6 +29,7 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 | `mcp__idea__.*` | `idea/idea-usage-tracker.py` | Mark idea-mcp enforcement CONFIRMED on first successful idea call | `.idea/` + IDE |
 | `ExitPlanMode` | `br/br-capture-gate.py` | Seed the approved plan into `br` (epic + steps) before edits | `.beads/` |
 | `Skill` | `review/skill-run-tracker.py` | Drop markers when `/…:review-work` / `/…:update-docs` run (tolerant of plugin namespacing) | always |
+| `Edit\|Write\|MultiEdit\|NotebookEdit` | `review/track-file-touch.sh` | Log touched files to a per-session manifest, scoping `review-docs-gate`'s diff | always |
 
 ### UserPromptSubmit
 
@@ -40,7 +41,7 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 
 | Script | What it does | Self-gate | Escape |
 |---|---|---|---|
-| `review/review-docs-gate.sh` | HARD-block session end until `/…:review-work` then `/…:update-docs` ran (marker-verified, ordered) | `.beads/` + diff ≥ threshold | `REVIEW_GATE_OFF=1` |
+| `review/review-docs-gate.sh` | HARD-block session end until `/…:review-work` then `/…:update-docs` ran (marker-verified, ordered); diff is scoped to this session's touched-file manifest, so other sessions'/pre-existing dirty state never counts | `.beads/` + diff ≥ threshold | `REVIEW_GATE_OFF=1` |
 | `br/br-progress-gate.sh` | Block if code changed but `br` state didn't (via `br-sig.py` signature) | `.beads/` | `BR_GATE_OFF=1` |
 
 ### Notification

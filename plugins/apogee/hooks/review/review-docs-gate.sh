@@ -49,10 +49,31 @@ if [[ -f "$CONFIG" ]]; then
 fi
 [[ ${#PATS[@]} -eq 0 ]] && PATS=("*.py" "*.ts" "*.tsx" "*.js" "*.swift" "*.go" "*.rs" "*.kt" "*.kts" "*.c" "*.cpp" "*.h" "*.java")
 
+# Session-scoped: only diff files THIS session touched (manifest written by
+# track-file-touch.sh on PostToolUse), then filter to PATS. This is what stops
+# another session's -- or pre-existing -- dirty state in the same working tree
+# from padding this session's line count on top of the baseline subtraction
+# below. No manifest yet (this session never called Edit/Write/MultiEdit/
+# NotebookEdit) -> nothing of this session's to enforce.
+MANIFEST="/tmp/claude-touched-${SID}.files"
+[[ ! -s "$MANIFEST" ]] && exit 0
+TOUCHED=()
+while IFS= read -r f; do [[ -n "$f" ]] && TOUCHED+=("$f"); done < <(sort -u "$MANIFEST" 2>/dev/null | sed "s|^${root}/||")
+[[ ${#TOUCHED[@]} -eq 0 ]] && exit 0
+
 # git diff --numstat lists only TRACKED files matching PATS. Git-ignored outputs (reports, scratch,
 # build artifacts) and non-code files therefore never count here: a deliverable written to a
 # git-ignored folder is ceremony-free and triggers no review/docs requirement. See gate_common.path_exempt.
-CUR_LINES=$(git diff --numstat HEAD -- "${PATS[@]}" 2>/dev/null | awk -F'\t' '$1!="-"{s+=$1+$2} END{print s+0}')
+CUR_LINES=$(git diff --numstat HEAD -- "${TOUCHED[@]}" 2>/dev/null | awk -F'\t' -v pats="$(IFS='|'; echo "${PATS[*]}")" '
+    BEGIN {
+        n = split(pats, p, "|")
+        for (i = 1; i <= n; i++) { gsub(/\./, "\\.", p[i]); gsub(/\*/, ".*", p[i]); rx[i] = "^" p[i] "$" }
+    }
+    $1 != "-" {
+        for (i = 1; i <= n; i++) if ($3 ~ rx[i]) { s += $1 + $2; next }
+    }
+    END { print s + 0 }
+')
 BASE_NUM="/tmp/claude-baseline-${SID}.numstat"
 BASE_LINES=0
 [[ -f "$BASE_NUM" ]] && BASE_LINES=$(awk -F'\t' '$1!="-"{s+=$1+$2} END{print s+0}' "$BASE_NUM" 2>/dev/null || echo 0)
