@@ -94,10 +94,10 @@ The plugin is the single source. To ship a change:
 1. Edit `plugins/apogee/…`.
 2. Cut a release with the `/apogee:release` command (Apogee's own dev workflow): it decides the
    SemVer bump, keeps `plugins/apogee/.claude-plugin/plugin.json` `version` and
-   `.claude-plugin/marketplace.json` `plugins[0].version` in lockstep, refreshes the CHANGELOG, and
-   gates on `scripts/validate.sh` — then surfaces the `git flow release finish` for you to run.
-3. After finishing and pushing: in any session, `/plugin marketplace update apogee` then
-   `/reload-plugins`.
+   `.claude-plugin/marketplace.json` `plugins[0].version` in lockstep, refreshes the CHANGELOG,
+   gates on `scripts/validate.sh`, then runs `git flow release finish` itself.
+3. After finishing: push (`git push origin main develop --tags` — stays a manual step), then in
+   any session, `/plugin marketplace update apogee` then `/reload-plugins`.
 
 Local marketplaces **do not auto-update**, so upgrades are always intentional. Every project with
 `apogee@apogee` enabled then runs the new version — no per-project copying. `scripts/validate.sh`

@@ -51,7 +51,10 @@ Read `docs/ARCHITECTURE.md` first.
   merge conflicts), or **in parallel** (separate branches/worktrees) when their file sets are
   disjoint. State the split and the chosen order before starting. When a branch's work is complete,
   finish it through `/apogee:merge` (docs/clean-tree guardrails, then delegates to the git-flow
-  finish) — not hand-rolled merges; `release`/`hotfix` finish only on explicit request.
+  finish) — not hand-rolled merges. `release`/`hotfix` finish runs via `/apogee:release` once the
+  user has asked for a release (the `enforce-git-flow-skill` hook ASKs for confirmation since it
+  touches the production branch — that's the safety gate, not a separate wait). Only `git push`
+  stays a distinct, explicit, manual step.
 
 ## Decisions
 
