@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-07-08
+
+### Added
+
+- `/apogee:release` is no longer Apogee-only: a new Version-source detection step (Pre-flight 5)
+  finds where (if anywhere) any project declares its version — the Apogee-plugin lockstep pair,
+  a standalone `package.json`/`composer.json`/`pyproject.toml`/`Cargo.toml`/`VERSION` file, or
+  "CHANGELOG + git tag only" when none is found — and bumps accordingly instead of refusing to
+  run outside this repo. Also infers the tag-prefix convention and nudges about a possible
+  README version badge. The CI gate (Step 5) now falls back from `scripts/validate.sh` to a
+  project's own `CLAUDE.md` Testing section, or asks the user, instead of hardcoding
+  `validate.sh`. `/apogee:merge`'s release/hotfix redirect wording was generalized to match.
+
+### Fixed
+
+- `scaffold/CLAUDE.md`'s Communication Style section read as too clinical — it forbade basic
+  courtesy like acknowledging thanks. Task-focused responses stay free of padding and unearned
+  praise, but ordinary social exchanges now get a brief, genuine reply.
+
+### Changed
+
+- `scaffold/CLAUDE.md` gained a Communication Style section (dry, direct tone; fact → analysis →
+  solution response shape) and extended Coding Standards with KISS/YAGNI/anti-overengineering
+  rules and an explicit quality-priority order.
+
 ## [1.12.0] - 2026-07-07
 
 ### Added
