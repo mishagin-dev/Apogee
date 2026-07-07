@@ -144,7 +144,7 @@ Do NOT `git checkout main` or `git merge` — the `enforce-git-flow-skill` gate 
 
 2. Branch on the current branch's gitflow prefix:
    - `feature/<slug>` or `bugfix/<slug>` → **invoke the `apogee:git-flow` skill** to finish it (`git flow feature finish <slug>` / `bugfix finish`). (`git-flow` is bundled with this plugin as `apogee:git-flow`; if it isn't available, run that `git flow … finish` command directly.) The skill handles the merge to develop and branch deletion — so **Step 5 cleanup is a no-op in this path**.
-   - `release/<slug>` or `hotfix/<slug>` → the release/hotfix lifecycle is owned by the **`/apogee:release`** command (version lockstep, CHANGELOG, `validate.sh` gate, finish handoff). STOP and tell the user to run it.
+   - `release/<slug>` or `hotfix/<slug>` → the release/hotfix lifecycle is owned by the **`/apogee:release`** command (version bump if a manifest is found, CHANGELOG, the project's own test gate, finish handoff). STOP and tell the user to run it.
    - Any other prefix (not a gitflow-managed branch) → STOP and ask the user how to proceed; do not guess.
 
 3. **Worktree + Git Flow is unsupported by AVH git-flow** (can't `git flow … finish` from a linked worktree). If Pre-flight detected worktree mode here, STOP and tell the user to finish from the main checkout (`<main-repo-path>`), then return to remove the worktree.
