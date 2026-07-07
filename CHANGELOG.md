@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-07-07
+
+### Added
+
+- `enforce-git-flow-skill.py` now ASKs before `git flow feature|bugfix start` when another such branch is already open (unfinished), instead of silently allowing work to pile up on parallel branches. A companion `unfinished-branch-nudge.py` (`UserPromptSubmit`) reminds the agent to surface any still-open branch to the user before starting new work — and separately flags branches whose content is already fully merged into `develop` (via some other means) as cleanup candidates, distinct from genuinely unfinished work.
+
+### Fixed
+
+- `review-docs-gate.sh`'s end-of-session diff is now scoped to a per-session manifest of touched files (written by a new `track-file-touch.sh`), so another session's — or pre-existing — dirty state in the same working tree can no longer inflate the line count and force `/review-work` + `/update-docs` for changes this session never made.
+- The `git merge`-ref detection in `enforce-git-flow-skill.py` assumed the branch name was the last token of the command, so `git merge feature/x --no-ff -m "..."` (the shape this repo's own `merge.md` template uses) slipped past the deny rule undetected, letting a manual merge into `develop` leave the branch un-deleted. The check now scans every token after `merge` for a gitflow-prefixed ref, regardless of position.
+
 ## [1.9.0] - 2026-07-07
 
 ### Added
