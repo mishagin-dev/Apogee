@@ -1,9 +1,10 @@
 # Release Command
 
 Own the Apogee release lifecycle end to end: decide the version, bump it in lockstep across
-both manifests, refresh the CHANGELOG, gate on `validate.sh`, commit the release prep, then
-stop and surface the exact `git flow release|hotfix finish` for the user to run. Finishing and
-pushing stay explicit user actions — this command never runs them itself.
+both manifests, refresh the CHANGELOG, gate on `validate.sh`, commit the release prep, then run
+`git flow release|hotfix finish` itself (the `enforce-git-flow-skill` hook asks for confirmation
+since it touches the production branch). Pushing stays a separate, explicit user action — this
+command never runs it.
 
 **Context from user:** $ARGUMENTS
 
@@ -21,9 +22,11 @@ Same rule as `/merge`: if you're tempted to silently paper over a problem (a fai
 `validate.sh`, an ambiguous version bump, a dirty tree), STOP and surface it. A release is
 semi-destructive once tagged — an easy mistake to avoid, an annoying one to unwind.
 
-`release finish`/`hotfix finish` and `git push` run **only on explicit user request** (the
-`enforce-git-flow-skill` hook already ASKs on `release finish`; push is manual after review
-per this repo's `CLAUDE.md`). This command prepares everything up to that point and then stops.
+Only `git push` runs **on a separate, explicit user request** (manual after review per this
+repo's `CLAUDE.md`). `release finish`/`hotfix finish` runs directly once the user has asked for
+this release — the `enforce-git-flow-skill` hook already ASKs for confirmation since it touches
+the production branch, which is the actual safety gate; this command doesn't add a second wait
+on top of it.
 
 ---
 
@@ -209,23 +212,29 @@ commit rather than erroring on an empty diff.
 
 ---
 
-## Step 7: Stop before finish — surface
+## Step 7: Finish
 
-Do **not** run `release finish`/`hotfix finish` yourself. Report to the user:
+Report to the user first:
 
 - Version decided, and why (Step 1's reasoning).
 - Both manifests + CHANGELOG confirmed at `<version>`.
 - `validate.sh` passed.
-- The exact command to finish, via the **`apogee:git-flow` skill**:
-  ```
-  git flow release finish -m "<version>" <version>
-  git flow hotfix finish -m "<version>" <version>
-  ```
-- **Tag-editor gotcha:** `-m "<message>"` is required. `GIT_EDITOR=true` (or any editor that
-  writes nothing) produces an empty tag message and a fatal error — always pass `-m` with real
-  content.
 
-Wait for the user to invoke it (themselves, or by asking you to run the `apogee:git-flow` skill).
+Then run the finish directly, via the **`apogee:git-flow` skill** (or `git flow ... finish`
+directly if the skill isn't available):
+```
+git flow release finish -m "<version>" <version>
+git flow hotfix finish -m "<version>" <version>
+```
+
+**Tag-editor gotcha:** `-m "<message>"` is required. `GIT_EDITOR=true` (or any editor that
+writes nothing) produces an empty tag message and a fatal error — always pass `-m` with real
+content.
+
+The `enforce-git-flow-skill` hook ASKs for confirmation before this runs, since it touches the
+production branch — that's the actual gate, not a separate "wait for the user" step in this
+command. Once confirmed, `finish` merges to `main`, creates the annotated tag, and back-merges to
+`develop` automatically.
 
 ---
 

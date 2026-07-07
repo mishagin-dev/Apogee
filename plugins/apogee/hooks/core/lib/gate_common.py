@@ -39,6 +39,36 @@ def beads_root(start: str):
         d = parent
 
 
+def git_root_for(fp, fallback):
+    """Return the git repo root that actually CONTAINS `fp` -- not necessarily the beads
+    workspace root passed in as `fallback`.
+
+    `fp` may live inside a git submodule nested under the beads root: submodules are independent
+    git repositories with their own branch/HEAD, so `git -C <fp's dir> rev-parse --show-toplevel`
+    correctly resolves to the submodule's own root, while the outer/beads root would report the
+    SUPER-repo's branch instead -- the wrong one for a branch-discipline check on that file. Walks
+    up to the nearest existing ancestor directory first, so this also works for a not-yet-created
+    file (a fresh `Write`). Falls back to `fallback` if `fp` is empty or git can't resolve a root
+    (e.g. the path isn't inside any git repo).
+    """
+    if not fp:
+        return fallback
+    d = os.path.dirname(os.path.abspath(fp))
+    while d and not os.path.isdir(d):
+        parent = os.path.dirname(d)
+        if parent == d:
+            return fallback
+        d = parent
+    if not d:
+        return fallback
+    try:
+        r = subprocess.run(["git", "-C", d, "rev-parse", "--show-toplevel"],
+                           capture_output=True, text=True, timeout=5)
+        return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else fallback
+    except Exception:
+        return fallback
+
+
 def git_ignored(root, rel):
     """True if `rel` (path relative to `root`) is git-ignored within `root`.
 
@@ -188,6 +218,25 @@ if __name__ == '__main__':
             if got != want:
                 ok = False
             print(f"  {mark}  git_ignored({rel!r}) = {got} (want {want})")
+
+        print("\ngit_root_for() tests (simulated submodule: a nested repo with its own .git):")
+        submodule = os.path.join(tmp, "vendor", "sub")
+        os.makedirs(submodule)
+        subprocess.run(["git", "-C", submodule, "init", "-q"], check=True, capture_output=True)
+        real_root = os.path.realpath(root)
+        real_submodule = os.path.realpath(submodule)
+        root_cases = [
+            ("file inside nested submodule", join("vendor", "sub", "inner.py"), real_submodule),
+            ("file in the outer repo",        join("src", "foo.py"),            real_root),
+            ("not-yet-created file",          join("vendor", "sub", "new.py"),  real_submodule),
+            ("empty path falls back",         "",                                real_root),
+        ]
+        for label, fp, want in root_cases:
+            got = os.path.realpath(git_root_for(fp, root))
+            mark = "✓" if got == want else "✗ FAIL"
+            if got != want:
+                ok = False
+            print(f"  {mark}  {label}: {got} (want {want})")
 
     print("\nis_code_file() tests:")
     code_cases = [

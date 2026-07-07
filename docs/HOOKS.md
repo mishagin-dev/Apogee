@@ -20,7 +20,7 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 | `Agent` | `idea/idea-agent-guard.py` | Deny subagent raw code search without idea-mcp | `.idea/` + IDE | `IDEA_GATE_OFF=1` |
 | `mcp__` | `core/security-scan.sh` | Scan outbound MCP payloads for secrets (`config/sensitive-patterns.json`) | always (matches `mcp__`) | — |
 | `Edit\|Write\|MultiEdit\|NotebookEdit` | `br/br-edit-gate.py` | Deny code edit when no `br` issue is `in_progress` | `.beads/` | `BR_GATE_OFF=1` |
-| `Edit\|Write\|MultiEdit\|NotebookEdit` | `br/br-branch-gate.py` | Deny edits off a `feature/`/`bugfix/` branch linked to the active epic | `.beads/` + git-flow | `BR_GATE_OFF=1` |
+| `Edit\|Write\|MultiEdit\|NotebookEdit` | `br/br-branch-gate.py` | Deny edits off a `feature/`/`bugfix/` branch linked to the active epic (submodule-aware: checks whichever repo actually contains the edited file, not the outer `.beads/` root) | `.beads/` + git-flow | `BR_GATE_OFF=1` |
 
 ### PostToolUse
 
