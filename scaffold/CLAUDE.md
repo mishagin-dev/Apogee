@@ -19,7 +19,18 @@
 - **Git-ignored deliverables are ceremony-free**: a report, research note, or other output written to a **git-ignored path** (a folder in `.gitignore`, e.g. `reports/`, scratch, build outputs) is a deliverable-on-disk — it needs **no** br step, **no** git-flow branch, and **no** commit. The edit/branch/Stop gates already exempt such paths, so just write the file and stop; don't force it into the workflow or try to commit it.
 - **Work honestly**: study existing code and reuse utilities before writing new ones; surface problems and trade-offs openly — never hide failures.
 
-## 2. Operator Model
+## 2. Communication Style
+
+- Tone: dry, technical, direct — no emotional framing.
+- No praise or compliments, no apologies or self-deprecation, no conversational filler ("of
+  course!", "happy to help", "hope this helps").
+- No explaining the obvious.
+- Response shape: fact → analysis → solution — no preamble, no unrequested closing summary.
+- Error/bug reports: cause → location → fix. No commentary on fault or emotional state.
+- Interpret the user's questions literally — don't assume context that isn't stated.
+- Don't propose alternative architectures unless asked.
+
+## 3. Operator Model
 
 <!-- Describe how you and Claude collaborate. Optional but valuable for
      solo / AI-agent-driven workflows.
@@ -35,7 +46,7 @@ Example:
 - **Boundaries:** always ask before git commits, breaking changes, deleting
   files, and architecture decisions worth ≥1 day of rework to undo. -->
 
-## 3. Key Architecture Decisions
+## 4. Key Architecture Decisions
 
 <!-- Document settled decisions here so Claude doesn't relitigate them.
      Include brief rationale for each. -->
@@ -50,7 +61,7 @@ Example:
 - **State management**: Server-side only. Why: single source of truth, no sync bugs.
 -->
 
-## 4. Tool Usage Rules
+## 5. Tool Usage Rules
 
 <!-- Map tasks to the correct tools for your project. -->
 
@@ -64,7 +75,7 @@ Example:
 | Documentation update | `/apogee:update-docs` skill |
 | Deployment | `/apogee:deploy` skill |
 
-## 5. Coding Standards
+## 6. Coding Standards
 
 <!-- Keep only standards that are non-obvious or project-specific.
      Don't document standard language conventions — Claude already knows those. -->
@@ -72,6 +83,10 @@ Example:
 - Follow the project's existing style, naming, and idioms; don't introduce new conventions without need.
 - Comments only where the code cannot speak for itself (constraints, non-obvious decisions) — no narrating comments.
 - No dead code, commented-out blocks, or unused imports in the result.
+- KISS: pick the simplest solution that satisfies the requirement now; flat structure over nested unless nesting improves readability.
+- YAGNI: no speculative functionality, config, or flags without a current requirement; extensibility is added only once a real need is confirmed.
+- No overengineering: no design patterns or extra abstraction layers (interfaces, DI, wrappers) unless they remove duplication/complexity that exists now; no premature optimization — working and clear first, optimize only against a measured problem; no generic solution built for a single use case.
+- Quality priority, highest to lowest: readability, directness (minimal indirection/magic), minimalism, consistency with existing project conventions. Prefer whichever option can be explained in one sentence.
 
 <!--
 Example:
@@ -81,7 +96,7 @@ Example:
 - All time logic in PostgreSQL, never client-side
 -->
 
-## 6. Testing
+## 7. Testing
 
 <!-- Document your test commands and when to run them. -->
 
@@ -104,7 +119,7 @@ npm run test:e2e      # E2E tests (~20s, hits network)
 | Before deployment | All suites |
 -->
 
-## 7. Privacy & Security
+## 8. Privacy & Security
 
 <!-- Document non-negotiable security rules for your project. -->
 
