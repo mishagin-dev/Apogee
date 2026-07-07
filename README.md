@@ -1,5 +1,9 @@
 # Apogee
 
+[![CI](https://github.com/mishagin-dev/Apogee/actions/workflows/validate.yml/badge.svg)](https://github.com/mishagin-dev/Apogee/actions/workflows/validate.yml)
+[![Release](https://img.shields.io/github/v/release/mishagin-dev/Apogee)](https://github.com/mishagin-dev/Apogee/releases)
+[![License: MIT](https://img.shields.io/github/license/mishagin-dev/Apogee)](LICENSE)
+
 Personal Claude Code toolkit — a fork of the
 [Claude Code Development Kit](https://github.com/peterkrueck/Claude-Code-Development-Kit)
 repackaged as a **plugin + local marketplace**. Install the machinery once; enable it per project.
@@ -94,3 +98,7 @@ projects. Escape hatches: `BR_GATE_OFF=1`, `REVIEW_GATE_OFF=1`, `IDEA_GATE_OFF=1
 Built and statically validated (manifests, hook scripts, scaffold). **Pending:** live plugin
 validation in a real session (`/plugin marketplace add` → `install` → `/reload-plugins`), then stripping
 the legacy global `hooks` block from `~/.claude/settings.json` (do this LAST).
+
+## License
+
+MIT — see [LICENSE](LICENSE).
