@@ -99,6 +99,10 @@ The plugin is the single source. To ship a change:
 3. After finishing: push (`git push origin main develop --tags` — stays a manual step), then in
    any session, `/plugin marketplace update apogee` then `/reload-plugins`.
 
+`/apogee:release` isn't Apogee-specific tooling — it detects where (if anywhere) a project
+declares its version and generalizes accordingly, so the same command also drives releases in any
+other project that has the plugin enabled.
+
 Local marketplaces **do not auto-update**, so upgrades are always intentional. Every project with
 `apogee@apogee` enabled then runs the new version — no per-project copying. `scripts/validate.sh`
 also asserts the two manifests and the CHANGELOG agree, so a version bump that misses one of them
