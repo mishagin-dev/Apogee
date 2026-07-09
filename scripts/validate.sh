@@ -12,6 +12,9 @@
 #                       (idea-usage-tracker, idea-agent-guard, git hooks)
 #   6. Version lockstep — plugin.json version == marketplace.json plugins[0].version
 #                       == CHANGELOG.md's top-most ## [x.y.z] header
+#   7. Language policy — no unallowlisted Cyrillic in plugins/apogee/**, scripts/**,
+#                       setup.sh, sync.sh, install.sh, root CLAUDE.md (see
+#                       scripts/lang-check-allowlist.txt for known exceptions)
 #
 # Exits 0 if all stages pass, 1 on any failure.
 #
@@ -171,6 +174,42 @@ else
     echo "ok  all three at ${plugin_version}"
 fi
 echo "Stage 6 done."
+
+# ---------------------------------------------------------------------------
+# Stage 7: language policy (English-only in code/config; docs/apogee/ is never
+#          scanned since it's not in LANG_SCAN_PATHS below — do NOT add a
+#          --exclude-dir for it: BSD grep's --exclude-dir matches basename
+#          only, and --exclude-dir=apogee would also skip plugins/apogee
+#          itself, since that scan root's own basename is "apogee")
+# ---------------------------------------------------------------------------
+echo "=== Stage 7: language policy ==="
+LANG_ALLOWLIST="${REPO_ROOT}/scripts/lang-check-allowlist.txt"
+LANG_SCAN_PATHS=(
+    "${REPO_ROOT}/plugins/apogee"
+    "${REPO_ROOT}/scripts"
+    "${REPO_ROOT}/setup.sh"
+    "${REPO_ROOT}/sync.sh"
+    "${REPO_ROOT}/install.sh"
+    "${REPO_ROOT}/CLAUDE.md"
+)
+stage7_hits=0
+while IFS= read -r hit; do
+    [ -z "${hit}" ] && continue
+    if [ -f "${LANG_ALLOWLIST}" ] && grep -qxF "${hit}" "${LANG_ALLOWLIST}"; then
+        continue
+    fi
+    echo "FAIL lang ${hit}"
+    fail=1
+    stage7_hits=$((stage7_hits + 1))
+done < <(
+    grep -rnIE --exclude-dir=.git --exclude="$(basename "${LANG_ALLOWLIST}")" \
+        '[а-яА-ЯёЁ]' "${LANG_SCAN_PATHS[@]}" 2>/dev/null \
+    | sed "s#^${REPO_ROOT}/##"
+)
+if [ "${stage7_hits}" -eq 0 ]; then
+    echo "ok  no unallowlisted Cyrillic found"
+fi
+echo "Stage 7 done."
 
 # ---------------------------------------------------------------------------
 # Summary

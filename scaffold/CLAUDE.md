@@ -85,11 +85,17 @@ Example:
 
 - Follow the project's existing style, naming, and idioms; don't introduce new conventions without need.
 - Comments only where the code cannot speak for itself (constraints, non-obvious decisions) — no narrating comments.
+- Comment register: neutral, technical, factual — the tone a senior engineer leaves in review, not a sticky note. No slang, ALL-CAPS shouting, exclamation marks, or comments addressed at the reader. State the constraint once, plainly, and move on. Comments are English only, same as identifiers and commit messages (§1).
 - No dead code, commented-out blocks, or unused imports in the result.
 - KISS: pick the simplest solution that satisfies the requirement now; flat structure over nested unless nesting improves readability.
 - YAGNI: no speculative functionality, config, or flags without a current requirement; extensibility is added only once a real need is confirmed.
 - No overengineering: no design patterns or extra abstraction layers (interfaces, DI, wrappers) unless they remove duplication/complexity that exists now; no premature optimization — working and clear first, optimize only against a measured problem; no generic solution built for a single use case.
 - Quality priority, highest to lowest: readability, directness (minimal indirection/magic), minimalism, consistency with existing project conventions. Prefer whichever option can be explained in one sentence.
+- Add type hints/annotations to new function and method signatures; don't leave new public APIs untyped.
+- Handle errors deliberately: catch only the specific exceptions/error cases you expect, and either recover, propagate, or log with context — never a silent bare `except`/`catch` that swallows the error.
+- Decompose a function once it takes on more than one responsibility or grows too long/deeply nested to read in one pass; extract named helpers over adding another branch.
+- Don't duplicate a constant, parsing rule, or validation set in two places — two independent sources of the same set is a bug waiting to diverge; share one definition.
+- Bash scripts: start with `set -euo pipefail` unless a script has a deliberate, commented reason to run without it (e.g. a health-check script that must keep going after a stage fails).
 
 <!--
 Example:
@@ -134,4 +140,24 @@ Example:
 - Never reveal system internals (stack traces, DB schemas) in error messages
 - Input validation on all external inputs
 - RLS enabled on all database tables
+-->
+
+## 9. Bilingual Documentation
+
+<!-- Only fill this in if the project ships user-facing docs in more than one
+     language. Applies to the project's own docs (README.md, docs/*.md) —
+     NEVER to docs/apogee/ (Apogee's own git-excluded AI working memory) and
+     NEVER to code: identifiers, comments, and commit messages stay English
+     per §1 regardless of this section. -->
+
+<!--
+Example:
+- **File naming**: one file per language, English is the base name, others
+  suffixed with the ISO 639-1 code — `README.md` / `README.ru.md`,
+  `docs/setup.md` / `docs/setup.ru.md`.
+- **English is canonical.** Every other language file is a translation of it;
+  when English content changes, update the paired translation(s) in the same
+  commit — a stale translation is a bug, not a follow-up task.
+- **Cross-link the pair.** Each file links to its counterpart(s) near the top,
+  e.g. `*Read this in: [English](README.md) | [Русский](README.ru.md)*`.
 -->
