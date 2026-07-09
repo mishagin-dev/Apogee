@@ -15,6 +15,13 @@ import subprocess
 # Top-level dirs whose edits never count as trackable code (meta / docs / config).
 EXEMPT_TOP = {".beads", "workflow", "conductor", ".claude"}
 
+# Nested dirs (not top-level) that are always exempt regardless of git-ignore state. docs/apogee is
+# Apogee's own working memory -- setup.sh adds it to .git/info/exclude on install, but that write is
+# a one-time side effect a project can end up without (plugin enabled without running setup.sh, or
+# /apogee:init run before it). Hardcoding it here (like .claude in EXEMPT_TOP) means the exemption
+# holds regardless of whether that install step ever ran.
+EXEMPT_NESTED = {os.path.join("docs", "apogee")}
+
 # Extensions treated as source CODE by the br edit/branch gates: only these require a br step / a
 # git-flow work branch. Everything else (docs, markdown, configs, images, data, no extension) is a
 # non-code edit and passes freely — so service commands (update-docs, readme, doc, image-*) and
@@ -89,8 +96,9 @@ def path_exempt(root, fp):
     Exempt = the edit can never be trackable code under the branch/step discipline:
       - no file path (e.g. NotebookEdit without one) -> not exempt, let the gate run;
       - edits outside the beads root;
-      - meta/doc/config top-level dirs (`EXEMPT_TOP`);
-      - git-ignored working files (Apogee working memory: `docs/apogee/**`, `.claude/*`);
+      - meta/doc/config top-level dirs (`EXEMPT_TOP`), and `docs/apogee/**` specifically
+        (`EXEMPT_NESTED`) -- Apogee's own working memory, exempt unconditionally;
+      - any other git-ignored working file (e.g. a project's own scratch/report dirs);
       - any `CLAUDE.md` (project / submodule instructions) -> bootstrap content, and the
         commit gate still enforces where it lands.
     """
@@ -100,7 +108,10 @@ def path_exempt(root, fp):
     rel = os.path.relpath(abs_fp, root)
     if rel.startswith(".."):
         return True
-    if rel.split(os.sep)[0] in EXEMPT_TOP:
+    parts = rel.split(os.sep)
+    if parts[0] in EXEMPT_TOP:
+        return True
+    if os.sep.join(parts[:2]) in EXEMPT_NESTED:
         return True
     if os.path.basename(abs_fp) == "CLAUDE.md":
         return True
@@ -193,6 +204,9 @@ if __name__ == '__main__':
             ("non-ignored code",        join("src", "foo.py"),             False),
             ("EXEMPT_TOP .beads",       join(".beads", "issues.json"),     True),
             ("EXEMPT_TOP .claude",      join(".claude", "x.md"),           True),
+            ("EXEMPT_NESTED docs/apogee (not gitignored)",
+                                        join("docs", "apogee", "progress.md"), True),
+            ("docs/other (not exempt)", join("docs", "other", "x.md"),     False),
             ("CLAUDE.md",               join("CLAUDE.md"),                 True),
             ("outside the root",        outside,                           True),
             ("empty path",              "",                                False),
