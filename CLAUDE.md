@@ -34,7 +34,8 @@ Read `docs/ARCHITECTURE.md` first.
   `hooks/idea/lib/`, `hooks/br/br-sig.py`).
 - Every gate must self-gate (no-op without `.beads/` / `.idea/`+IDE / git-flow) and fail open.
 - After editing hooks, run `bash scripts/validate.sh` (py/sh/json syntax, `${CLAUDE_PLUGIN_ROOT}`
-  hook-path resolution, and the `idea_symbols` self-test; CI runs it too).
+  hook-path resolution, the `idea_symbols` self-test, and the language-policy check; CI runs it
+  too).
 
 ## Conventions
 

@@ -1,0 +1,7 @@
+# English-only language policy allowlist for scripts/validate.sh Stage 7.
+# One line per legitimate non-English hit: path:line:exact matched line text
+# (paste the exact grep -rn output line, relative to repo root). Any edit to
+# that line's content OR line number invalidates the entry.
+plugins/apogee/skills/git-flow/SKILL.md:200:- **Help/output is in Russian** (e.g. «Переключились на ветку…»): the host git
+plugins/apogee/skills/second-opinion/SKILL.md:3:description: Get an independent second opinion from another AI model via the locally installed `agy` CLI (antigravity-cli — defaults to a Gemini Pro model, can route to Gemini/GPT/Claude). Use this skill in Plan Mode for large or critical tasks, when stuck on a debugging dead end, when weighing architecture trade-offs, for subtle edge cases in code review, or whenever an independent perspective would add value. Also use it whenever the user explicitly asks for a "second opinion", "ask agy", "another perspective", "cross-check this", or "вторая точка зрения" — even if they don't name the tool. This is the successor to the gemini-based `second-opinion` skill (gemini-cli is being deprecated); prefer `agy` and fall back to `second-opinion` only if `agy` is unavailable.
+scripts/validate.sh:206:        '[а-яА-ЯёЁ]' "${LANG_SCAN_PATHS[@]}" 2>/dev/null \
