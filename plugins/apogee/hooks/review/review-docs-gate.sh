@@ -43,6 +43,7 @@ if [[ -f "$CONFIG" ]]; then
 fi
 
 cd "$root" 2>/dev/null || exit 0
+git rev-parse --verify -q HEAD >/dev/null 2>&1 || exit 0
 PATS=()
 if [[ -f "$CONFIG" ]]; then
     while IFS= read -r p; do [[ -n "$p" ]] && PATS+=("$p"); done < <(jq -r '(.file_patterns // [])|.[]' "$CONFIG" 2>/dev/null)
