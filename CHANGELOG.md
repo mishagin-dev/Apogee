@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2026-07-09
+
+### Added
+
+- `setup.sh` now runs `git flow init -d` automatically alongside `git init`/`br init` when a
+  project has no `gitflow.*` config yet (on by default, opts out with the existing
+  `--no-tracker-init` flag) — verified to work even on a brand-new, zero-commit repo.
+- `scaffold/CLAUDE.md` §6 Coding Standards gained five senior-level rules: type hints on new
+  signatures, deliberate (never silent) error handling, function decomposition past one
+  responsibility, no duplicated constants/parsing rules, and `set -euo pipefail` as the Bash
+  default. A new §9 "Bilingual Documentation" gives host projects an opt-in template for
+  maintaining RU+EN docs as separate per-language files. `scripts/validate.sh` gained a Stage 7
+  language-policy gate that fails CI on any unallowlisted Cyrillic in shipped code
+  (`scripts/lang-check-allowlist.txt` holds the known legitimate exceptions).
+
+### Changed
+
+- `scaffold/CLAUDE.md` §6 gained a comment-register rule: neutral, technical tone for code
+  comments — no slang, ALL-CAPS, exclamation marks, or reader-directed asides, English only.
+
 ## [1.14.0] - 2026-07-09
 
 ### Added
