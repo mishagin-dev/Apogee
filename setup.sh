@@ -29,9 +29,9 @@
 #     --no-scaffold      skip copying CLAUDE.md/GEMINI.md/docs/apogee (only enable the plugin)
 #     --no-settings      skip writing TARGET/.claude/settings.local.json
 #     --no-git-init      don't auto `git init` TARGET when it isn't a git repo yet
-#     --no-tracker-init  don't auto `br init` TARGET when it has no .beads/ yet
-#                        (git flow init is never automatic -- it's a structural branching
-#                        decision; a reminder is printed instead when it looks unconfigured)
+#     --no-tracker-init  don't auto `br init` / `git flow init -d` when TARGET has no .beads/ or
+#                        gitflow.* config yet (git-flow only if the AVH binary is installed;
+#                        otherwise a reminder is printed instead)
 #
 set -euo pipefail
 
@@ -212,15 +212,20 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
   echo
 fi
 
-# ---- tracker init: br is auto (low-impact, easily removed); git flow init is only ever a
-# printed reminder -- it's a structural branching-model decision a project should opt into
-# consciously, not something this script decides on the target's behalf.
+# ---- tracker init: br + git-flow, both auto by default -- the gates self-gate to .beads/ and
+# gitflow.* config, so without this step they silently stay inert until someone remembers to run
+# `br init`/`git flow init` by hand. `git flow init -d` just creates `develop` off current HEAD
+# with AVH's default naming conventions (verified: works even on a brand-new, zero-commit repo)
+# -- it doesn't touch existing history, so auto-running it is as low-risk as `br init`.
 if [[ $DO_TRACKER_INIT -eq 1 ]]; then
   echo "→ Tracker init (the gates self-gate to .beads/ + gitflow projects)…"
   ( cd "$TARGET" && command -v br >/dev/null 2>&1 && [[ ! -d .beads ]] && br init && echo "  • br init done." ) || true
-  ( cd "$TARGET" && command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 \
+  ( cd "$TARGET" && command -v git-flow >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 \
       && ! git config --get-regexp '^gitflow\.branch\.' >/dev/null 2>&1 \
-      && echo "  • run 'git flow init -d' manually to enable the git-flow gate." ) || true
+      && git flow init -d >/dev/null 2>&1 && echo "  • git flow init -d done." ) || true
+  ( cd "$TARGET" && ! command -v git-flow >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 \
+      && ! git config --get-regexp '^gitflow\.branch\.' >/dev/null 2>&1 \
+      && echo "  • git-flow (AVH) not installed -- run 'git flow init -d' by hand once it is, to enable the git-flow gate." ) || true
   echo
 fi
 
