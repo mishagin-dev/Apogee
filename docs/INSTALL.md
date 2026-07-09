@@ -63,7 +63,7 @@ Env overrides: `APOGEE_HOME` (clone dir), `APOGEE_BRANCH` (default `main`).
 | `--no-scaffold` | skip copying content; only enable the plugin |
 | `--no-settings` | skip writing `TARGET/.claude/settings.local.json` |
 | `--no-git-init` | don't auto `git init` TARGET when it isn't a git repo yet |
-| `--no-tracker-init` | don't auto `br init` TARGET when it has no `.beads/` yet |
+| `--no-tracker-init` | don't auto `br init` / `git flow init -d` when TARGET has no `.beads/` or gitflow config yet |
 
 What it does:
 
@@ -78,9 +78,11 @@ What it does:
   host's committed `.gitignore` or its git history. Skipped with a notice if the target is not a git
   repo. Submodules aren't covered here (they're independent git repos) — `/apogee:init` adds a
   submodule's own `CLAUDE.md` to *that submodule's* `.git/info/exclude` when it creates it.
-- **TRACKER INIT (auto):** if `TARGET` has no `.beads/` yet, runs `br init`. `git flow init` is never
-  automatic — a printed reminder only, since it's a structural branching-model decision. Skip `br
-  init` with `--no-tracker-init`.
+- **TRACKER INIT (auto):** if `TARGET` has no `.beads/` yet, runs `br init`; if it has no
+  `gitflow.*` config yet and the AVH `git-flow` binary is installed, runs `git flow init -d`
+  (default branch/prefix conventions, non-interactive — works even on a brand-new zero-commit
+  repo). Without the binary installed, prints a reminder instead. Skip both with
+  `--no-tracker-init`.
 - **ENABLE (machinery):** writes the `enabledPlugins` entry (global or per-project). No hooks/skills are
   copied — they live in the plugin.
 - **SETTINGS (per-project):** writes/merges a personal `TARGET/.claude/settings.local.json` with a
