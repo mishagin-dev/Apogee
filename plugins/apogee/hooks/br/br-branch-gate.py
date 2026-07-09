@@ -20,8 +20,9 @@ has its own independent branch/HEAD, nested under (but separate from) the outer/
 holds `.beads/` — checking the super-repo's branch there would be enforcing discipline on the wrong
 repo, and force pointless "umbrella" branches in the super-repo just to unblock submodule edits.
 Exempt paths (see `gate_common.path_exempt`): meta/doc dirs (`.beads/`, `workflow/`, `conductor/`,
-`.claude/`), edits outside the beads root, git-ignored working files (e.g. `docs/apogee/**`), and any
-`CLAUDE.md` — so bootstrap commands like `/apogee:init` are never blocked on a base branch. Code-only:
+`.claude/`, `docs/apogee/` — unconditionally exempt, not just when git-ignored), edits outside the
+beads root, any other git-ignored working file, and any `CLAUDE.md` — so bootstrap commands like
+`/apogee:init` are never blocked on a base branch. Code-only:
 a non-code file (docs, configs, images — see `gate_common.is_code_file`) is never branch-scoped work,
 so service commands (`/apogee:update-docs`, `/apogee:readme`, `/apogee:doc`, image-*) and ordinary
 doc/config edits pass on any branch. Escape hatch: env `BR_GATE_OFF=1`.
