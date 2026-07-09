@@ -85,6 +85,7 @@ Example:
 
 - Follow the project's existing style, naming, and idioms; don't introduce new conventions without need.
 - Comments only where the code cannot speak for itself (constraints, non-obvious decisions) — no narrating comments.
+- Comment register: neutral, technical, factual — the tone a senior engineer leaves in review, not a sticky note. No slang, ALL-CAPS shouting, exclamation marks, or comments addressed at the reader. State the constraint once, plainly, and move on. Comments are English only, same as identifiers and commit messages (§1).
 - No dead code, commented-out blocks, or unused imports in the result.
 - KISS: pick the simplest solution that satisfies the requirement now; flat structure over nested unless nesting improves readability.
 - YAGNI: no speculative functionality, config, or flags without a current requirement; extensibility is added only once a real need is confirmed.
