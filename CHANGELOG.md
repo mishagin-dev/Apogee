@@ -4,6 +4,32 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-07-09
+
+### Added
+
+- `setup.sh` now excludes `CLAUDE.md` and `GEMINI.md` (not just `docs/apogee/`) from the host
+  project's git via `.git/info/exclude` — all AI-tooling context stays local-only, worked with
+  normally (an IDE with "respect gitignore" off still shows it) but never committed. `/apogee:init`
+  mirrors this for a submodule's own flat `CLAUDE.md` in that submodule's own exclude file.
+- `setup.sh` now runs `git init` automatically when the target isn't a git repo yet, and `br init`
+  automatically when it has no `.beads/` yet — both on by default (`--no-git-init` /
+  `--no-tracker-init` opt out). `git flow init` stays a printed reminder only, since it's a
+  structural branching decision a project should opt into consciously.
+
+### Fixed
+
+- `review-docs-gate.sh` and `br-progress-gate.sh` (Stop hooks) computed `git diff --numstat HEAD`
+  to measure changed lines. On a fresh repo with zero commits, `HEAD` doesn't resolve, `git diff`
+  exits 128, and `pipefail` combined with `set -e` aborted the script silently mid-run — surfacing
+  as a non-blocking Stop hook failure on every stop. Both gates now skip cleanly when `HEAD`
+  doesn't exist yet.
+- `docs/apogee/**` was only exempt from the br edit/branch gates when the project happened to have
+  it git-ignored already — a one-time side effect `setup.sh` writes on install. A project that
+  enabled the plugin without running `setup.sh` (or ran `/apogee:init` before it) never got that
+  exclude rule, so the first write into `docs/apogee/**` was wrongly denied pending a br step/work
+  branch. It's now unconditionally exempt, independent of git-ignore state.
+
 ## [1.13.0] - 2026-07-08
 
 ### Added
