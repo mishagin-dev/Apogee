@@ -8,8 +8,9 @@ step first (`br update <id> --claim` / `br create … --json`). Once a step is i
 
 Scope: GLOBAL hook, but self-gates to beads projects (a `.beads/` dir above cwd). No-op elsewhere.
 Exempt paths (see `gate_common.path_exempt`): meta/doc dirs (`.beads/`, `workflow/`, `conductor/`,
-`.claude/`), edits outside the beads root, git-ignored working files (e.g. `docs/apogee/**`), and any
-`CLAUDE.md` — so bootstrap commands like `/apogee:init` are never blocked. Code-only: a non-code file
+`.claude/`, `docs/apogee/` — unconditionally exempt, not just when git-ignored), edits outside the
+beads root, any other git-ignored working file, and any `CLAUDE.md` — so bootstrap commands like
+`/apogee:init` are never blocked. Code-only: a non-code file
 (docs, configs, images — see `gate_common.is_code_file`) never needs a br step, so service commands
 (`/apogee:update-docs`, `/apogee:readme`, `/apogee:doc`, image-*) and ordinary doc/config edits pass
 freely. Escape hatch: env `BR_GATE_OFF=1`.
