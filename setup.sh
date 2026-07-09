@@ -3,8 +3,12 @@
 # setup.sh — install the Apogee toolkit into a project.
 #
 # Three clearly separated halves:
-#   COPY     — project CONTENT is scaffolded (copied) into the target: CLAUDE.md,
-#              docs/apogee/*, doc scaffolding dirs, assets/. Owned by the project.
+#   COPY     — project CONTENT is scaffolded (copied) into the target: CLAUDE.md, GEMINI.md,
+#              docs/apogee/*, doc scaffolding dirs, assets/. Lives in the target's working tree
+#              (the agent reads/writes it normally — an IDE with "respect gitignore" off still
+#              shows it) but stays OUT of the host project's git history via .git/info/exclude:
+#              it's personal AI-tooling context, not a project deliverable. Back it up yourself
+#              (e.g. to a NAS) if you want it to survive a fresh clone.
 #   ENABLE   — the MACHINERY (hooks + commands + workflow skills) is NOT copied. It
 #              lives once in the `apogee` plugin (this repo is its local marketplace) and
 #              is merely enabled for the project via `enabledPlugins`. Update once
@@ -21,11 +25,28 @@
 #     TARGET_DIR      project to set up (default: current dir)
 #     --per-project   enable the plugin in TARGET/.claude/settings.json only
 #                     (default: enable globally in ~/.claude/settings.json)
-#     --no-scaffold   skip copying docs/CLAUDE.md (only enable the plugin)
+#     --no-scaffold   skip copying CLAUDE.md/GEMINI.md/docs/apogee (only enable the plugin)
 #     --no-settings   skip writing TARGET/.claude/settings.local.json
 #     --init-tracker  offer to run `br init` and `git flow init` so the gates engage
 #
 set -euo pipefail
+
+# Append `pattern` to `dir`'s .git/info/exclude (local-only, uncommitted -- never touches the
+# host's tracked .gitignore, so enabling Apogee leaves zero git footprint). Idempotent; no-op if
+# `dir` isn't a git repo yet.
+git_exclude() {
+  local dir="$1" pattern="$2" comment="$3" exclude
+  git -C "$dir" rev-parse --git-dir >/dev/null 2>&1 || { echo "  • $dir is not a git repo — skipped .git/info/exclude ($pattern)."; return 0; }
+  exclude="$(cd "$dir" && git rev-parse --git-path info/exclude)"
+  [[ "$exclude" = /* ]] || exclude="$dir/$exclude"
+  mkdir -p "$(dirname "$exclude")"
+  if [[ ! -f "$exclude" ]] || ! grep -qxF "$pattern" "$exclude" 2>/dev/null; then
+    printf '\n# %s\n%s\n' "$comment" "$pattern" >> "$exclude"
+    echo "  • $pattern added to .git/info/exclude ($dir)."
+  else
+    echo "  • $pattern already excluded ($dir)."
+  fi
+}
 
 MARKETPLACE_NAME="apogee"
 PLUGIN_NAME="apogee"
@@ -91,22 +112,12 @@ if [[ $DO_SCAFFOLD -eq 1 ]]; then
   mkdir -p "$TARGET/assets"; [[ -e "$TARGET/assets/.gitkeep" ]] || touch "$TARGET/assets/.gitkeep"
   echo "  • doc/asset scaffolding ensured."
 
-  # docs/apogee/ is Apogee's working memory — keep it out of the host project's git.
-  # Use .git/info/exclude (local, uncommitted) rather than .gitignore so the host's
-  # tracked ignore file stays untouched — zero git footprint in the project.
-  if git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
-    EXCLUDE="$(cd "$TARGET" && git rev-parse --git-path info/exclude)"
-    [[ "$EXCLUDE" = /* ]] || EXCLUDE="$TARGET/$EXCLUDE"
-    mkdir -p "$(dirname "$EXCLUDE")"
-    if [[ ! -f "$EXCLUDE" ]] || ! grep -qxF "docs/apogee/" "$EXCLUDE" 2>/dev/null; then
-      printf '\n# Apogee toolkit working memory (local-only)\ndocs/apogee/\n' >> "$EXCLUDE"
-      echo "  • docs/apogee/ added to .git/info/exclude."
-    else
-      echo "  • docs/apogee/ already excluded."
-    fi
-  else
-    echo "  • $TARGET is not a git repo — skipped .git/info/exclude (docs/apogee/ untracked anyway)."
-  fi
+  # docs/apogee/ is Apogee's working memory, and CLAUDE.md/GEMINI.md are personal AI-tooling
+  # context (not a project deliverable) -- keep all three out of the host project's git. See the
+  # COPY note in the file header for why .git/info/exclude, not .gitignore.
+  git_exclude "$TARGET" "docs/apogee/" "Apogee toolkit working memory (local-only)"
+  git_exclude "$TARGET" "CLAUDE.md" "Apogee AI-tooling context (local-only)"
+  git_exclude "$TARGET" "GEMINI.md" "Apogee AI-tooling context (local-only)"
   echo
 fi
 
@@ -182,19 +193,7 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
   echo "  • settings.local.json merged ($LOCAL)"
 
   # keep the personal file out of the host project's git (mirror docs/apogee/)
-  if git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
-    EXCLUDE="$(cd "$TARGET" && git rev-parse --git-path info/exclude)"
-    [[ "$EXCLUDE" = /* ]] || EXCLUDE="$TARGET/$EXCLUDE"
-    mkdir -p "$(dirname "$EXCLUDE")"
-    if [[ ! -f "$EXCLUDE" ]] || ! grep -qxF ".claude/settings.local.json" "$EXCLUDE" 2>/dev/null; then
-      printf '\n# Apogee personal settings (local-only)\n.claude/settings.local.json\n' >> "$EXCLUDE"
-      echo "  • .claude/settings.local.json added to .git/info/exclude."
-    else
-      echo "  • .claude/settings.local.json already excluded."
-    fi
-  else
-    echo "  • $TARGET is not a git repo — skipped .git/info/exclude."
-  fi
+  git_exclude "$TARGET" ".claude/settings.local.json" "Apogee personal settings (local-only)"
   echo
 fi
 
