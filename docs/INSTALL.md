@@ -51,7 +51,8 @@ Env overrides: `APOGEE_HOME` (clone dir), `APOGEE_BRANCH` (default `main`).
 ## Set up a project (local clone)
 
 ```
-./setup.sh [TARGET_DIR] [--per-project] [--no-scaffold] [--no-settings] [--init-tracker]
+./setup.sh [TARGET_DIR] [--per-project] [--no-scaffold] [--no-settings]
+           [--no-git-init] [--no-tracker-init]
 ```
 
 | Flag | Effect |
@@ -61,16 +62,25 @@ Env overrides: `APOGEE_HOME` (clone dir), `APOGEE_BRANCH` (default `main`).
 | `--per-project` | enable only in `TARGET/.claude/settings.json` |
 | `--no-scaffold` | skip copying content; only enable the plugin |
 | `--no-settings` | skip writing `TARGET/.claude/settings.local.json` |
-| `--init-tracker` | offer `br init` and remind to run `git flow init` so the gates engage |
+| `--no-git-init` | don't auto `git init` TARGET when it isn't a git repo yet |
+| `--no-tracker-init` | don't auto `br init` TARGET when it has no `.beads/` yet |
 
 What it does:
 
+- **GIT INIT (auto):** if `TARGET` isn't a git repo yet, runs `git init` first — the
+  `.git/info/exclude` writes below need a repo to write into. Skip with `--no-git-init`.
 - **COPY (content):** `CLAUDE.md` + `GEMINI.md` at the project root (never clobbered if present);
   `docs/apogee/ai-context/*.md` and the empty `docs/apogee/{business,design-brand,legal,open-issues}/`
   dirs; `assets/.gitkeep`. Existing files are preserved.
-- **EXCLUDE:** appends `docs/apogee/` to the project's `.git/info/exclude` (the toolkit's working
-  memory is local-only — kept out of git without touching the host's committed `.gitignore`). Skipped
-  with a notice if the target is not a git repo.
+- **EXCLUDE:** appends `docs/apogee/`, `CLAUDE.md`, and `GEMINI.md` to the project's
+  `.git/info/exclude` — all three are personal AI-tooling context (worked with locally, an IDE with
+  "respect gitignore" off still shows them), not a project deliverable, so none of them touch the
+  host's committed `.gitignore` or its git history. Skipped with a notice if the target is not a git
+  repo. Submodules aren't covered here (they're independent git repos) — `/apogee:init` adds a
+  submodule's own `CLAUDE.md` to *that submodule's* `.git/info/exclude` when it creates it.
+- **TRACKER INIT (auto):** if `TARGET` has no `.beads/` yet, runs `br init`. `git flow init` is never
+  automatic — a printed reminder only, since it's a structural branching-model decision. Skip `br
+  init` with `--no-tracker-init`.
 - **ENABLE (machinery):** writes the `enabledPlugins` entry (global or per-project). No hooks/skills are
   copied — they live in the plugin.
 - **SETTINGS (per-project):** writes/merges a personal `TARGET/.claude/settings.local.json` with a
