@@ -51,6 +51,7 @@ from gitflow_common import (  # noqa: E402
     production_branch as _production_branch,
     prefix_type as _prefix_type,
     open_work_branches as _open_work_branches,
+    effective_repo as _effective_repo,
 )
 
 
@@ -128,6 +129,12 @@ def main():
 
     if "git" not in command:
         sys.exit(0)
+
+    # Judge the repo the git command actually TARGETS, not the session cwd: `git -C sub commit`
+    # or `cd sub && git commit` operates on a submodule with its own branch/HEAD. Checking the
+    # super-repo's branch there wrongly denied submodule commits on a base super-repo branch and
+    # forced pointless "umbrella" branches -- the same trap the br-branch-gate already avoids.
+    cwd = _effective_repo(command, cwd)
 
     if not _is_gitflow_repo(cwd):
         sys.exit(0)
@@ -263,6 +270,28 @@ def _run_self_test() -> None:
         if got_ref != want_ref:
             ok = False
         print(f"  {mark}  {label}: detected ref={got_ref} (want {want_ref})")
+
+    # effective_repo must retarget submodule git ops (`-C sub`, `cd sub && ...`) to the submodule
+    # dir, ignore the message-reuse `git commit -C <commit>`, and fall back to cwd otherwise.
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        sub = os.path.normpath(os.path.join(tmp, "sub"))
+        os.makedirs(sub)
+        repo_cases = [
+            ("git -C sub commit",          "git -C sub commit -m x",  sub),
+            ("cd sub && git commit",       "cd sub && git commit -m x", sub),
+            ("cd sub; git commit",         "cd sub; git commit",      sub),
+            ("commit -C HEAD (not a dir)", "git commit -C HEAD",      tmp),
+            ("plain commit → cwd",         "git commit -m x",         tmp),
+            ("nonexistent -C dir → cwd",   "git -C nope commit",      tmp),
+            ("-C sub overrides -C HEAD",   "git -C sub commit -C HEAD", sub),
+        ]
+        for label, cmd, want_dir in repo_cases:
+            got_dir = _effective_repo(cmd, tmp)
+            mark = "✓" if got_dir == want_dir else "✗ FAIL"
+            if got_dir != want_dir:
+                ok = False
+            print(f"  {mark}  {label}: effective_repo={got_dir!r} (want {want_dir!r})")
 
     print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
     raise SystemExit(0 if ok else 1)

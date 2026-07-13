@@ -1,5 +1,7 @@
 """Shared git-flow helpers for hooks/git/*.py scripts. Part of the apogee plugin."""
 
+import os
+import re
 import subprocess
 
 DEFAULT_PREFIXES = {
@@ -18,6 +20,45 @@ def run(args, cwd):
         return r.stdout.strip() if r.returncode == 0 else ""
     except Exception:
         return ""
+
+
+# A leading `cd <dir>` before the git command (`cd sub && git commit`, `cd sub; git ...`).
+# Anchored to start-of-string or a shell chain operator so an inner `... cd ...` inside an
+# argument is not mistaken for the shell's working-directory change.
+_CD_RE = re.compile(r"(?:^|&&|\|\||;|&)\s*cd\s+(?P<dir>[^\s;&|]+)")
+
+# git's GLOBAL `-C <dir>` option (`git -C sub commit`). Non-greedy up to the FIRST `-C` after
+# `git` so `git -C sub commit -C HEAD` grabs `sub`, not the commit-message-reuse `-C HEAD`; the
+# isdir() backstop in effective_repo() discards any `-C` value (a sha, HEAD, a branch) that is
+# not an actual directory. The `(?![\w-])` after git avoids matching `git-foo`.
+_DASH_C_RE = re.compile(r"(?<![\w/.-])git(?![\w-])[^|;&\n]*?\s-C\s+(?P<dir>[^\s;&|]+)")
+
+
+def _resolve_dir(raw, base):
+    """Resolve a raw `cd`/`-C` argument against `base`; return the dir if it exists, else None."""
+    raw = (raw or "").strip("'\"")
+    if not raw or raw == ".":
+        return None  # no-op: keep `base`
+    path = raw if os.path.isabs(raw) else os.path.join(base, raw)
+    path = os.path.normpath(path)
+    return path if os.path.isdir(path) else None
+
+
+def effective_repo(command, cwd):
+    """Return the directory the git command actually targets, so branch/gitflow checks run
+    against the RIGHT repo -- a submodule commit (`git -C sub commit`, `cd sub && git commit`)
+    must be judged by the submodule's own branch, not the session's super-repo (mirrors the
+    submodule-aware br-branch-gate). Applies a leading `cd`, then git's global `-C`, mirroring
+    shell + git semantics; falls back to `cwd` when neither is present or resolvable.
+    """
+    d = cwd
+    m = _CD_RE.search(command)
+    if m:
+        d = _resolve_dir(m.group("dir"), d) or d
+    m = _DASH_C_RE.search(command)
+    if m:
+        d = _resolve_dir(m.group("dir"), d) or d
+    return d
 
 
 def is_gitflow_repo(cwd):
