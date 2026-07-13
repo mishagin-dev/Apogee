@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.1] - 2026-07-13
+
+### Fixed
+
+- The commit gate (`enforce-git-flow-skill.py`) now judges the git-flow branch of the repo the
+  command actually targets, not the session's working directory. A submodule commit
+  (`git -C sub commit`, `cd sub && git commit`) issued while the super-repo sat on `develop`/`main`
+  was wrongly denied, forcing a pointless same-named "umbrella" branch in the super-repo just to
+  commit submodule code. New `effective_repo()` helper in `gitflow_common.py` resolves the target
+  repo (parsing `git -C <dir>` and a leading `cd <dir> &&`); real super-repo commits stay gated.
+  This mirrors the already submodule-aware `br-branch-gate.py`.
+
 ## [1.15.0] - 2026-07-09
 
 ### Added
