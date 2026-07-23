@@ -30,10 +30,15 @@ Anything else in `$ARGUMENTS` is free-form context for you to factor into which 
 
 This is the autonomous counterpart to the normal work loop (`/apogee:prime` → work, gated by `br` /
 git-flow / idea → `/apogee:review-work` → `/apogee:update-docs` → `/apogee:merge`) — it *is* that
-loop, run end-to-end by the agent instead of pausing between each stage. It only exists to eliminate
-confirmation friction on beads+git-flow projects where a plan has already been approved (in Plan
-Mode) and recorded as epics + steps. It does **not** relax any of this repo's hard technical
-guardrails: a merge conflict, an unexpected dirty file, a failing test, or a release/hotfix branch
+loop, run end-to-end by the agent instead of pausing between each stage. It's also the intended
+continuation of a Plan Mode approval in a git-flow project: `plugins/apogee/hooks/br/br-capture-
+gate.py` (fires on `ExitPlanMode`) captures the approved plan into `br` as an epic + steps, then
+hands off here instead of telling the agent to open the branch and implement by hand — approving
+the plan already is the go-ahead to execute it, so this command should be the default next action,
+not a separately-requested one. It only exists to eliminate confirmation friction on beads+git-flow
+projects where a plan has already been approved and recorded as epics + steps. It does **not**
+relax any of this repo's hard technical guardrails: a merge conflict, an unexpected dirty file, a
+failing test, or a release/hotfix branch
 still stop the loop exactly as they would in interactive use. Softening only applies to the
 confirmation *prompts* that exist purely to ask "are you sure" on things the plan already answered —
 not to correctness checks.

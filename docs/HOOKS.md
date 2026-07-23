@@ -31,7 +31,7 @@ that failed open on its own infra errors would defeat its entire purpose. Script
 | Matcher | Script | What it does | Self-gate |
 |---|---|---|---|
 | `mcp__idea__.*` | `idea/idea-usage-tracker.py` | Mark idea-mcp enforcement CONFIRMED on first successful idea call | `.idea/` + IDE |
-| `ExitPlanMode` | `br/br-capture-gate.py` | Seed the approved plan into `br` (epic + steps) before edits | `.beads/` |
+| `ExitPlanMode` | `br/br-capture-gate.py` | Seed the approved plan into `br` (epic + steps) before edits; in git-flow repos, hand off execution to `/apogee:run-plan` instead of the agent implementing by hand | `.beads/` |
 | `Skill` | `review/skill-run-tracker.py` | Drop markers when `/…:review-work` / `/…:update-docs` run (tolerant of plugin namespacing) | always |
 | `Edit\|Write\|MultiEdit\|NotebookEdit` | `review/track-file-touch.sh` | Log touched files to a per-session manifest, scoping `review-docs-gate`'s diff | always |
 
