@@ -27,7 +27,7 @@ or known issues, and confirm it with the user before treating it as the feature 
 
 ## Approach
 
-For concerns not directly in front of you — a third-party API/SDK, a platform capability, a library version question, or a cross-cutting code search — dispatch sub-agents in parallel. Treat training data as potentially stale, especially for fast-moving platforms, SDKs, and APIs. Context7 MCP first; WebSearch only if Context7 lacks coverage.
+For concerns not directly in front of you — a third-party API/SDK, a platform capability, a library version question, or a cross-cutting code search — dispatch sub-agents in parallel. Treat training data as potentially stale, especially for fast-moving platforms, SDKs, and APIs. Context7 MCP first; WebSearch only if Context7 lacks coverage. For a genuinely deep external unknown that ad-hoc WebSearch can't settle — a new third-party integration, an unfamiliar protocol, a compliance/regulatory requirement — escalate to the `deep-research` skill **if it's available**. It's the top rung of the ladder, not a default: skip it for routine, code-adjacent lookups.
 
 For architecture decisions, state the tradeoff, not just the chosen option. For UI flows, plan how you'll verify the change end-to-end (manual browser test, simulator run, integration test — whatever applies). After implementing the code, but before final verification, run `/review-work` to catch bugs upfront.
 
