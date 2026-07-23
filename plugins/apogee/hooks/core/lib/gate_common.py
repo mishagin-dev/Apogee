@@ -154,6 +154,81 @@ def ask(reason):
     }))
 
 
+def br_show(root, issue_id):
+    """`br show <id> --json` -> the issue dict, or None on any error.
+
+    Shared by any hook that needs to resolve one issue's fields (external_ref, parent, status).
+    """
+    try:
+        r = subprocess.run(["br", "-q", "show", issue_id, "--json", "--no-color"],
+                           capture_output=True, text=True, timeout=10, cwd=root)
+        obj = json.loads(r.stdout or "null")
+    except Exception:
+        return None
+    if isinstance(obj, list):
+        return obj[0] if obj else None
+    if isinstance(obj, dict) and "error" not in obj:
+        return obj
+    return None
+
+
+def _br_list_all(root):
+    """`br list --all --json` -> the issues array (summary objects, no `parent`/`external_ref` --
+    those fields only appear in `br show`), or None on any br/parse error."""
+    try:
+        r = subprocess.run(["br", "-q", "list", "--all", "--json", "--no-color"],
+                           capture_output=True, text=True, timeout=10, cwd=root)
+        if r.returncode != 0:
+            return None
+        return json.loads(r.stdout or "{}").get("issues", [])
+    except Exception:
+        return None
+
+
+def br_find_by_external_ref(root, ref):
+    """Find the issue (any type/status) whose `external_ref` equals `ref`.
+
+    Returns (issue_dict_or_None, query_ok). `br list` never includes `external_ref` (a summary
+    view) -- only `br show <id>` does -- so this lists candidate ids first, then calls `br_show`
+    per candidate (mirrors `br-branch-gate.py`'s `_br_show` list-then-show pattern). `query_ok` is
+    False on any br/parse error, distinct from "found nothing", so a fail-closed caller can tell
+    "couldn't check" apart from "checked, and there's genuinely no match".
+    """
+    candidates = _br_list_all(root)
+    if candidates is None:
+        return None, False
+    for candidate in candidates:
+        show = br_show(root, candidate.get("id", ""))
+        if show and show.get("external_ref") == ref:
+            return show, True
+    return None, True
+
+
+def br_open_children(root, epic_id):
+    """List of ids of `epic_id`'s children (parent == epic_id) not in status "closed".
+
+    Returns (ids, query_ok) -- same fail-closed-friendly shape as br_find_by_external_ref. `status`
+    IS present in the list summary view, so already-closed candidates are skipped without a `show`
+    call; `parent` is not, so every still-open candidate needs one to check parentage.
+    """
+    candidates = _br_list_all(root)
+    if candidates is None:
+        return None, False
+    ids = []
+    for candidate in candidates:
+        if candidate.get("status") == "closed":
+            continue
+        cid = candidate.get("id")
+        if not cid:
+            continue
+        show = br_show(root, cid)
+        # Use the list view's own id (already known-good), not show.get("id") -- a malformed/
+        # missing "id" in the `show` response must not silently poison the caller's `", ".join(...)`.
+        if show and show.get("parent") == epic_id:
+            ids.append(cid)
+    return ids, True
+
+
 def strip_payloads(cmd: str) -> str:
     """Remove quoted-string and heredoc payloads so git-op regexes only see real commands, not git
     mentions inside another command's arguments.
