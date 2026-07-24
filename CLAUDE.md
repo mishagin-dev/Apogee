@@ -18,9 +18,9 @@ Read `docs/ARCHITECTURE.md` first.
   only on gitflow branches via the `git-flow`/`git-commit` skills (the gate denies commits on
   `main`/`develop`). A release (`git flow release`, tags `<version>`) spans `main` + `develop` + the
   tag — all three must be pushed together (`git push origin main develop --tags`), by you as usual.
-- **Don't dogfood until stable.** Don't enable the `apogee` plugin globally until it's validated on a
-  throwaway project (see `docs/INSTALL.md` + ADR 0002). Strip the global `~/.claude/settings.json`
-  hooks block LAST.
+- **Dogfooding is live.** The `apogee` plugin is enabled globally and runs from the local `directory`
+  marketplace; the ADR 0002 migration is complete — the legacy global ccdk hook block is gone from
+  `~/.claude/settings.json`. Don't reintroduce a global hook block or per-throwaway-project caution.
 - **Language split.** Dialogue with the user in their language; code, comments, commit messages, docs,
   branch names, and anything sent to external tools (`agy`) — in **English**.
 - **Machinery vs content vs preferences** — respect the boundary (ADR 0002): hooks/commands/skills go in

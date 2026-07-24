@@ -2,7 +2,11 @@
 
 Every hook is wired in `plugins/apogee/hooks/hooks.json` and fires only when its plugin is enabled.
 All gate hooks **self-gate** (no-op unless the trigger column is satisfied) and **fail open** (any
-parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PLUGIN_ROOT}`.
+parse/IO error exits 0, never blocking) — the one deliberate exception is
+`git/enforce-git-flow-skill.py`'s open-children check, which fails **closed** specifically for
+`APOGEE_RUN_PLAN=1`-tagged autonomous finishes (see that row below): an unattended safety backstop
+that failed open on its own infra errors would defeat its entire purpose. Scripts are referenced via
+`${CLAUDE_PLUGIN_ROOT}`.
 
 ## By lifecycle event
 
@@ -11,7 +15,7 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 | Matcher | Script (`hooks/…`) | What it does | Self-gate | Escape |
 |---|---|---|---|---|
 | `Bash` | `git/enforce-git-commit-skill.py` | Only `git commit -F <file>` / `--amend --no-edit` allowed; blocks ad-hoc `git commit -m` | any `git commit` | use the `git-commit` skill |
-| `Bash` | `git/enforce-git-flow-skill.py` | ASK on `release`/`hotfix finish`; ASK on `feature`/`bugfix start` while another such branch is still open; deny commits/merges off git-flow branches | git-flow config | — |
+| `Bash` | `git/enforce-git-flow-skill.py` | ASK on `release`/`hotfix finish`; ASK on `feature`/`bugfix start` while another such branch is still open (bypassed when the command is tagged `APOGEE_RUN_PLAN=1`); DENY `feature`/`bugfix finish` when the linked br epic still has open steps (fail-open on a br query error for a plain manual finish, fail-**closed** when the command is `APOGEE_RUN_PLAN=1`-tagged — the /apogee:run-plan autonomous-execution safety backstop); deny commits/merges off git-flow branches | git-flow config | — |
 | `Bash` | `lang/tool-lang-guard.py` | Deny an `agy`/`gemini` command whose prompt contains Cyrillic (external AI is a tool → English) | command invokes `agy`/`gemini` | `TOOL_LANG_OFF=1` |
 | `Bash` | `idea/idea-bash-grep-guard.py` | Deny `grep`/`rg`/`ag`/`ack` used for symbol search (use idea-mcp) | `.idea/` + IDE | `IDEA_GATE_OFF=1` |
 | `Grep` | `idea/idea-symbol-guard.py` | Deny native symbol search via Grep | `.idea/` + IDE | `IDEA_GATE_OFF=1` |
@@ -27,7 +31,7 @@ parse/IO error exits 0, never blocking). Scripts are referenced via `${CLAUDE_PL
 | Matcher | Script | What it does | Self-gate |
 |---|---|---|---|
 | `mcp__idea__.*` | `idea/idea-usage-tracker.py` | Mark idea-mcp enforcement CONFIRMED on first successful idea call | `.idea/` + IDE |
-| `ExitPlanMode` | `br/br-capture-gate.py` | Seed the approved plan into `br` (epic + steps) before edits | `.beads/` |
+| `ExitPlanMode` | `br/br-capture-gate.py` | Seed the approved plan into `br` (epic + steps) before edits; in git-flow repos, hand off execution to `/apogee:run-plan` instead of the agent implementing by hand | `.beads/` |
 | `Skill` | `review/skill-run-tracker.py` | Drop markers when `/…:review-work` / `/…:update-docs` run (tolerant of plugin namespacing) | always |
 | `Edit\|Write\|MultiEdit\|NotebookEdit` | `review/track-file-touch.sh` | Log touched files to a per-session manifest, scoping `review-docs-gate`'s diff | always |
 

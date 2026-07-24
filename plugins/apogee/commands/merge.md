@@ -106,12 +106,19 @@ For monorepos with per-product subdirs (e.g., `ProductA/`, `ProductB/`), map eac
    ```
    If yes → docs were handled in the work session. Skip silently, proceed to Step 3.
 
-3. **If substantive diff AND no doc touches on branch** → STOP. List the specific files likely needing attention, then present three options:
-   - **(a)** Abort the merge so the user can invoke the `/update-docs` skill in this or another session.
-   - **(b)** Proceed anyway (user explicitly accepts doc drift — note this for Step 6).
-   - **(c)** Cancel entirely.
+3. **If substantive diff AND no doc touches on branch:**
+   - **Invoked as part of `/apogee:run-plan`'s autonomous loop** (you already know this from your own
+     context — no file/flag check needed, this is agent-followed prose, not code): auto-invoke the
+     `apogee:update-docs` skill now, wait for it to finish, then re-run the point-2 check. Proceed to
+     Step 3 once it passes. Never stop here in this mode — in practice this branch is a backstop,
+     since `run-plan.md`'s own loop already runs `update-docs` per epic before ever calling `/merge`.
+   - **Otherwise (ordinary interactive `/merge`):** STOP. List the specific files likely needing
+     attention, then present three options:
+     - **(a)** Abort the merge so the user can invoke the `/update-docs` skill in this or another session.
+     - **(b)** Proceed anyway (user explicitly accepts doc drift — note this for Step 6).
+     - **(c)** Cancel entirely.
 
-   **Wait for user choice. Do NOT auto-invoke `/update-docs`.** Merge is semi-destructive; this is a deliberate exception to the usual "skip redundant confirmation" preference.
+     **Wait for user choice. Do NOT auto-invoke `/update-docs`.** Merge is semi-destructive; this is a deliberate exception to the usual "skip redundant confirmation" preference.
 
 ---
 
@@ -130,6 +137,12 @@ For monorepos with per-product subdirs (e.g., `ProductA/`, `ProductB/`), map eac
 
 **Never `git add -A` or `git add .`.** Never auto-commit without the user naming files. A merge commit that quietly swallows regenerated build output or stale `.DS_Store`s is painful to undo.
 
+**No exception for `/apogee:run-plan`'s autonomous loop.** A dirty worktree at merge time — even
+from a file the loop itself touched earlier — means the loop's own per-step commit discipline
+already broke down somewhere; that is exactly the moment to stop and surface it to a human, not to
+guess that whatever's lingering is safe to ship. Treat this guardrail identically in autonomous and
+interactive use: STOP, same as above.
+
 ---
 
 ## Step 4: Merge to main
@@ -143,7 +156,7 @@ Do NOT `git checkout main` or `git merge` — the `enforce-git-flow-skill` gate 
 1. Confirm commits exist (`git log <base>..HEAD --oneline`, where `<base>` is the gitflow develop branch from `gitflow.branch.develop`, falling back to `develop`/`main`). If empty → ask the user whether to just run Step 5 cleanup.
 
 2. Branch on the current branch's gitflow prefix:
-   - `feature/<slug>` or `bugfix/<slug>` → **invoke the `apogee:git-flow` skill** to finish it (`git flow feature finish <slug>` / `bugfix finish`). (`git-flow` is bundled with this plugin as `apogee:git-flow`; if it isn't available, run that `git flow … finish` command directly.) The skill handles the merge to develop and branch deletion — so **Step 5 cleanup is a no-op in this path**.
+   - `feature/<slug>` or `bugfix/<slug>` → **invoke the `apogee:git-flow` skill** to finish it (`git flow feature finish <slug>` / `bugfix finish`). (`git-flow` is bundled with this plugin as `apogee:git-flow`; if it isn't available, run that `git flow … finish` command directly.) The skill handles the merge to develop and branch deletion — so **Step 5 cleanup is a no-op in this path**. **Invoked from `/apogee:run-plan`'s loop:** prefix the actual `git flow feature|bugfix finish <slug>` command with `APOGEE_RUN_PLAN=1` (e.g. `APOGEE_RUN_PLAN=1 git flow feature finish <slug>`) — this is what lets the enforcement hook apply the stricter fail-closed check on open child steps instead of its ordinary fail-open behavior; never add this prefix outside of actually running that loop.
    - `release/<slug>` or `hotfix/<slug>` → the release/hotfix lifecycle is owned by the **`/apogee:release`** command (version bump if a manifest is found, CHANGELOG, the project's own test gate, finish handoff). STOP and tell the user to run it.
    - Any other prefix (not a gitflow-managed branch) → STOP and ask the user how to proceed; do not guess.
 

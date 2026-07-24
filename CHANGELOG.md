@@ -4,6 +4,34 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - 2026-07-24
+
+### Added
+
+- `/apogee:run-plan`: autonomous epic-by-epic execution for beads+git-flow projects. Opens a
+  branch per ready `br` epic, implements/closes its steps, runs the review/docs/test gates,
+  finishes into develop, and repeats — with no per-micro-decision confirmation. A stateless
+  `APOGEE_RUN_PLAN=1` command-string tag (not a marker file or env var — hooks are separate
+  processes per tool call, so nothing session-scoped is crash-safe) lets
+  `enforce-git-flow-skill.py` bypass the "another branch open" ASK and apply a fail-closed check
+  on a new DENY rule: finishing a branch is blocked while its linked epic still has open steps,
+  failing open only for untagged manual finishes (matching the repo-wide convention). `git push`
+  and the release/hotfix lifecycle always stay manual. Circuit breaker defaults to 3
+  epics/invocation (`pipeline.json`, tunable).
+
+### Fixed
+
+- `br-capture-gate.py` (fires on `ExitPlanMode`) now hands off to `/apogee:run-plan` in git-flow
+  repos instead of telling the agent to open the branch and implement by hand — approving a plan
+  is now the trigger for autonomous execution, not a separate ask.
+
+### Changed
+
+- ADR 0003 records that Zed has no idea-mcp-parity MCP surface (researched, not built); ADR 0004
+  records Serena as the recommended non-JetBrains alternative (researched, not built).
+- `/apogee:plan-feature` gained a `deep-research` skill escalation rung for genuinely deep external
+  unknowns that ad-hoc WebSearch can't settle.
+
 ## [1.15.1] - 2026-07-13
 
 ### Fixed
