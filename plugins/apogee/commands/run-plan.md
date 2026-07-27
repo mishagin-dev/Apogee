@@ -72,11 +72,31 @@ plan.sh`; don't relitigate any of it without a comparable review.
 2. **Dependency graph must be sane.** Run `br dep cycles --json`. Non-empty → abort before touching
    anything; a broken dependency graph makes `br ready` unreliable, and there is nothing safe to
    automate on top of it.
-3. **Read the circuit-breaker config**: `pipeline.json`'s `run_plan.max_epics_per_invocation`
-   (default 3; `0` means unlimited — only if the user has explicitly raised it, or passed
-   `max-epics: 0` for this invocation via `$ARGUMENTS`) and `run_plan.test_command` (if set, gates
-   every epic's finish; `null` skips that gate). A `max-epics:` value in `$ARGUMENTS` overrides the
-   config file's value for this invocation only.
+3. **Locate and read the circuit-breaker config, `pipeline.json`.** This file ships as plugin
+   machinery, not project content — `setup.sh` never copies it into a host project, so it will
+   never be present at a path relative to the project you're running this command in. Locate it
+   with (in order):
+   - **Working inside the Apogee source repo itself** (this file's own repo): relative path
+     `plugins/apogee/hooks/core/config/pipeline.json` from the repo root.
+   - **Any other project** (the common case — the plugin is *enabled* there, not vendored):
+     `${CLAUDE_PLUGIN_ROOT}` is a harness substitution available only inside `hooks.json` command
+     strings, not a Bash-visible environment variable an agent can read (`echo $CLAUDE_PLUGIN_ROOT`
+     is empty in a normal tool call) — don't rely on it here. Instead resolve the plugin's actual
+     install path, which is version-pinned and changes on every update, so never hardcode it:
+     ```bash
+     find ~/.claude/plugins/cache/apogee -path '*/hooks/core/config/pipeline.json' 2>/dev/null | sort -V | tail -1
+     ```
+     (`sort -V | tail -1` picks the highest installed version if more than one is cached.) If that
+     finds nothing, the plugin cache may live elsewhere — cross-check
+     `~/.claude/plugins/installed_plugins.json`'s `.plugins["apogee@apogee"][0].installPath` and
+     append `/hooks/core/config/pipeline.json`.
+   - **File genuinely not found either way** → proceed with the documented defaults (3 epics,
+     no test-command gate) rather than blocking the loop on a missing optional config.
+
+   Read `run_plan.max_epics_per_invocation` (default 3; `0` means unlimited — only if the user has
+   explicitly raised it, or passed `max-epics: 0` for this invocation via `$ARGUMENTS`) and
+   `run_plan.test_command` (if set, gates every epic's finish; `null` skips that gate). A
+   `max-epics:` value in `$ARGUMENTS` overrides the config file's value for this invocation only.
 4. Initialize an in-context epic counter at 0 (tracked across this session's turns — no file
    needed, the whole loop runs within one continuous session).
 
