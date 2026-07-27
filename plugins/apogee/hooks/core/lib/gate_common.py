@@ -25,13 +25,51 @@ EXEMPT_NESTED = {os.path.join("docs", "apogee")}
 # Extensions treated as source CODE by the br edit/branch gates: only these require a br step / a
 # git-flow work branch. Everything else (docs, markdown, configs, images, data, no extension) is a
 # non-code edit and passes freely — so service commands (update-docs, readme, doc, image-*) and
-# ordinary doc/config edits never hit the br ceremony. Mirrors the default PATS in review-docs-gate.sh
-# and br-progress-gate.sh — keep these sets in sync.
-CODE_EXTENSIONS = frozenset({
+# ordinary doc/config edits never hit the br ceremony.
+#
+# Derived from pipeline.json's `file_patterns` (single source of truth shared with the shell gates
+# via core/lib/file_patterns.sh's resolve_file_patterns) rather than hardcoded here directly --
+# five independently-maintained copies of this list (this one, pipeline.json, and three shell
+# fallback arrays) drifted out of sync with each other in practice (missing PHP/Dart entirely,
+# inconsistent Kotlin/Java coverage). Now there are exactly two hardcoded fallbacks left (this
+# module's _CODE_EXTENSIONS_FALLBACK and file_patterns.sh's _FILE_PATTERNS_FALLBACK, kept in sync
+# by hand) -- used only if pipeline.json itself is missing or unreadable.
+_CODE_EXTENSIONS_FALLBACK = frozenset({
     "py", "ts", "tsx", "js",
     "swift", "go", "rs", "kt", "kts",
     "c", "cpp", "h", "java",
+    "php", "dart",
 })
+
+_GLOB_EXT_RE = re.compile(r"^\*\.([A-Za-z0-9]+)$")
+
+
+def _load_code_extensions(config_path=None):
+    """Read pipeline.json's `file_patterns` (e.g. "*.py") and return the bare-extension set
+    (e.g. "py") that `is_code_file()` compares against. Falls back to
+    `_CODE_EXTENSIONS_FALLBACK` if the config is missing, unreadable, malformed, or yields no
+    recognizable `*.ext` patterns -- this module must keep working even without a config file.
+    `config_path` is overridable (defaults to the real pipeline.json next to this module) purely
+    so the self-test below can exercise the fallback/parsing paths without touching the real file.
+    """
+    if config_path is None:
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config", "pipeline.json")
+    try:
+        with open(config_path) as f:
+            patterns = json.load(f).get("file_patterns")
+    except Exception:
+        return _CODE_EXTENSIONS_FALLBACK
+    if not patterns:
+        return _CODE_EXTENSIONS_FALLBACK
+    exts = set()
+    for pat in patterns:
+        m = _GLOB_EXT_RE.match(pat)
+        if m:
+            exts.add(m.group(1).lower())
+    return frozenset(exts) if exts else _CODE_EXTENSIONS_FALLBACK
+
+
+CODE_EXTENSIONS = _load_code_extensions()
 
 
 def beads_root(start: str):
@@ -338,6 +376,9 @@ if __name__ == '__main__':
         ("header.h",       True),
         ("App.java",       True),
         ("svc.rs",         True),
+        ("index.php",      True),
+        ("main.dart",      True),
+        ("Activity.kt",    True),
         # non-code -> br gates skip (service commands / doc & config edits pass freely)
         ("README.md",      False),
         ("docs/spec.md",   False),
@@ -354,6 +395,49 @@ if __name__ == '__main__':
         if got != want:
             ok = False
         print(f"  {mark}  is_code_file({fp!r}) = {got} (want {want})")
+
+    print("\n_load_code_extensions() tests (pipeline.json is the single source of truth):")
+    with tempfile.TemporaryDirectory() as tmp:
+        missing = os.path.join(tmp, "nope.json")
+        got = _load_code_extensions(missing)
+        mark = "✓" if got == _CODE_EXTENSIONS_FALLBACK else "✗ FAIL"
+        if got != _CODE_EXTENSIONS_FALLBACK:
+            ok = False
+        print(f"  {mark}  missing config -> fallback ({len(got)} extensions)")
+
+        malformed = os.path.join(tmp, "malformed.json")
+        with open(malformed, "w") as f:
+            f.write("{not valid json")
+        got = _load_code_extensions(malformed)
+        mark = "✓" if got == _CODE_EXTENSIONS_FALLBACK else "✗ FAIL"
+        if got != _CODE_EXTENSIONS_FALLBACK:
+            ok = False
+        print(f"  {mark}  malformed config -> fallback")
+
+        custom = os.path.join(tmp, "custom.json")
+        with open(custom, "w") as f:
+            json.dump({"file_patterns": ["*.rb", "*.ex", "not-a-glob", "*."]}, f)
+        got = _load_code_extensions(custom)
+        want = frozenset({"rb", "ex"})
+        mark = "✓" if got == want else "✗ FAIL"
+        if got != want:
+            ok = False
+        print(f"  {mark}  custom file_patterns parsed -> {sorted(got)} (want {sorted(want)})")
+
+        empty = os.path.join(tmp, "empty.json")
+        with open(empty, "w") as f:
+            json.dump({"file_patterns": []}, f)
+        got = _load_code_extensions(empty)
+        mark = "✓" if got == _CODE_EXTENSIONS_FALLBACK else "✗ FAIL"
+        if got != _CODE_EXTENSIONS_FALLBACK:
+            ok = False
+        print(f"  {mark}  empty file_patterns -> fallback")
+
+    real = _load_code_extensions()
+    mark = "✓" if {"php", "dart"} <= real else "✗ FAIL"
+    if not ({"php", "dart"} <= real):
+        ok = False
+    print(f"  {mark}  real pipeline.json includes php+dart: {sorted(real)}")
 
     print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
     raise SystemExit(0 if ok else 1)

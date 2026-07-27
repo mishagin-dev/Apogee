@@ -14,6 +14,7 @@
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../core/lib/file_patterns.sh"
 OVERRIDE=3
 
 [[ "${REVIEW_GATE_OFF:-}" == "1" ]] && exit 0
@@ -45,10 +46,7 @@ fi
 cd "$root" 2>/dev/null || exit 0
 git rev-parse --verify -q HEAD >/dev/null 2>&1 || exit 0
 PATS=()
-if [[ -f "$CONFIG" ]]; then
-    while IFS= read -r p; do [[ -n "$p" ]] && PATS+=("$p"); done < <(jq -r '(.file_patterns // [])|.[]' "$CONFIG" 2>/dev/null)
-fi
-[[ ${#PATS[@]} -eq 0 ]] && PATS=("*.py" "*.ts" "*.tsx" "*.js" "*.swift" "*.go" "*.rs" "*.kt" "*.kts" "*.c" "*.cpp" "*.h" "*.java")
+while IFS= read -r p; do PATS+=("$p"); done < <(resolve_file_patterns "$CONFIG")
 
 # Session-scoped: only diff files THIS session touched (manifest written by
 # track-file-touch.sh on PostToolUse), then filter to PATS. This is what stops

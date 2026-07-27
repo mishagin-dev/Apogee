@@ -51,8 +51,13 @@ Apogee/
 All hook commands in `hooks/hooks.json` reference scripts via `${CLAUDE_PLUGIN_ROOT}` so they resolve
 from the marketplace cache regardless of where the plugin is installed. Python hooks anchor their
 internal imports on `os.path.dirname(os.path.abspath(__file__))` (e.g. the idea guards import
-`hooks/idea/lib/idea_symbols.py`), so relocation never breaks imports. The one cross-group reference —
-`review-docs-gate.sh` reading `../core/config/pipeline.json` — is relative and verified.
+`hooks/idea/lib/idea_symbols.py`), so relocation never breaks imports.
+
+Cross-group references are all relative and verified by `scripts/validate.sh`. They converge on
+`hooks/core/`: the `br/*` and `git/*` gates import `core/lib/gate_common.py`; `review-docs-gate.sh`,
+`br-progress-gate.sh`, and `snapshot-baseline.sh` source `core/lib/file_patterns.sh` and read
+`core/config/pipeline.json`. Keeping shared helpers in `core/lib/` is deliberate — the alternative
+(a copy per group) is what let the code-file pattern list drift across five call sites.
 
 ## Self-gating (why global-enable is safe)
 
