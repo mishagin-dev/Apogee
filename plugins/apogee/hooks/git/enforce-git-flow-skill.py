@@ -417,6 +417,8 @@ def _run_self_test() -> None:
             ("git -C sub commit",          "git -C sub commit -m x",  sub),
             ("cd sub && git commit",       "cd sub && git commit -m x", sub),
             ("cd sub; git commit",         "cd sub; git commit",      sub),
+            ("cd sub on its own line, git on the next (real multi-line Bash tool call)",
+                                            "cd sub\ngit commit -m x", sub),
             ("commit -C HEAD (not a dir)", "git commit -C HEAD",      tmp),
             ("plain commit → cwd",         "git commit -m x",         tmp),
             ("nonexistent -C dir → cwd",   "git -C nope commit",      tmp),

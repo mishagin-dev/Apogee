@@ -22,10 +22,13 @@ def run(args, cwd):
         return ""
 
 
-# A leading `cd <dir>` before the git command (`cd sub && git commit`, `cd sub; git ...`).
-# Anchored to start-of-string or a shell chain operator so an inner `... cd ...` inside an
-# argument is not mistaken for the shell's working-directory change.
-_CD_RE = re.compile(r"(?:^|&&|\|\||;|&)\s*cd\s+(?P<dir>[^\s;&|]+)")
+# A leading `cd <dir>` before the git command (`cd sub && git commit`, `cd sub; git ...`, or
+# `cd sub` on its own line followed by `git ...` on the next -- a real multi-line Bash tool call
+# executes newline-separated commands sequentially exactly like `;`, so `\n` must be a boundary
+# token too; a bare `\s*` alone doesn't count as one on its own, only literally following one of
+# these tokens does). Anchored to start-of-string or a shell chain operator so an inner `... cd
+# ...` inside an argument is not mistaken for the shell's working-directory change.
+_CD_RE = re.compile(r"(?:^|&&|\|\||;|&|\n)\s*cd\s+(?P<dir>[^\s;&|]+)")
 
 # git's GLOBAL `-C <dir>` option (`git -C sub commit`). Non-greedy up to the FIRST `-C` after
 # `git` so `git -C sub commit -C HEAD` grabs `sub`, not the commit-message-reuse `-C HEAD`; the

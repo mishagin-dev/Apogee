@@ -18,8 +18,14 @@ Read `docs/ARCHITECTURE.md` first.
   only on gitflow branches via the `git-flow`/`git-commit` skills (the gate denies commits on
   `main`/`develop`). A release (`git flow release`, tags `<version>`) spans `main` + `develop` + the
   tag — all three must be pushed together (`git push origin main develop --tags`), by you as usual.
-- **Dogfooding is live.** The `apogee` plugin is enabled globally and runs from the local `directory`
-  marketplace; the ADR 0002 migration is complete — the legacy global ccdk hook block is gone from
+- **Dogfooding is live, and this machine's install is GitHub-sourced.** The `apogee` plugin is
+  enabled globally from a **GitHub** marketplace (`mishagin-dev/Apogee`) — a deliberate deviation
+  from `install.sh`'s default, which registers the local `~/.apogee` clone (`docs/INSTALL.md` is
+  correct about that path; this machine just isn't on it). Consequence: editing this working tree
+  does NOT change running sessions. Machinery changes only take effect after `git push`, then
+  `/plugin marketplace update apogee` + `/reload-plugins`. Verify hook changes with
+  `scripts/validate.sh` and the sandbox smoke scripts, not by expecting live behavior to shift.
+  The ADR 0002 migration is complete — the legacy global ccdk hook block is gone from
   `~/.claude/settings.json`. Don't reintroduce a global hook block or per-throwaway-project caution.
 - **Language split.** Dialogue with the user in their language; code, comments, commit messages, docs,
   branch names, and anything sent to external tools (`agy`) — in **English**.
@@ -31,7 +37,13 @@ Read `docs/ARCHITECTURE.md` first.
 - All hook commands in `plugins/apogee/hooks/hooks.json` must use `${CLAUDE_PLUGIN_ROOT}/hooks/<group>/…`.
 - Python hooks: anchor internal imports on `os.path.dirname(os.path.abspath(__file__))`, never on CWD or
   `${CLAUDE_PLUGIN_ROOT}` inside sub-scripts. Keep a hook's helpers in its own group dir (e.g.
-  `hooks/idea/lib/`, `hooks/br/br-sig.py`).
+  `hooks/idea/lib/`, `hooks/br/br-sig.py`) — `hooks/core/lib/` is the deliberate exception for
+  helpers more than one group depends on (`gate_common.py`, `file_patterns.sh`).
+- **One source of truth for "what counts as a code file":** `hooks/core/config/pipeline.json`'s
+  `file_patterns`. Bash gates read it via `hooks/core/lib/file_patterns.sh`'s
+  `resolve_file_patterns`; Python reads it via `gate_common.py`'s `_load_code_extensions()`. Each
+  side keeps exactly one hardcoded fallback for when the config is unreadable — never add a third
+  copy, and keep the two fallbacks in sync when editing the list.
 - Every gate must self-gate (no-op without `.beads/` / `.idea/`+IDE / git-flow) and fail open.
 - After editing hooks, run `bash scripts/validate.sh` (py/sh/json syntax, `${CLAUDE_PLUGIN_ROOT}`
   hook-path resolution, the `idea_symbols` self-test, and the language-policy check; CI runs it
