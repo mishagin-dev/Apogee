@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.1] - 2026-07-24
+
+### Fixed
+
+- `/apogee:run-plan` could not locate `pipeline.json`. The file ships as plugin machinery, so
+  `setup.sh` never copies it into a host project, and `${CLAUDE_PLUGIN_ROOT}` is a `hooks.json`
+  substitution rather than an environment variable an agent's Bash call can read. Pre-flight now
+  resolves it explicitly — repo-relative inside the Apogee source tree, otherwise a
+  version-agnostic search of the plugin cache — and falls back to documented defaults.
+- `br-progress-gate.sh` read `hooks/br/config/pipeline.json`, a path that never existed. The gate
+  had run on hardcoded defaults since it shipped, ignoring `min_lines_changed` and `file_patterns`.
+- `effective_repo()` did not treat a newline as a shell command separator, so `cd sub` on one line
+  followed by `git commit` on the next was judged against the session's repo instead of the
+  submodule.
+
+### Changed
+
+- The set of extensions counting as trackable code is now defined once, in `pipeline.json`'s
+  `file_patterns`, instead of five drifting copies. Bash gates resolve it through the new
+  `hooks/core/lib/file_patterns.sh`; `gate_common.py` derives `CODE_EXTENSIONS` from the same
+  source. PHP and Dart join the list; Kotlin, Java, and the C family are now consistent across
+  every gate.
+
 ## [1.16.0] - 2026-07-24
 
 ### Added
