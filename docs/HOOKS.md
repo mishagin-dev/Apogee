@@ -8,6 +8,13 @@ parse/IO error exits 0, never blocking) — the one deliberate exception is
 that failed open on its own infra errors would defeat its entire purpose. Scripts are referenced via
 `${CLAUDE_PLUGIN_ROOT}`.
 
+Several gates below only act on **code** files (the br edit/branch gates, and the line-count
+thresholds in the two Stop gates). That set is defined once, in
+`hooks/core/config/pipeline.json`'s `file_patterns` — edit it there to add a language, not in the
+individual hooks. Bash gates read it through `hooks/core/lib/file_patterns.sh`; Python reads it
+through `gate_common.py`'s `_load_code_extensions()`. Same file also carries the gate thresholds
+(`min_lines_changed`, `review_threshold`) and `run_plan`'s circuit breaker.
+
 ## By lifecycle event
 
 ### PreToolUse
