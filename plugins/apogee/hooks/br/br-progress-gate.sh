@@ -8,6 +8,7 @@
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../core/lib/file_patterns.sh"
 
 INPUT="$(cat)"
 SID="$(printf '%s' "$INPUT" | jq -r '.session_id // "unknown"' 2>/dev/null || echo unknown)"
@@ -35,17 +36,19 @@ BASE="$(cat "/tmp/br-baseline-${SID}.sig" 2>/dev/null || echo "")"
 if [[ -n "$BASE" && "$CUR" != "$BASE" ]]; then rm -f "$STATE"; exit 0; fi   # br touched -> allow + reset
 
 # br unchanged -> is there meaningful code change?
-CONFIG="$SCRIPT_DIR/config/pipeline.json"
+# NOTE: this used to be "$SCRIPT_DIR/config/pipeline.json" -- wrong, since SCRIPT_DIR is
+# hooks/br/ and the config lives in hooks/core/config/. That path never existed, so this gate
+# silently ran on hardcoded defaults (MIN=10, the fallback PATS) since it shipped, never actually
+# respecting pipeline.json's configured min_lines_changed/file_patterns. Fixed to match
+# review-docs-gate.sh's (correct) relative path.
+CONFIG="$SCRIPT_DIR/../core/config/pipeline.json"
 MIN=10
 [[ -f "$CONFIG" ]] && MIN="$(jq -r '.min_lines_changed // 10' "$CONFIG" 2>/dev/null || echo 10)"
 
 cd "$root" 2>/dev/null || exit 0
 git rev-parse --verify -q HEAD >/dev/null 2>&1 || exit 0
 PATS=()
-if [[ -f "$CONFIG" ]]; then
-    while IFS= read -r p; do [[ -n "$p" ]] && PATS+=("$p"); done < <(jq -r '(.file_patterns // [])|.[]' "$CONFIG" 2>/dev/null)
-fi
-[[ ${#PATS[@]} -eq 0 ]] && PATS=("*.py" "*.ts" "*.tsx" "*.js" "*.swift" "*.go" "*.rs" "*.kt" "*.kts" "*.c" "*.cpp" "*.h" "*.java")
+while IFS= read -r p; do PATS+=("$p"); done < <(resolve_file_patterns "$CONFIG")
 
 # Only TRACKED code files count (git diff --numstat + PATS). Git-ignored outputs (reports, scratch)
 # never land here, so writing a deliverable to an ignored folder demands no br progress. See

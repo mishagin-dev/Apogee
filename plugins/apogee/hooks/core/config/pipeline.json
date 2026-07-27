@@ -2,7 +2,7 @@
   "enabled": true,
   "min_lines_changed": 10,
   "review_threshold": 50,
-  "file_patterns": ["*.py", "*.ts", "*.js", "*.swift", "*.go", "*.rs"],
+  "file_patterns": ["*.py", "*.ts", "*.tsx", "*.js", "*.swift", "*.go", "*.rs", "*.kt", "*.kts", "*.c", "*.cpp", "*.h", "*.java", "*.php", "*.dart"],
   "review_command": "/apogee:review-work",
   "test_command": null,
   "docs_command": "/apogee:update-docs",
