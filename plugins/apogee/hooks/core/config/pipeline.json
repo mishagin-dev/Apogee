@@ -1,16 +1,4 @@
 {
-  "enabled": true,
-  "min_lines_changed": 10,
-  "review_threshold": 50,
-  "file_patterns": ["*.py", "*.ts", "*.tsx", "*.js", "*.swift", "*.go", "*.rs", "*.kt", "*.kts", "*.c", "*.cpp", "*.h", "*.java", "*.php", "*.dart"],
-  "review_command": "/apogee:review-work",
-  "test_command": null,
-  "docs_command": "/apogee:update-docs",
-  "phases": {
-    "review": true,
-    "tests": true,
-    "docs": true
-  },
   "run_plan": {
     "max_epics_per_invocation": 3,
     "test_command": null

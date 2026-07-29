@@ -12,12 +12,12 @@ Read `docs/ARCHITECTURE.md` first.
 
 ## Critical rules
 
-- **Beads stays inert; git-flow is enabled.** Keep this repo WITHOUT `.beads/` so the `br` gates
-  self-gate to no-op while you build (if you add it, develop with escape envs:
-  `BR_GATE_OFF=1 REVIEW_GATE_OFF=1 IDEA_GATE_OFF=1 TOOL_LANG_OFF=1`). git-flow IS configured: commit
-  only on gitflow branches via the `git-flow`/`git-commit` skills (the gate denies commits on
-  `main`/`develop`). A release (`git flow release`, tags `<version>`) spans `main` + `develop` + the
-  tag — all three must be pushed together (`git push origin main develop --tags`), by you as usual.
+- **Beads stays inert; git-flow is enabled.** This repo has no `.beads/`, so the `br` machinery is a
+  no-op here. git-flow IS configured: commit only on gitflow branches via the `git-flow` /
+  `git-commit` skills. Since ADR 0005 nothing *blocks* a commit on `main`/`develop` — the rule holds
+  because it's written here, not because a hook enforces it. A release (`git flow release`, tags
+  `<version>`) spans `main` + `develop` + the tag — all three must be pushed together
+  (`git push origin main develop --tags`), by you as usual.
 - **Dogfooding is live, and this machine's install is GitHub-sourced.** The `apogee` plugin is
   enabled globally from a **GitHub** marketplace (`mishagin-dev/Apogee`) — a deliberate deviation
   from `install.sh`'s default, which registers the local `~/.apogee` clone (`docs/INSTALL.md` is
@@ -36,18 +36,21 @@ Read `docs/ARCHITECTURE.md` first.
 
 - All hook commands in `plugins/apogee/hooks/hooks.json` must use `${CLAUDE_PLUGIN_ROOT}/hooks/<group>/…`.
 - Python hooks: anchor internal imports on `os.path.dirname(os.path.abspath(__file__))`, never on CWD or
-  `${CLAUDE_PLUGIN_ROOT}` inside sub-scripts. Keep a hook's helpers in its own group dir (e.g.
-  `hooks/idea/lib/`, `hooks/br/br-sig.py`) — `hooks/core/lib/` is the deliberate exception for
-  helpers more than one group depends on (`gate_common.py`, `file_patterns.sh`).
-- **One source of truth for "what counts as a code file":** `hooks/core/config/pipeline.json`'s
-  `file_patterns`. Bash gates read it via `hooks/core/lib/file_patterns.sh`'s
-  `resolve_file_patterns`; Python reads it via `gate_common.py`'s `_load_code_extensions()`. Each
-  side keeps exactly one hardcoded fallback for when the config is unreadable — never add a third
-  copy, and keep the two fallbacks in sync when editing the list.
-- Every gate must self-gate (no-op without `.beads/` / `.idea/`+IDE / git-flow) and fail open.
+  `${CLAUDE_PLUGIN_ROOT}` inside sub-scripts. A hook's helpers live in its own group dir
+  (`hooks/git/lib/`). There is no shared cross-group lib any more — `hooks/core/lib/` was dissolved
+  by ADR 0005 once its consumers went. If exactly one hook needs a helper, inline it; only bring a
+  shared dir back when a *third* consumer actually appears.
+- **The blocking surface is deliberately two hooks** (ADR 0005): `core/security-scan.sh` (DENY —
+  secrets to external MCP servers) and `git/enforce-git-flow-skill.py` (ASK on `release|hotfix
+  finish`; DENY on an `APOGEE_RUN_PLAN=1`-tagged finish with open epic steps). Everything else is
+  context — nudges and injected directives. Before adding a gate, answer both questions ADR 0005
+  used: *is the outcome irreversible*, and *is a human present to catch it*. If either is "no", the
+  rule belongs in a SKILL.md or `scaffold/CLAUDE.md`, not in a hook.
+- Every hook must self-gate (no-op without `.beads/` / `.idea/`+IDE / git-flow) and fail open. The
+  one exception is Rule 2b, which fails *closed* precisely because it only runs unattended.
 - After editing hooks, run `bash scripts/validate.sh` (py/sh/json syntax, `${CLAUDE_PLUGIN_ROOT}`
-  hook-path resolution, the `idea_symbols` self-test, and the language-policy check; CI runs it
-  too).
+  hook-path resolution, the two `--test` self-tests, version lockstep, and the language-policy
+  check; CI runs it too).
 
 ## Conventions
 

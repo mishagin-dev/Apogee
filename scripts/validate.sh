@@ -8,8 +8,7 @@
 #   3. JSON validity  — jq empty every *.json in the repo (excluding .git)
 #   4. Hook paths     — every ${CLAUDE_PLUGIN_ROOT}/<path> in hooks.json must
 #                       resolve to an existing file under plugins/apogee/
-#   5. Self-tests     — idea_symbols.py + gate_common.py + hook --test modes
-#                       (idea-usage-tracker, idea-agent-guard, git hooks)
+#   5. Self-tests     — hook --test modes (enforce-git-flow-skill)
 #   6. Version lockstep — plugin.json version == marketplace.json plugins[0].version
 #                       == CHANGELOG.md's top-most ## [x.y.z] header
 #   7. Language policy — no unallowlisted Cyrillic in plugins/apogee/**, scripts/**,
@@ -118,30 +117,21 @@ echo "Stage 4 done."
 # Stage 5: self-tests (lib __main__ assertions + hook --test modes)
 # ---------------------------------------------------------------------------
 echo "=== Stage 5: self-tests ==="
-SELFTESTS=(
-    "${REPO_ROOT}/plugins/apogee/hooks/idea/lib/idea_symbols.py"
-    "${REPO_ROOT}/plugins/apogee/hooks/core/lib/gate_common.py"
-)
-# Hook-entry scripts expose a --test mode (their __main__ otherwise runs the live hook on stdin).
+# The two surviving blocking hooks both expose a --test mode (their __main__ otherwise runs the
+# live hook on stdin). Entries are "<interpreter> <path>".
+# NOTE: no bare-`python3 <lib>` self-test array here. There used to be one for the shared libs, but
+# both were deleted with the gates they served (ADR 0005). Do not reintroduce an EMPTY array and
+# loop over it: this script runs `set -uo pipefail` and macOS ships Bash 3.2, where "${EMPTY[@]}"
+# aborts on an unbound variable -- CI (Bash 5) would pass while every local run failed.
 HOOK_SELFTESTS=(
-    "${REPO_ROOT}/plugins/apogee/hooks/idea/idea-usage-tracker.py"
-    "${REPO_ROOT}/plugins/apogee/hooks/idea/idea-agent-guard.py"
-    "${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-flow-skill.py"
-    "${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-commit-skill.py"
+    "python3 ${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-flow-skill.py"
+    "bash ${REPO_ROOT}/plugins/apogee/hooks/core/security-scan.sh"
 )
-for f in "${SELFTESTS[@]}"; do
-    if python3 "$f" > /dev/null 2>&1; then
-        echo "ok  $f"
+for entry in "${HOOK_SELFTESTS[@]}"; do
+    if ${entry} --test > /dev/null 2>&1; then
+        echo "ok  ${entry##* } --test"
     else
-        echo "FAIL selftest $f"
-        fail=1
-    fi
-done
-for f in "${HOOK_SELFTESTS[@]}"; do
-    if python3 "$f" --test > /dev/null 2>&1; then
-        echo "ok  $f --test"
-    else
-        echo "FAIL selftest $f --test"
+        echo "FAIL selftest ${entry##* } --test"
         fail=1
     fi
 done

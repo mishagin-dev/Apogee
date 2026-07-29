@@ -120,17 +120,13 @@ Falls back to session auth if provider is unavailable.
 | `FAIL: message contains non-ASCII characters` | Replace the flagged characters (em-dash, Cyrillic, smart quotes) with ASCII. |
 | Body merged into one line after commit | You used `-m`; recommit with the `-F` temp-file pattern. |
 
-## Enforcement hook (active)
+## No hook backs this
 
-A PreToolUse hook is wired via `hooks.json`:
+There used to be a PreToolUse hook denying `git commit -m` / `-am` / bare
+`git commit`. [ADR 0005](../../../../docs/decisions/0005-enforcement-safety-only.md)
+removed it: a badly-formatted commit message is a `git commit --amend` away
+from fixed, and the rule was already stated three times in this file.
 
-```
-plugins/apogee/hooks/git/enforce-git-commit-skill.py
-```
-
-It intercepts every `Bash` call and, when it detects a `git commit` invocation,
-checks whether the commit goes through the `-F <file>` temp-file pattern used
-by this skill's Workflow (step 4). Commits via `-m`, `--message`, `-am`, or a
-bare `git commit` are denied with a reminder to use this skill. The hook is
-fail-open: any parse error is silently ignored so unrelated Bash calls are
-never blocked.
+So the `-F <file>` pattern in step 4 of the Workflow is now a convention you
+follow, not one you are forced into. Follow it anyway — `-m` collapses the
+multi-line body, which is the actual reason for the rule.

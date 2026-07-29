@@ -209,31 +209,26 @@ Symfony context:  list_symfony_* / locate_* > bin/console introspection  (PHP on
 Debugging:        xdebug_* IDE tools         > var_dump / dd() / Xdebug CLI  (PHP only)
 ```
 
-## Context economy (this skill replaces an LSP-enforcement kit)
+## Context economy (the whole point of this skill)
 
-The whole point is to spend fewer tokens: precise IDE queries instead of "grep + read
-the whole file." Two habits the enforcement hooks back:
+Spend fewer tokens: precise IDE queries instead of "grep + read the whole file." Two habits:
 
 - **Navigate before bulk-reading.** To understand a symbol, call `search_symbol` /
   `get_symbol_info` (and `get_file_problems` for diagnostics) to get the exact file +
   line range, then `Read` only that range (`offset`/`limit`). Reading whole code files
-  blind is the expensive default this skill exists to avoid. (`idea-read-gate.py` enforces
-  this once idea-first mode is active: full-file code reads are budgeted; an idea call
-  refreshes the budget; surgical `offset`/`limit` reads are always free.)
+  blind is the expensive default this skill exists to avoid.
 - **Subagents have no idea-MCP.** A delegated "grep/find this symbol" task runs grep +
   whole-file reads inside the subagent — the exact waste we avoid. Resolve symbols/locations
-  HERE first, then pass concrete `file:line` context into the subagent prompt. (`idea-agent-guard.py`
-  blocks raw code-search delegation while idea-first mode is active.)
+  HERE first, then pass concrete `file:line` context into the subagent prompt.
 
-Activation (fail-closed / forced): in a JetBrains project (a `.idea/` dir) with the IDE running,
-`idea-force-activate.py` (SessionStart) turns the guards ON from turn 1 — native symbol search and
-blind full-file code reads are blocked immediately, so you MUST use idea. Make any `mcp__idea__*`
-call to proceed (the matcher is `mcp__idea__.*`, so ANY tool counts — `search_symbol`,
-`get_all_open_file_paths`, `list_directory_tree`, …); pass `projectPath` if asked which project. The
-first success "confirms" the mode (`idea-usage-tracker.py`). This is not a trap: if idea is forced on
-but genuinely unreachable (e.g. Claude launched outside the IDE), the block SELF-HEALS after a couple
-of attempts and native tools resume. Any idea error/disambiguation also deactivates → native. Global
-escape `IDEA_GATE_OFF=1`; per-project opt-out via `~/.claude/hooks/idea-enforce.json`.
+**Nothing enforces this.** The five guards that used to block native symbol search, glob search,
+`grep`, blind full-file reads and subagent delegation were removed by
+[ADR 0005](../../../../docs/decisions/0005-enforcement-safety-only.md): they defended token economy,
+not correctness, they were the toolkit's only fail-CLOSED bracket, and they produced a documented
+stream of false positives (a research delegation blocked because the prompt "looked like" code
+search). What remains is `idea-nudge.py`, a reminder of at most three per session in projects with a
+`.idea/`/`*.iml` and a running IDE. Prefer idea tools because they are cheaper and more precise —
+and fall straight back to native tools whenever idea is absent, erroring, or slower for the job.
 
 ---
 

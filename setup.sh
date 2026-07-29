@@ -89,7 +89,7 @@ echo "  enable scope:       $([[ $PER_PROJECT -eq 1 ]] && echo 'per-project' || 
 echo
 
 # ---- auto git init: a brand-new TARGET needs a repo before any .git/info/exclude write below
-# (or `br`/gate self-gating) can do anything. Safe and idempotent -- no-op if already a repo.
+# (or the hooks' self-gating) can do anything. Safe and idempotent -- no-op if already a repo.
 if [[ $DO_GIT_INIT -eq 1 ]] && command -v git >/dev/null 2>&1 \
    && ! git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
   ( cd "$TARGET" && git init -q )
@@ -183,7 +183,7 @@ echo
 # agent toward — idea, plugin-bundled Context7 — both stable-token, harmless when absent)
 # run without prompts in acceptEdits/default sessions, a
 # content-agnostic deny-list (sudo / rm -rf / destructive git — defense-in-depth that
-# complements the hook gates), plus project-local plansDirectory and an absolute
+# the primary destructive-command guard since ADR 0005), plus project-local plansDirectory and an absolute
 # autoMemoryDirectory. Non-clobbering: existing keys win, the allow/deny lists are
 # unioned, the dirs are set only if absent.
 if [[ $DO_SETTINGS -eq 1 ]]; then
@@ -212,20 +212,20 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
   echo
 fi
 
-# ---- tracker init: br + git-flow, both auto by default -- the gates self-gate to .beads/ and
+# ---- tracker init: br + git-flow, both auto by default -- the hooks self-gate to .beads/ and
 # gitflow.* config, so without this step they silently stay inert until someone remembers to run
 # `br init`/`git flow init` by hand. `git flow init -d` just creates `develop` off current HEAD
 # with AVH's default naming conventions (verified: works even on a brand-new, zero-commit repo)
 # -- it doesn't touch existing history, so auto-running it is as low-risk as `br init`.
 if [[ $DO_TRACKER_INIT -eq 1 ]]; then
-  echo "→ Tracker init (the gates self-gate to .beads/ + gitflow projects)…"
+  echo "→ Tracker init (the hooks self-gate to .beads/ + gitflow projects)…"
   ( cd "$TARGET" && command -v br >/dev/null 2>&1 && [[ ! -d .beads ]] && br init && echo "  • br init done." ) || true
   ( cd "$TARGET" && command -v git-flow >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 \
       && ! git config --get-regexp '^gitflow\.branch\.' >/dev/null 2>&1 \
       && git flow init -d >/dev/null 2>&1 && echo "  • git flow init -d done." ) || true
   ( cd "$TARGET" && ! command -v git-flow >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 \
       && ! git config --get-regexp '^gitflow\.branch\.' >/dev/null 2>&1 \
-      && echo "  • git-flow (AVH) not installed -- run 'git flow init -d' by hand once it is, to enable the git-flow gate." ) || true
+      && echo "  • git-flow (AVH) not installed -- run 'git flow init -d' by hand once it is, to enable the git-flow workflow." ) || true
   echo
 fi
 

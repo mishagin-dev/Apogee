@@ -79,18 +79,27 @@ tags (release/hotfix), back-merges, and deletes the branch**.
   `git` call so you can confirm the branch pair before it merges.
 - **No remote here** — never pass `-p`/`--push`, `publish`, or `track`.
 - **Commits only inside gitflow branches.** Never commit directly on `main` or
-  `develop`; always start a feature/bugfix/hotfix/release first.
+  `develop`; always start a feature/bugfix/hotfix/release first. Nothing blocks
+  you here — the hook that used to DENY this was removed by ADR 0005 because it
+  duplicated this very line. The rule did not change; only the wall did.
+- **One logical change per branch.** Finish the branch you are on before starting
+  the next feature/bugfix. Split a batch of fixes into separate branches, run them
+  sequentially when their file sets overlap.
+- **Never hand-roll what git-flow owns.** No `git checkout -b feature/...`, no
+  `git merge` of a gitflow branch, no manual merge into the production branch —
+  use `git flow <type> start|finish` so the tag and back-merge happen correctly.
 - **`release finish` / `hotfix finish` — run once the user has asked for it.** These touch the
   production branch, so never start one unprompted. Once a release/hotfix/finish has actually been
   requested, run the command directly rather than stopping for a second, separate confirmation —
-  the enforcement hook already ASKs before it executes (it touches the production branch), and
-  that ASK is the real safety gate, not a redundant wait layered on top of it in your own prose.
+  the hook already ASKs before it executes (it touches the production branch), and that ASK is the
+  real safety gate, not a redundant wait layered on top of it in your own prose.
 
 ## beads link (CCDK / beads_rust projects)
 
 In a beads project (a `.beads/` dir at the repo root), a git-flow work branch
 maps **1:1 to a br epic** — one track == one epic == one feature/bugfix branch.
-The link is the convention the branch gate (below) enforces:
+The link is a convention. Nothing enforces it since ADR 0005 removed the branch gate,
+but `/apogee:run-plan` relies on it to know which epic a branch is finishing:
 
 - **Name the branch after the epic slug.** The epic is created with
   `br create … --slug <id>`; start the branch as `git flow feature start <id>`
@@ -108,29 +117,23 @@ The link is the convention the branch gate (below) enforces:
 - **Before `finish`,** the epic's steps should all be closed in br — the branch
   is the unit that merges, so leaving steps open breaks the 1:1 link.
 
-## Enforcement hook (active)
+## Enforcement hook (two rules)
 
-A PreToolUse hook (`plugins/apogee/hooks/git/enforce-git-flow-skill.py`) is wired via
-`hooks.json`. In gitflow-enabled repos it enforces six rules:
+A PreToolUse hook (`plugins/apogee/hooks/git/enforce-git-flow-skill.py`) is wired via `hooks.json`.
+In gitflow-enabled repos it checks exactly two things; in repos without gitflow config it is
+completely inert.
 
-1. **ASK** — `git flow release finish` / `git flow hotfix finish`: surfaces a
-   confirmation prompt (touches production branch).
-2. **ASK** — `git flow feature|bugfix start` while another `feature/`/`bugfix/` branch is
-   already open: one logical change per branch, finished before the next starts.
-3. **DENY** — `git commit` on a non-gitflow branch (`main`, `develop`, etc.).
-4. **DENY** — `git merge` while the current branch is the production branch.
-5. **DENY** — manual branch creation with a gitflow-prefixed name
-   (`git checkout -b feature/...`, `git switch -c release/...`, etc.).
-6. **DENY** — `git merge` of a gitflow-prefixed ref from any branch.
+1. **ASK** — `git flow release finish` / `git flow hotfix finish`: surfaces a confirmation prompt,
+   because this merges into the production branch and creates a tag.
+2. **DENY** — a `git flow feature|bugfix finish` **tagged `APOGEE_RUN_PLAN=1`** while the br epic
+   linked to that branch still has open steps. This applies only to `/apogee:run-plan`'s autonomous
+   loop, where no human is watching; it fails **closed** (a `br` query error refuses the finish).
+   An interactive finish is not checked at all.
 
-In repos without gitflow config the hook is completely inert.
-
-A **companion edit-time gate** (`plugins/apogee/hooks/br/br-branch-gate.py`, on
-`Edit|Write|MultiEdit|NotebookEdit`) enforces the same discipline at the source —
-it **denies code edits** on a base branch (`main`/`develop`), and on a
-feature/bugfix branch whose `external_ref` link (see "beads link" above) does not
-match the active step's epic. It is active only in repos that are **both** beads
-and gitflow initialized; inert elsewhere. Escape hatch: `BR_GATE_OFF=1`.
+Everything else this hook used to deny — commits off gitflow branches, manual merges, manual branch
+creation, one-branch-at-a-time — is now the Guardrails list above. [ADR 0005](../../../../docs/decisions/0005-enforcement-safety-only.md)
+has the evidence: those rules were already written here, and duplicating them as hooks bought
+false positives rather than caught mistakes.
 
 ## Publishing the release (gh/glab)
 

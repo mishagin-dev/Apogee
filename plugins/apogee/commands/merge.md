@@ -1,6 +1,6 @@
 # Merge Command
 
-Finalize work on a branch: verify docs + tree are clean, then ship. In **Git Flow repos** `/merge` is verify-only and hands the actual finish to the `apogee:git-flow` skill (manual merges to the production branch are blocked by the git-flow enforcement gate). In **plain repos** it merges to main directly. Supports both standard `git checkout -b` branches and `git worktree` flows — all auto-detected at pre-flight.
+Finalize work on a branch: verify docs + tree are clean, then ship. In **Git Flow repos** `/merge` is verify-only and hands the actual finish to the `apogee:git-flow` skill (a manual merge into the production branch would skip the tag and the back-merge into develop). In **plain repos** it merges to main directly. Supports both standard `git checkout -b` branches and `git worktree` flows — all auto-detected at pre-flight.
 
 **Context from user:** $ARGUMENTS
 
@@ -43,7 +43,7 @@ Do not prompt the user for verification notes. Most merges don't carry a `Verifi
    ```bash
    git config --get-regexp '^gitflow\.branch\.'
    ```
-   - **Non-empty** → **Git Flow repo**. Step 4 must NOT run `git checkout main`/`git merge` itself — the `enforce-git-flow-skill` gate denies manual merges on the production branch. Use the **Git Flow finish** path in Step 4 instead.
+   - **Non-empty** → **Git Flow repo**. Step 4 must NOT run `git checkout main`/`git merge` itself — that skips the tag and the back-merge into develop, which `git flow finish` handles. Use the **Git Flow finish** path in Step 4 instead.
    - **Empty** → plain repo; use the standard/worktree merge path in Step 4.
 
 2. **Verify branch.** Run `git branch --show-current`.
@@ -151,7 +151,7 @@ interactive use: STOP, same as above.
 
 ### Git Flow mode (takes precedence when 1b is non-empty)
 
-Do NOT `git checkout main` or `git merge` — the `enforce-git-flow-skill` gate denies that, and finishing must go through the **`apogee:git-flow` skill** (which drives the `git flow` binary, tags, and back-merge to develop).
+Do NOT `git checkout main` or `git merge` — nothing blocks you since ADR 0005, but it produces a wrong result. Finishing must go through the **`apogee:git-flow` skill** (which drives the `git flow` binary, tags, and back-merge to develop).
 
 1. Confirm commits exist (`git log <base>..HEAD --oneline`, where `<base>` is the gitflow develop branch from `gitflow.branch.develop`, falling back to `develop`/`main`). If empty → ask the user whether to just run Step 5 cleanup.
 

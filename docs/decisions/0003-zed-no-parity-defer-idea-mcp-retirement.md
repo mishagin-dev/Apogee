@@ -207,3 +207,22 @@ the tested file disappears — nothing is left half-wired at any intermediate co
   version header, per the existing release convention.
 - Finish the branch through the normal git-flow release process used elsewhere in this repo (see the
   `merge`/`release` command conventions already in place) — not a hand-rolled merge.
+
+## Amendment (2026-07-29) — Steps 1-3 executed early by ADR 0005, on unrelated grounds
+
+[ADR 0005](0005-enforcement-safety-only.md) deleted the `idea/` group's five guards,
+`idea-force-activate.py`, `idea-usage-tracker.py`, and `lib/idea_symbols.py` — **not** because the
+JetBrains → Zed migration was confirmed (it has not been; JetBrains remains in active use), but
+because an enforcement audit found they block read-only operations for token economy with no safety
+content at all. This executes Steps 1-3 of the retirement checklist above and overrides this ADR's
+Decision §2 for those files only.
+
+**Explicitly NOT retired, and still governed by this ADR's original trigger:** the `apogee:idea-mcp`
+skill (Step 4), the `mcp__idea__*` baseline permissions in `setup.sh` (Step 5), `scaffold/CLAUDE.md`'s
+"idea-mcp first" rule and its Tool Usage row (Step 6), and the JetBrains references in the remaining
+docs (Step 7). `idea-nudge.py` — a passive `UserPromptSubmit` reminder, never a guard — also survives,
+now self-contained after `lib/idea_symbols.py`'s deletion.
+
+Steps 4-8 remain pending the trigger stated above: the user explicitly confirming the migration is
+complete. Note that those steps' line-number references are now stale for anything under
+`plugins/apogee/hooks/idea/` — re-locate by search, as this ADR already instructs.

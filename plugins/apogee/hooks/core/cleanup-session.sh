@@ -9,7 +9,9 @@ SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // "unknown"' 2>/dev/null |
 
 [[ "$SESSION_ID" == "unknown" ]] && exit 0
 
-rm -f "/tmp/claude-baseline-${SESSION_ID}.numstat" \
-      "/tmp/claude-stop-${SESSION_ID}.state" \
-      "/tmp/claude-touched-${SESSION_ID}.files"
+# The two surviving per-session files: the nudge counters that stop each reminder
+# after N firings. Everything else this used to clear belonged to the review/br
+# gates deleted by ADR 0005.
+rm -f "/tmp/gitflow-nudge-${SESSION_ID}.count" \
+      "/tmp/idea-nudge-${SESSION_ID}.count"
 exit 0
