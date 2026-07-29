@@ -117,19 +117,21 @@ echo "Stage 4 done."
 # Stage 5: self-tests (lib __main__ assertions + hook --test modes)
 # ---------------------------------------------------------------------------
 echo "=== Stage 5: self-tests ==="
-# Hook-entry scripts expose a --test mode (their __main__ otherwise runs the live hook on stdin).
+# The two surviving blocking hooks both expose a --test mode (their __main__ otherwise runs the
+# live hook on stdin). Entries are "<interpreter> <path>".
 # NOTE: no bare-`python3 <lib>` self-test array here. There used to be one for the shared libs, but
 # both were deleted with the gates they served (ADR 0005). Do not reintroduce an EMPTY array and
 # loop over it: this script runs `set -uo pipefail` and macOS ships Bash 3.2, where "${EMPTY[@]}"
 # aborts on an unbound variable -- CI (Bash 5) would pass while every local run failed.
 HOOK_SELFTESTS=(
-    "${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-flow-skill.py"
+    "python3 ${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-flow-skill.py"
+    "bash ${REPO_ROOT}/plugins/apogee/hooks/core/security-scan.sh"
 )
-for f in "${HOOK_SELFTESTS[@]}"; do
-    if python3 "$f" --test > /dev/null 2>&1; then
-        echo "ok  $f --test"
+for entry in "${HOOK_SELFTESTS[@]}"; do
+    if ${entry} --test > /dev/null 2>&1; then
+        echo "ok  ${entry##* } --test"
     else
-        echo "FAIL selftest $f --test"
+        echo "FAIL selftest ${entry##* } --test"
         fail=1
     fi
 done
