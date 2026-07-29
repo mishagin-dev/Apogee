@@ -28,8 +28,8 @@ Anything else in `$ARGUMENTS` is free-form context for you to factor into which 
 
 ## Philosophy
 
-This is the autonomous counterpart to the normal work loop (`/apogee:prime` → work, gated by `br` /
-git-flow / idea → `/apogee:review-work` → `/apogee:update-docs` → `/apogee:merge`) — it *is* that
+This is the autonomous counterpart to the normal work loop (`/apogee:prime` → work, tracked in
+`br` on a git-flow branch → `/apogee:review-work` → `/apogee:update-docs` → `/apogee:merge`) — it *is* that
 loop, run end-to-end by the agent instead of pausing between each stage. It's also the intended
 continuation of a Plan Mode approval in a git-flow project: `plugins/apogee/hooks/br/br-capture-
 gate.py` (fires on `ExitPlanMode`) captures the approved plan into `br` as an epic + steps, then
@@ -43,6 +43,14 @@ still stop the loop exactly as they would in interactive use. Softening only app
 confirmation *prompts* that exist purely to ask "are you sure" on things the plan already answered —
 not to correctness checks.
 
+**This loop is now the only place with a hard backstop.** [ADR 0005](../../../docs/decisions/0005-enforcement-safety-only.md)
+stripped Apogee's enforcement layer down to two safety gates, on the grounds that a recoverable
+mistake made in front of a human does not need a wall. That reasoning does not extend here: an
+unattended loop has no human to notice tracker drift, so the open-epic-steps DENY was kept —
+narrowed to *only* the commands this command tags, and fail-closed. Every other rule the loop
+follows (commit through the skill, one epic per branch, never `git push`) is prose you must actually
+follow; nothing will stop you.
+
 **Design note (why this reads the way it does):** this command's design went through an adversarial
 second-opinion review before being built, and the implementation went through a two-reviewer
 code-review pass (Bug Hunter + Rules Auditor) afterward. The second-opinion reviewer correctly
@@ -50,7 +58,10 @@ rejected a stateful "autonomous mode" marker file (crash-unsafe — see `enforce
 module docstring for why), rejected an autonomous exception to the clean-tree guardrail (a dirty
 file at merge time is a signal of a bug, not something to paper over), pushed the new
 safety-backstop DENY rule from fail-open to fail-closed specifically for this command's tagged
-invocations, and pushed the circuit-breaker default from unlimited to 3. The code review then found
+invocations, and pushed the circuit-breaker default from unlimited to 3. It later re-argued the
+point during the ADR 0005 teardown, when the draft plan proposed replacing the backstop with prose:
+prose relies on a human backstop an unattended loop does not have. That argument is why the rule
+survived. The code review then found
 (and the fixes are already in `enforce-git-flow-skill.py`) two high-severity gaps in the first
 implementation of that backstop: it could be shadowed entirely by a compound Bash command
 (`git flow feature start decoy && git flow feature finish <slug>` let an earlier rule's
@@ -114,10 +125,12 @@ APOGEE_RUN_PLAN=1 git flow feature finish <epic-slug>
 
 `enforce-git-flow-skill.py` checks for this literal prefix on the command string — it is a
 stateless, per-command signal (no marker file, nothing to leak past this loop, nothing to clean up
-on a crash), and it is what lets Rule 2 bypass its "another branch is open" ASK and lets the new
-open-children DENY apply its stricter fail-closed behavior instead of the ordinary fail-open one.
-**Never use this prefix on any other command, and never use it outside of actually running this
-loop** — it is not a general-purpose "skip confirmation" switch.
+on a crash), and it is the *only* thing that arms the open-children DENY: an untagged
+`git flow feature|bugfix finish` is not checked at all.
+
+The tag makes the hook **stricter**, never more permissive — there is nothing it lets you skip.
+Tagging a command you are not issuing from this loop only exposes it to a fail-closed check, so
+never use it outside an actual run.
 
 ---
 
@@ -142,8 +155,9 @@ Repeat until termination (see below). Each iteration:
 3. **Drain the epic's steps.** Loop:
    - `br ready --json` filtered to `parent == epicId`. None left → break to step 4.
    - `br update <stepId> --claim --actor "${BR_ACTOR:-assistant}"`.
-   - Implement the step (normal Edit/Write flow — `br-edit-gate`/`br-branch-gate` pass automatically
-     since a step is `in_progress` and the branch is correctly linked to its epic).
+   - Implement the step (normal Edit/Write flow — nothing gates edits since ADR 0005; keeping the
+     step `in_progress` and the branch linked to its epic is now discipline, and the finish-time
+     DENY in step 5 is what catches it if you let that slip).
    - **Commit immediately via the `apogee:git-commit` skill, before moving to the next step.** This
      discipline is exactly what keeps the tree clean at merge time (Step 5's clean-tree guardrail
      has zero autonomous-mode exceptions — see Philosophy — so a dirty tree there means this step
@@ -151,21 +165,22 @@ Repeat until termination (see below). Each iteration:
    - `br close <stepId> --suggest-next --actor "${BR_ACTOR:-assistant}"` (the `--suggest-next` flag
      directly returns newly-unblocked work).
 
-4. **Epic-level gates — run proactively, before ever calling `/merge`.** This is what satisfies
-   `review-docs-gate.sh` without that hook ever needing to fire:
+4. **Epic-level checks — run proactively, before ever calling `/merge`.** No hook enforces this
+   order any more (the review→docs Stop gate is gone), which makes running them here the only thing
+   that keeps an unattended run honest:
    - Invoke the `apogee:review-work` skill.
    - Invoke the `apogee:update-docs` skill; commit any doc changes via `git-commit`.
    - **If `pipeline.json`'s `run_plan.test_command` is set**, run it now. A failure halts here — the
      branch stays open, uncommitted work (if any) stays as-is, and this is surfaced to the user as a
-     hard stop. **Closing br steps is not evidence the code actually works** — this gate exists
+     hard stop. **Closing br steps is not evidence the code actually works** — this check exists
      specifically because it isn't.
 
 5. **Finish the branch.** Invoke `/apogee:merge`; when it reaches the Git Flow finish step, the
    underlying command must be tagged: `APOGEE_RUN_PLAN=1 git flow feature|bugfix finish <slug>`.
    Rule 1 (`enforce-git-flow-skill.py`'s release/hotfix ASK) never fires for feature/bugfix finish —
-   confirmed by its regex, which only matches `(release|hotfix)`. The new open-children DENY rule
-   does apply here, fail-closed for this tagged command: if it can't positively confirm every step
-   of this epic is closed, it refuses, and the loop halts with that reason surfaced.
+   confirmed by its regex, which only matches `(release|hotfix)`. The open-children DENY does apply
+   here, fail-closed for this tagged command: if it can't positively confirm every step of this epic
+   is closed, it refuses, and the loop halts with that reason surfaced.
 
 6. **Close the epic**: `br epic close-eligible` (closes epics whose children are all closed —
    no custom logic needed).
