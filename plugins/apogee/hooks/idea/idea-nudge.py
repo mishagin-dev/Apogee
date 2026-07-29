@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 """
-UserPromptSubmit hook — bootstrap idea-first mode (break the chicken-and-egg).
+UserPromptSubmit hook — remind the agent to prefer IDEA MCP tools for code intelligence.
 
-The idea-mcp enforcement guards (idea-symbol/glob/bash-grep, read-gate, agent-guard) only activate
-once `is_idea_active()` is true, which happens only AFTER a successful mcp__idea__ call sets the
-session flag (via idea-usage-tracker.py). If the agent never voluntarily calls idea, nothing ever
-activates. This hook nudges the agent to make that first idea call so the guards engage — turning the
-idea-MCP setup into a context-economy replacement for an LSP-enforcement kit.
+The point is context economy: `mcp__idea__search_symbol` returns a symbol and its location where
+grep + reading whole files would spend thousands of tokens. This is a NUDGE only (additionalContext)
+— it never blocks. The five idea enforcement guards it used to bootstrap were deleted by ADR 0005
+(they blocked read-only operations, produced false positives, and defended nothing irreversible), so
+there is no longer any "activation" to trigger; the reminder stands on its own.
 
-Safe by design: it only NUDGES (additionalContext), never blocks. The server is stdio (can't be
-probed from a hook), so we never force-activate the flag — only a real successful idea call does that,
-which means the guards can never deadlock a session where idea tools are actually absent.
-
-Fires only while: a JetBrains IDE process is running, idea is not yet active this session, and at most
+Fires only while: this tree is a JetBrains project, a JetBrains IDE process is running, and at most
 LIMIT times per session (so it never nags forever when idea genuinely isn't connected).
  Part of the apogee plugin.
 """
@@ -22,26 +18,43 @@ import os
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
-from idea_symbols import has_idea_project, is_idea_active  # noqa: E402
-
 LIMIT = 3
 _IDE_RE = r'jetbrains|intellij|phpstorm|pycharm|goland|webstorm|rubymine|clion|rider|datagrip'
 
 DIRECTIVE = (
     "A JetBrains IDE is running, so the IDEA MCP server may be serving this project. "
-    "If mcp__idea__* tools are present in your toolset, they take PRIORITY over native tools for "
-    "code intelligence (this setup replaces an LSP-enforcement kit to save context): use "
+    "If mcp__idea__* tools are present in your toolset, prefer them over native tools for "
+    "code intelligence — they cost a fraction of the context: use "
     "mcp__idea__search_symbol / get_symbol_info instead of grep+reading whole files; "
-    "mcp__idea__get_file_problems / get_inspections to validate edits; rename_refactoring instead of "
+    "mcp__idea__get_file_problems / lint_files to validate edits; rename_refactoring instead of "
     "sed; execute_run_configuration / build_project instead of bare terminal build/run. "
-    "ACTIVATE enforcement now by making ONE cheap mcp__idea__* call that returns real data — ANY "
-    "successful idea call turns the guards on, not a specific tool. Prefer mcp__idea__get_project_modules; "
-    "if it isn't offered, use any available idea tool (e.g. get_all_open_file_paths, list_directory_tree, "
-    "get_project_dependencies). If the call asks which project (disambiguation), retry once with "
-    "projectPath set to this repo. If NO mcp__idea__* tools are present at all, ignore this and use "
-    "native tools."
+    "If a call asks which project (disambiguation), retry once with projectPath set to this repo. "
+    "If NO mcp__idea__* tools are present at all, ignore this and use native tools."
 )
+
+
+def _has_idea_project(cwd: str) -> bool:
+    """True if cwd is inside a JetBrains project the IDE could be serving.
+
+    Walks up from cwd to root, checking each level for either a `.idea/` dir or a top-level `*.iml`
+    module file. The `*.iml` marker covers JetBrains Gateway / remote-dev where `.idea/` lives on the
+    backend but an `.iml` is present locally; checking it at every walk level (not just cwd) lets a
+    subdir of such a project resolve correctly. Inlined from the deleted lib/idea_symbols.py
+    (ADR 0005) -- this hook was its last user.
+    """
+    d = os.path.abspath(cwd)
+    while True:
+        if os.path.isdir(os.path.join(d, '.idea')):
+            return True
+        try:
+            if any(name.endswith('.iml') for name in os.listdir(d)):
+                return True
+        except OSError:
+            pass
+        parent = os.path.dirname(d)
+        if parent == d:
+            return False
+        d = parent
 
 
 def _ide_running() -> bool:
@@ -62,9 +75,7 @@ def main() -> None:
     cwd = payload.get('cwd') or os.getcwd()
     sid = payload.get('session_id', '')
 
-    if is_idea_active(cwd, sid):
-        sys.exit(0)  # guards already active -> no nudge needed
-    if not has_idea_project(cwd):
+    if not _has_idea_project(cwd):
         sys.exit(0)  # IDE isn't serving this tree (no .idea/ or .iml) -> nudge would be futile
     if not _ide_running():
         sys.exit(0)  # no JetBrains IDE -> idea MCP can't be connected
