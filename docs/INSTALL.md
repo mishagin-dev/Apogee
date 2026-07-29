@@ -88,8 +88,10 @@ What it does:
 - **SETTINGS (per-project):** writes/merges a personal `TARGET/.claude/settings.local.json` with a
   baseline `permissions.allow` (so the plugin's skills run without prompts — `Bash(br:*)`,
   `Bash(agy:*)`, the image-skill commands, plus `mcp__idea__*` and `mcp__plugin_context7_context7__*`,
-  the two MCP servers the toolkit's gates/conventions push the agent toward), a content-agnostic
-  `permissions.deny` (`sudo`, `rm -rf`, destructive git — defense-in-depth alongside the hook gates),
+  the two MCP servers the toolkit's conventions push the agent toward), a content-agnostic
+  `permissions.deny` (`sudo`, `rm -rf`, destructive git). Since [ADR 0005](decisions/0005-enforcement-safety-only.md)
+  this deny list — enforced by Claude Code itself, not by Apogee — is the toolkit's primary guard
+  against destructive commands; the hooks add exactly two checks on top of it,
   `plansDirectory` (`./.claude/plans`), and an absolute `autoMemoryDirectory` (`TARGET/.claude/memory`).
   Non-clobbering (existing keys win, allow/deny lists unioned); the file is added to
   `.git/info/exclude`. Skip with `--no-settings`. See
@@ -141,8 +143,9 @@ this way — that's `/plugin marketplace update`.
 
 ## Bootstrap note (developing Apogee itself)
 
-The Apogee repo is intentionally **not** a `.beads/` or git-flow project, so its own gates stay inert
-while you develop the toolkit. If you ever add `.beads/`, use the escape envs
-(`BR_GATE_OFF=1 REVIEW_GATE_OFF=1 IDEA_GATE_OFF=1 TOOL_LANG_OFF=1`) for friction-free development. See
+The Apogee repo has no `.beads/`, so the beads-triggered hooks stay inert while you develop the
+toolkit. It *is* a git-flow project, so `enforce-git-flow-skill.py` is live — which makes developing
+here a genuine end-to-end test of the one interactive gate that ships. There are no escape
+environment variables to set: ADR 0005 removed the gates that had them. See
 [ADR 0002](decisions/0002-plugin-not-global-hooks.md) for the migration sequencing (strip global hooks
 LAST).
