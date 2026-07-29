@@ -4,6 +4,85 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-07-29
+
+Two weeks of daily use made the verdict clear: the context layer (docs, `br` memory, priming,
+skills) makes the agent genuinely better informed, while the enforcement layer mostly got in the
+way. A three-part audit found that of thirteen blocking gates, exactly one defended an irreversible
+outcome — and it was dead code. This release strips enforcement down to safety-only. See
+[ADR 0005](docs/decisions/0005-enforcement-safety-only.md).
+
+The rules did not change. The walls did. Everything a gate used to block is still written in
+`scaffold/CLAUDE.md` and the skills, where an agent reads it and a human can override it.
+
+### Removed
+
+- **Eleven blocking gates, 22 files, ~2,570 lines.** The idea-mcp guard bracket (symbol/glob/bash-
+  grep guards, read gate, agent guard, force-activate, usage tracker), the `br` edit/branch/progress
+  gates, the review→docs Stop gate, the `git commit -F` gate, the external-AI language guard, and
+  the passive hooks that only existed to feed them (`snapshot-baseline.sh`, `br-snapshot.sh`,
+  `br-sig.py`, `gated.sh`, `skill-run-tracker.py`, `track-file-touch.sh`).
+- **The `Stop` lifecycle event**, which no longer has any consumer. A session can end whenever it
+  ends.
+- **The escape environment variables** `BR_GATE_OFF`, `REVIEW_GATE_OFF`, `IDEA_GATE_OFF` and
+  `TOOL_LANG_OFF`. Nothing reads them; keeping a documented hatch with nothing behind it is the same
+  doc/code contradiction this release exists to end. **If you set any of these, remove them** — they
+  will be silently ignored.
+- **`hooks/core/lib/`**, the cross-group helper directory. With one consumer left per helper, each
+  survivor moved into (or was inlined by) the hook that uses it.
+- **`pipeline.json` keys** `enabled`, `min_lines_changed`, `review_threshold`, `file_patterns`,
+  `review_command`, `test_command`, `docs_command` and `phases`. Only `run_plan` retains a consumer.
+  **A tuned `review_threshold` now gets silence, not an error.**
+
+### Changed
+
+- **`hooks.json`: 27 hook commands → 10.** Two of them can block; the rest inject context.
+- **`enforce-git-flow-skill.py`: 522 → 296 lines.** Rules 2/3/4/5/6 (commits off gitflow branches,
+  manual merges, manual branch creation, one-branch-at-a-time) are gone; they duplicated
+  `skills/git-flow/SKILL.md` verbatim. The release/hotfix ASK is unchanged.
+- **The open-epic-steps DENY is now scoped to `APOGEE_RUN_PLAN=1`-tagged commands only** — and stays
+  fail-closed there. An interactive `git flow feature|bugfix finish` is no longer checked at all.
+  This is the one rule that survived the teardown, on a refined criterion: the test is not only
+  whether an outcome is irreversible, but whether a human is present to catch it. An unattended loop
+  has no such backstop.
+- **`permissions.deny` is documented as what it always was** — the primary guard against destructive
+  commands (`sudo`, `rm -rf`, `git push --force`, `git reset --hard`, …). It is enforced by Claude
+  Code itself, independent of any Apogee hook, and it is untouched by this release.
+- **`br` tracking is now stated as a rule** in `scaffold/CLAUDE.md` §1. It was the only discipline
+  that existed solely inside a deleted gate and nowhere in prose.
+- **`idea-nudge.py` no longer bootstraps anything** — it reminds the agent that `mcp__idea__*` tools
+  are cheaper than grep + whole-file reads, and stops after three firings per session.
+- **`br-capture-gate.py`'s directive** no longer promises edit/branch gates that don't exist.
+- Docs rewritten to match: `HOOKS.md` (96 → 62 lines), `ARCHITECTURE.md`, `README.md`, `INSTALL.md`,
+  and the git-flow / git-commit / idea-mcp skills.
+
+### Fixed
+
+- **The MCP secret scanner was dead code and now works.** It inspected `.code_context`,
+  `.problem_description` and `.attached_files[]` — the schema of a gemini MCP server that has not
+  been configured for months — so every outbound payload passed through unexamined. It now walks the
+  whole `tool_input` via `jq -r '..|strings'`, one value per line, capped at 256 KB so a minified
+  blob in the payload cannot spike grep.
+- **The scanner's false-positive engine is gone.** The heuristic `credentials` group and the loose
+  `regex_patterns` matched `password: str`, `client_secret: string` and `API_KEY=os.environ[...]`,
+  and a 24-entry line whitelist could not keep up. What remains is vendor-prefixed tokens, PEM
+  headers and credential-bearing URLs, plus a placeholder filter applied to the matched token — so
+  AWS's own `AKIAIOSFODNN7EXAMPLE` and `postgres://user:password@localhost` stay quiet. Precision
+  over recall, deliberately: a scanner that cries wolf gets switched off, and a switched-off scanner
+  has zero recall.
+- The scanner emits a modern `permissionDecision: deny` instead of the legacy `{"decision":"block"}`
+  shape, reports only the first six characters of a match, and no longer writes a log file into the
+  versioned plugin cache on every MCP call.
+
+### Testing
+
+- `security-scan.sh --test` — 18 cases (8 must fire, 10 must stay quiet), wired into
+  `validate.sh` Stage 5.
+- `enforce-git-flow-skill.py --test` rewritten. `_FLOW_FINISH_RE`, the regex behind the release ASK,
+  had **zero** coverage before this release.
+- `smoke-run-plan.sh` retargeted: 15 assertions against a real `br` + `git flow` sandbox, now
+  including the release/hotfix ASK.
+
 ## [1.16.1] - 2026-07-24
 
 ### Fixed
