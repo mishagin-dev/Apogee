@@ -57,9 +57,9 @@ def _resolve_dir(raw, base):
 def effective_repo(command, cwd):
     """Return the directory the git command actually targets, so branch/gitflow checks run
     against the RIGHT repo -- a submodule commit (`git -C sub commit`, `cd sub && git commit`)
-    must be judged by the submodule's own branch, not the session's super-repo (mirrors the
-    submodule-aware br-branch-gate). Applies a leading `cd`, then git's global `-C`, mirroring
-    shell + git semantics; falls back to `cwd` when neither is present or resolvable.
+    must be judged by the submodule's own branch, not the session's super-repo. Applies a leading
+    `cd`, then git's global `-C`, mirroring shell + git semantics; falls back to `cwd` when neither
+    is present or resolvable.
     """
     d = cwd
     m = _CD_RE.search(command)
