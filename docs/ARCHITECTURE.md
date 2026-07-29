@@ -3,7 +3,9 @@
 Apogee is a personal Claude Code toolkit: a fork of the
 [Claude Code Development Kit](https://github.com/peterkrueck/Claude-Code-Development-Kit) repackaged as
 a **plugin + local marketplace**. Its job is to keep Claude Code coherent across sessions (durable
-context + repeatable work loop) and to enforce a disciplined workflow via lifecycle hooks.
+context + repeatable work loop) and to keep a disciplined workflow available via lifecycle hooks.
+Since [ADR 0005](decisions/0005-enforcement-safety-only.md) those hooks mostly *inform* rather than
+*block*: exactly two can refuse an action, and both defend outcomes that cannot be undone.
 
 ## Three layers (the core model)
 
@@ -26,12 +28,10 @@ Apogee/
 │   ├── .claude-plugin/plugin.json    # name: apogee, version (hooks/hooks.json auto-loads by convention)
 │   ├── hooks/
 │   │   ├── hooks.json                # lifecycle wiring; all paths via ${CLAUDE_PLUGIN_ROOT}
-│   │   ├── br/    # beads_rust gates: edit/branch/capture/prime/progress/snapshot + br-sig
-│   │   ├── git/   # enforce-git-commit-skill, enforce-git-flow-skill
-│   │   ├── idea/  # JetBrains idea-mcp guards (+ lib/idea_symbols.py)
-│   │   ├── review/# review-docs-gate, skill-run-tracker
-│   │   ├── core/  # security-scan, snapshot-baseline, notify, cleanup, gated, apogee-session-start + config/ + sounds/
-│   │   └── lang/  # tool-lang-guard (English-only for external-AI CLIs)
+│   │   ├── br/    # br-capture-gate (plan -> epic), br-prime (agent guide)
+│   │   ├── git/   # enforce-git-flow-skill (the only Bash gate) + unfinished-branch-nudge, lib/
+│   │   ├── idea/  # idea-nudge (prefer mcp__idea__* for code intelligence)
+│   │   └── core/  # security-scan, notify, cleanup, apogee-session-start + config/ + sounds/
 │   ├── skills/    # update-docs, review-work, second-opinion, deploy, image-gen, image-edit,
 │   │              #   bg-remove, doc, readme, br, git-commit, git-flow, idea-mcp
 │   └── commands/  # init.md, prime.md, plan-feature.md, release.md, merge.md  → /apogee:<name>
@@ -50,22 +50,23 @@ Apogee/
 
 All hook commands in `hooks/hooks.json` reference scripts via `${CLAUDE_PLUGIN_ROOT}` so they resolve
 from the marketplace cache regardless of where the plugin is installed. Python hooks anchor their
-internal imports on `os.path.dirname(os.path.abspath(__file__))` (e.g. the idea guards import
-`hooks/idea/lib/idea_symbols.py`), so relocation never breaks imports.
+internal imports on `os.path.dirname(os.path.abspath(__file__))` (e.g. `enforce-git-flow-skill.py`
+imports `hooks/git/lib/gitflow_common.py`), so relocation never breaks imports.
 
-Cross-group references are all relative and verified by `scripts/validate.sh`. They converge on
-`hooks/core/`: the `br/*` and `git/*` gates import `core/lib/gate_common.py`; `review-docs-gate.sh`,
-`br-progress-gate.sh`, and `snapshot-baseline.sh` source `core/lib/file_patterns.sh` and read
-`core/config/pipeline.json`. Keeping shared helpers in `core/lib/` is deliberate — the alternative
-(a copy per group) is what let the code-file pattern list drift across five call sites.
+There are **no cross-group imports left**. `hooks/core/lib/` existed to share helpers between the br,
+review, idea and git brackets; ADR 0005 removed every consumer but one per helper, so the directory
+was dissolved and each survivor moved into — or was inlined by — the hook that actually uses it.
+Only bring a shared lib back when a third consumer genuinely appears. `scripts/validate.sh` verifies
+that every `${CLAUDE_PLUGIN_ROOT}` path in `hooks.json` still resolves.
 
 ## Self-gating (why global-enable is safe)
 
-Every gate hook no-ops unless its trigger is present in the project:
+Every hook no-ops unless its trigger is present in the project:
 
-- **`.beads/`** → the `br/*` gates, `review-docs-gate`, `apogee-session-start`, `gated.sh`.
-- **`.idea/` + a running JetBrains IDE** → the `idea/*` guards.
-- **git-flow config** (`gitflow.branch.*`) → `enforce-git-flow-skill`, `br-branch-gate`.
+- **`.beads/`** → `br-capture-gate`, `br-prime`, `apogee-session-start`.
+- **`.idea/` or `*.iml` + a running JetBrains IDE** → `idea-nudge`.
+- **git-flow config** (`gitflow.branch.*`) → `enforce-git-flow-skill`, `unfinished-branch-nudge`.
+- **any `mcp__` tool call** → `security-scan.sh` (the one unconditional hook).
 
 So enabling the plugin globally behaves like the old global wiring — the machinery only engages in real
 managed projects. A project is considered **Apogee-managed** when it has both `.beads/` **and**
@@ -76,9 +77,14 @@ managed projects. A project is considered **Apogee-managed** when it has both `.
 One-time bootstrap: `/apogee:init` (research the codebase, fill `docs/apogee/ai-context` + root
 `CLAUDE.md`, seed a flat `CLAUDE.md` in each first-level submodule). Then the recurring loop:
 
-`/apogee:prime` (load `docs/apogee/ai-context` + beads state) → work (gated by `br`/git-flow/idea) →
-`/apogee:review-work` → `/apogee:update-docs` (the Stop gate enforces this order) →
-`/apogee:merge` (verify-only in git-flow repos; delegates to the `git-flow` skill).
+`/apogee:prime` (load `docs/apogee/ai-context` + beads state) → work (tracked in `br`, on a git-flow
+branch) → `/apogee:review-work` → `/apogee:update-docs` → `/apogee:merge` (runs the docs/clean-tree
+guardrails, then delegates to the `git-flow` skill).
+
+Nothing forces that order any more — the Stop gate that did was removed by ADR 0005 after it spent
+more releases being repaired than it spent catching mistakes. `/apogee:merge` still checks docs
+freshness and a clean tree before finishing a branch, which is where the check has teeth without
+being able to wedge a session. For unattended runs, `/apogee:run-plan` drives the whole loop itself.
 
 ## Tracker
 

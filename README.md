@@ -13,7 +13,7 @@ repackaged as a **plugin + local marketplace**. Install the machinery once; enab
 ```
 .claude-plugin/marketplace.json   # local marketplace exposing the `apogee` plugin
 plugins/apogee/                   # THE PLUGIN (machinery — installed once, linked per project)
-  ├── hooks/                      # lifecycle gates: br/git-flow/idea/review + core advisory + lang guard
+  ├── hooks/                      # 2 safety gates (secrets, release finish) + context injectors
   ├── skills/                     # workflow skills: update-docs, review-work, second-opinion, deploy, image-*
   └── commands/                   # /apogee:prime, /apogee:plan-feature, /apogee:merge
 scaffold/                         # project CONTENT (copied per project, excluded locally in the host)
@@ -80,18 +80,25 @@ Bump `plugins/apogee/.claude-plugin/plugin.json` `version`, then in any session:
 /reload-plugins
 ```
 
-## Gates self-gate
+## Hooks self-gate, and barely block
 
 Every hook no-ops unless its trigger is present (`.beads/`, `.idea/` + a running JetBrains IDE, or
 git-flow config), so enabling the plugin globally is safe — the machinery only engages in real
-projects. Escape hatches: `BR_GATE_OFF=1`, `REVIEW_GATE_OFF=1`, `IDEA_GATE_OFF=1`, `TOOL_LANG_OFF=1`.
+projects.
+
+Only **two** hooks can refuse an action, both guarding something that cannot be undone: sending a
+credential to an external MCP server, and finishing a release. Everything else injects context. The
+workflow rules still exist — they live in `CLAUDE.md` and the skills, where an agent reads them and
+a human can override them. See [ADR 0005](docs/decisions/0005-enforcement-safety-only.md) for the
+audit that got us here. There are no escape-hatch environment variables; there is nothing left to
+escape.
 
 ## Documentation
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — the three-layer model (plugin / scaffold / preferences) and repo layout
-- [docs/HOOKS.md](docs/HOOKS.md) — full hook catalog: events, gating conditions, escape envs
+- [docs/HOOKS.md](docs/HOOKS.md) — full hook catalog: events, decisions, gating conditions
 - [docs/INSTALL.md](docs/INSTALL.md) — install, per-project enable, update, sync, uninstall
-- [docs/decisions/](docs/decisions/) — ADRs: [0001 tracker = beads_rust](docs/decisions/0001-tracker-beads-rust.md), [0002 plugin not global hooks](docs/decisions/0002-plugin-not-global-hooks.md)
+- [docs/decisions/](docs/decisions/) — ADRs: [0001 tracker = beads_rust](docs/decisions/0001-tracker-beads-rust.md), [0002 plugin not global hooks](docs/decisions/0002-plugin-not-global-hooks.md), [0005 enforcement is safety-only](docs/decisions/0005-enforcement-safety-only.md)
 
 ## Status
 
