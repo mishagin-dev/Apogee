@@ -1,6 +1,6 @@
 {
   "name": "apogee",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Claude Code workflow machinery: lifecycle hooks (secret scan + release ASK, plus context injectors), workflow skills (update-docs, review-work, second-opinion, deploy, doc, readme, image-gen/edit, bg-remove, br, git-commit, git-flow, idea-mcp), and the init/prime/plan-feature/release/merge/run-plan commands. Install once, enable per project.",
   "author": {
     "name": "mishagin.dev (fork of peterkrueck/Claude-Code-Development-Kit)",

@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-08-29
+
+### Fixed
+
+- **The MCP secret scanner never ran.** A hook `matcher` is a regex matched against the *whole* tool
+  name, so the bare `"mcp__"` matcher could not match `mcp__context7__resolve-library-id` — or any
+  other real tool. It shipped that way in the plugin's first commit and had not fired once since.
+  2.0.0 fixed the scanner's payload parsing but left the matcher, so the gate stayed dead; the
+  matcher is now `"mcp__.*"`. Caught by calling a real MCP tool with a synthetic AWS key in the
+  payload and watching it sail through. The repo contained the evidence all along: the (now
+  removed) `idea-usage-tracker` used `"mcp__idea__.*"` and worked.
+- `validate.sh` Stage 4 now fails on any `mcp__`-prefixed matcher that does not end in `*`, so this
+  class of silent no-op cannot ship again.
+
 ## [2.0.0] - 2026-07-29
 
 Two weeks of daily use made the verdict clear: the context layer (docs, `br` memory, priming,
