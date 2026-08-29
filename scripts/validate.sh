@@ -98,12 +98,24 @@ for rel in paths:
     if not os.path.isfile(full):
         missing.append(rel)
 
-if missing:
-    for p in sorted(missing):
-        print(f"FAIL path {p}")
+# A hook matcher is a regex matched against the WHOLE tool name, so a bare prefix silently matches
+# nothing. `"mcp__"` shipped from the first plugin commit and never once fired -- it cannot equal
+# `mcp__context7__resolve-library-id`. The working form is `mcp__.*`. Only an `mcp__` matcher can
+# hit this (native tool names like `Bash` ARE the whole name), so the rule is scoped to those.
+bad_matchers = []
+for event, groups in data.get("hooks", {}).items():
+    for group in groups:
+        m = group.get("matcher")
+        if m and m.startswith("mcp__") and not m.endswith("*"):
+            bad_matchers.append(f"{event}: {m!r} matches nothing -- did you mean {m + '.*'!r}?")
+
+for problem in bad_matchers:
+    print(f"FAIL matcher {problem}")
+for p in sorted(missing):
+    print(f"FAIL path {p}")
+if missing or bad_matchers:
     sys.exit(1)
-else:
-    print(f"All {len(paths)} hook paths resolved OK.")
+print(f"All {len(paths)} hook paths resolved OK; matchers OK.")
 PYEOF
 )"
 stage4_rc=$?
