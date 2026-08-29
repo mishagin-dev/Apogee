@@ -4,6 +4,39 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-08-29
+
+### Added
+
+- **`symfony` skill** — drives a Symfony project through the official `symfony` CLI instead of
+  bare `php bin/console` / `composer` / `vendor/bin/*`, on two measured grounds rather than
+  style. Only `symfony console` resolves the project root, so bare `php` fails from any
+  subdirectory (`Could not open input file: bin/console`); `symfony composer` and `symfony php`
+  do **not** resolve it, which is the half nobody expects. And the CLI injects environment from
+  running Docker services: a Flex `compose.override.yaml` publishes ports unpinned, so `.env`
+  keeps the `5432` placeholder while Docker moves the real port on every `up` — observed
+  shifting `32770` -> `32771` between two runs of the same project. Also records the MakerBundle
+  traps that break agents outright: `--no-interaction` crashes the generator
+  (`Typed property ...$controllerClassData must not be accessed before initialization`), and
+  closing stdin on `make:entity` is a silent half-success that leaves the entity field-less.
+  Ships with `smoke.sh`, which re-proves the `.env` divergence on the target project rather than
+  asking the reader to trust the numbers. Verified end to end against Symfony 8.1.5, PHP 8.5.9
+  and PostgreSQL in Docker.
+
+### Changed
+
+- **The idea nudge no longer recommends an unreachable path.** `mcp__idea__*` schemas are
+  deferred, so a call without a prior `ToolSearch` fails outright — and 14 days of transcripts
+  carried 119 `ToolSearch` calls with not one `select:mcp__idea__*`, i.e. the directive
+  converted at zero. It now states that prerequisite. It also stops advertising search: a
+  2026-08-25 measurement over 10 lookups replayed from real session history found the MCP search
+  path 41% *more* expensive than grep, since `search_symbol` returns coordinates without symbol
+  names and `search_text` without line content, so the small first response usually forces a
+  second call. What the directive names now is only what has no shell equivalent — inspections,
+  semantic rename, call graphs, IDE run configurations.
+- Both plugin manifests list the new skill; `marketplace.json` also picks up `run-plan`, which
+  had been missing from its command list since that command shipped.
+
 ## [2.0.1] - 2026-08-29
 
 ### Fixed
