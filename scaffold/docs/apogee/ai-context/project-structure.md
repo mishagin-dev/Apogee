@@ -22,45 +22,18 @@
 
 ```
 your-project/
-├── .claude/
-│   ├── commands/
-│   │   ├── prime.md                    # /prime — load core project context
-│   │   └── merge.md                    # /merge — finalize worktree work
-│   ├── hooks/
-│   │   ├── review-on-stop.sh           # Advisory review nudge on stop
-│   │   ├── snapshot-baseline.sh        # Session baseline capture
-│   │   ├── security-scan.sh            # MCP/plugin sensitive data scanner
-│   │   ├── notify.sh                   # Audio notifications
-│   │   ├── config/
-│   │   │   ├── pipeline.json           # Review-on-stop configuration
-│   │   │   └── sensitive-patterns.json # Security scan patterns
-│   │   └── sounds/
-│   │       ├── complete.wav
-│   │       └── input-needed.wav
-│   ├── skills/                         # Project-specific skills
-│   └── settings.local.json             # Personal, git-excluded: permissions, plansDirectory, autoMemoryDirectory
-│
-├── assets/                             # Visual assets (processed + source)
-│   ├── app-icon/                       # App icons
-│   ├── character/                      # Character/mascot art
-│   ├── logo/                           # Brand marks and avatars
-│   ├── social/                         # Social media graphics
-│   └── web/                            # Website graphics (favicon, OG image)
-��
+├── .claude/                            # local-only (git-excluded): settings.local.json, plans/, memory/
+├── .beads/                             # br issue tracker (local-only, git-excluded)
 ├── docs/
-│   └── apogee/                         # Apogee working memory (git-excluded, local-only)
-│       ├── ai-context/                 # Core AI development context
-│       │   ├── spec.md                 # What the product does
-│       │   ├── project-structure.md    # THIS FILE — file tree and tech stack
-│       │   ├── progress.md             # What's done, what's next
-│       │   └── deployment-infrastructure.md # Hosting, accounts, CI/CD
-│       ├── legal/                      # Privacy policy, ToS, compliance
-│       ├── business/                   # Business plans, competitive analysis
-│       ├── design-brand/               # Brand voice, design system, guidelines
-│       └── open-issues/                # Active investigations and decisions
+│   └── apogee/                         # Apogee working memory (local-only, git-excluded)
+│       └── ai-context/                 # Core AI development context
+│           ├── spec.md                 # What the product does
+│           ├── project-structure.md    # THIS FILE: file tree and tech stack
+│           ├── progress.md             # What's done, what's next
+│           └── deployment-infrastructure.md # Hosting, accounts, CI/CD
 │
-├── CLAUDE.md                           # AI development rules and standards
-├── GEMINI.md                           # agy second-opinion consultant instructions
+├── CLAUDE.md                           # AI development rules (local-only, git-excluded)
+├── GEMINI.md                           # agy second-opinion consultant instructions (local-only)
 │
 ├── src/                                # Your source code directories go here
 ```

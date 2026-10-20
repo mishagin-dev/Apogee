@@ -1,7 +1,7 @@
 ---
 name: review-work
 description: Review uncommitted code changes using parallel Claude sub-agents with specialized roles (Bug Hunter, Rules Auditor). Spawns multiple focused reviewers for large diffs (50+ lines), single reviewer for smaller changes. Checks for bugs, security issues, CLAUDE.md compliance, and test coverage gaps. Use after completing substantial implementation work, or when the Stop hook requests it. Also invocable manually with /review-work.
-user_invocable: true
+user-invocable: true
 ---
 
 # Review Work — Automated Code Review

@@ -1,3 +1,8 @@
+---
+description: "Finalize a branch: verify docs and a clean tree, then finish it (git-flow finish, or merge to main in plain repos)."
+argument-hint: "[Verified: <note>] [summary: <override>]"
+---
+
 # Merge Command
 
 Finalize work on a branch: verify docs + tree are clean, then ship. In **Git Flow repos** `/merge` is verify-only and hands the actual finish to the `apogee:git-flow` skill (a manual merge into the production branch would skip the tag and the back-merge into develop). In **plain repos** it merges to main directly. Supports both standard `git checkout -b` branches and `git worktree` flows — all auto-detected at pre-flight.
@@ -19,9 +24,9 @@ Rule of thumb: if you're tempted to have `/merge` silently fix something, STOP a
 Two documented uses for `$ARGUMENTS`:
 
 - `Verified: <context>` — appended as a `Verified:` line in the merge commit. Opt-in; only include if user passed one.
-  Example: `/merge Verified: integration tests pass + manual smoke check`
+  Example: `/apogee:merge Verified: integration tests pass + manual smoke check`
 - `summary: <override>` — use as the merge-message summary instead of synthesizing from the diff.
-  Example: `/merge summary: swap payment provider from Stripe to Adyen`
+  Example: `/apogee:merge summary: swap payment provider from Stripe to Adyen`
 
 Do not prompt the user for verification notes. Most merges don't carry a `Verified:` line, and it's a deliberate signal rather than a checkbox.
 
@@ -70,7 +75,7 @@ Do not prompt the user for verification notes. Most merges don't carry a `Verifi
 You have no implicit session context (fresh session). Read the branch before drafting anything.
 
 - **Small diffs** (<200 lines changed AND <10 files): `git diff main` inline.
-- **Large diffs** (>200 lines OR >10 files): delegate to an `Explore` sub-agent (Sonnet) to keep context clean.
+- **Large diffs** (>200 lines OR >10 files): delegate to an `Explore` sub-agent to keep context clean.
 
   ```
   Agent({
@@ -98,7 +103,7 @@ For monorepos with per-product subdirs (e.g., `ProductA/`, `ProductB/`), map eac
 
 **Decision flow:**
 
-1. **Apply skip criteria** (from `.claude/skills/update-docs/SKILL.md` "When to Skip" section): bug fixes, small refactors, code cleanup, UI tweaks, single-file additions within existing patterns, perf opts without arch impact, comment/formatting changes. If the branch fits these → skip silently, proceed to Step 3.
+1. **Apply skip criteria** (from the `apogee:update-docs` skill's "When to Skip" section): bug fixes, small refactors, code cleanup, UI tweaks, single-file additions within existing patterns, perf opts without arch impact, comment/formatting changes. If the branch fits these → skip silently, proceed to Step 3.
 
 2. **Check whether docs were already touched on this branch:**
    ```bash
@@ -114,11 +119,11 @@ For monorepos with per-product subdirs (e.g., `ProductA/`, `ProductB/`), map eac
      since `run-plan.md`'s own loop already runs `update-docs` per epic before ever calling `/merge`.
    - **Otherwise (ordinary interactive `/merge`):** STOP. List the specific files likely needing
      attention, then present three options:
-     - **(a)** Abort the merge so the user can invoke the `/update-docs` skill in this or another session.
+     - **(a)** Abort the merge so the user can invoke `/apogee:update-docs` in this or another session.
      - **(b)** Proceed anyway (user explicitly accepts doc drift — note this for Step 6).
      - **(c)** Cancel entirely.
 
-     **Wait for user choice. Do NOT auto-invoke `/update-docs`.** Merge is semi-destructive; this is a deliberate exception to the usual "skip redundant confirmation" preference.
+     **Wait for user choice. Do NOT auto-invoke `/apogee:update-docs`.** Merge is semi-destructive; this is a deliberate exception to the usual "skip redundant confirmation" preference.
 
 ---
 

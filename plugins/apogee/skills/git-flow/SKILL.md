@@ -194,7 +194,7 @@ first refusal, `gh`/`glab` are the fallback.
 - **Binary behavior in doubt** — validate it in a throwaway sandbox:
 
   ```bash
-  bash plugins/apogee/skills/git-flow/smoke.sh
+  bash "${CLAUDE_PLUGIN_ROOT}/skills/git-flow/smoke.sh"
   ```
 
   It runs `init` + a feature round-trip + a release round-trip in a `mktemp -d`
