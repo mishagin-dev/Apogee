@@ -34,7 +34,7 @@ Apogee/
 │   │   └── core/  # security-scan (+ config/sensitive-patterns.json), cleanup, apogee-session-start
 │   ├── skills/    # update-docs, review-work, second-opinion, public-docs, readme, symfony-cli-workflow,
 │   │              #   ai-clean-room, br, git-commit, git-flow
-│   │              #   + the entry points init, prime, plan-feature, release, merge, run-plan → /apogee:<name>
+│   │              #   + the entry points init, prime, plan-feature, start, merge, release, run-plan → /apogee:<name>
 │   │              #   (skills, not commands/: Claude Code merged the two formats; user-only ones set
 │   │              #   disable-model-invocation)
 ├── scaffold/                         # project CONTENT (copied per project)
@@ -78,8 +78,8 @@ managed projects. A project is considered **Apogee-managed** when it has both `.
 One-time bootstrap: `/apogee:init` (research the codebase, fill `docs/apogee/ai-context` + root
 `CLAUDE.md`, seed a flat `CLAUDE.md` in each first-level submodule). Then the recurring loop:
 
-`/apogee:prime` (load `docs/apogee/ai-context` + beads state) → work (tracked in `br`, on a git-flow
-branch) → `/apogee:review-work` → `/apogee:update-docs` → `/apogee:merge` (runs the docs/clean-tree
+`/apogee:prime` (load `docs/apogee/ai-context` + beads state) → `/apogee:start` (branch off a fresh
+`develop`, br epic linked) → work (tracked in `br`) → `/apogee:review-work` → `/apogee:update-docs` → `/apogee:merge` (runs the docs/clean-tree
 guardrails, then delegates to the `git-flow` skill).
 
 Nothing forces that order any more — the Stop gate that did was removed by ADR 0005 after it spent

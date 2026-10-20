@@ -16,7 +16,7 @@ plugins/apogee/                   # THE PLUGIN (machinery — installed once, li
   ├── hooks/                      # 2 safety gates (secrets, release finish) + context injectors
   ├── skills/                     # update-docs, review-work, second-opinion, public-docs, readme, symfony-cli-workflow,
   │                               #   ai-clean-room, br, git-commit, git-flow
-  └── skills/                     #   plus the entry points: /apogee:init, prime, plan-feature, merge, release, run-plan
+  └── skills/                     #   plus the entry points: /apogee:init, prime, plan-feature, start, merge, release, run-plan
 scaffold/                         # project CONTENT (copied per project, excluded locally in the host)
   ├── CLAUDE.md  GEMINI.md        # convention files (Claude + agy)
   └── docs/apogee/                # working-memory docs (spec, project-structure, progress, ...)
