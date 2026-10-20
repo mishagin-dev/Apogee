@@ -162,7 +162,7 @@ echo "Stage 5 done."
 # ---------------------------------------------------------------------------
 echo "=== Stage 6: version lockstep ==="
 # Every marketplace entry must agree with its plugin.json; the `apogee` entry must also match the
-# CHANGELOG's top header (the CHANGELOG tracks the core plugin, not apogee-media).
+# CHANGELOG's top header.
 plugin_version="$(jq -r '.version' "${PLUGIN_JSON}" 2>/dev/null)"
 marketplace_version="$(jq -r '.plugins[] | select(.name == "apogee") | .version' "${MARKETPLACE_JSON}" 2>/dev/null)"
 changelog_version="$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' "${CHANGELOG}" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"

@@ -10,7 +10,6 @@ In an interactive Claude session, register the marketplace from GitHub:
 ```
 /plugin marketplace add mishagin-dev/Apogee
 /plugin install apogee@apogee
-/plugin install apogee-media@apogee   # image skills (image-gen, image-edit, bg-remove), optional
 /reload-plugins
 ```
 
@@ -65,7 +64,6 @@ Env overrides: `APOGEE_HOME` (clone dir), `APOGEE_BRANCH` (default `main`).
 | `--no-settings` | skip writing `TARGET/.claude/settings.local.json` |
 | `--no-git-init` | don't auto `git init` TARGET when it isn't a git repo yet |
 | `--no-tracker-init` | don't auto `br init` / `git flow init -d` when TARGET has no `.beads/` or gitflow config yet |
-| `--no-media` | don't enable `apogee-media` (the image skills) nor allow its tools (deno, rembg, python3) in `settings.local.json` |
 
 What it does:
 
@@ -94,7 +92,7 @@ What it does:
 - **SETTINGS (per-project):** writes/merges a personal `TARGET/.claude/settings.local.json` with a
   baseline `permissions.allow` (so the plugin's skills run without prompts — `Bash(br:*)`,
   `Bash(agy:*)`, the sanctioned `git push` forms (ADR 0007), plus `mcp__idea__*` and
-  `mcp__plugin_context7_context7__*`; the image-skill commands only with `apogee-media`), a content-agnostic
+  `mcp__plugin_context7_context7__*`), a content-agnostic
   `permissions.deny` (`sudo`, `rm -rf`, destructive git). Since [ADR 0005](decisions/0005-enforcement-safety-only.md)
   this deny list — enforced by Claude Code itself, not by Apogee — is the toolkit's primary guard
   against destructive commands; the hooks add exactly two checks on top of it,

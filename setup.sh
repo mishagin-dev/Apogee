@@ -22,13 +22,11 @@
 #
 # Usage:
 #   ./setup.sh [TARGET_DIR] [--per-project] [--no-scaffold] [--no-settings]
-#              [--no-git-init] [--no-tracker-init] [--no-media]
+#              [--no-git-init] [--no-tracker-init]
 #     TARGET_DIR         project to set up (default: current dir)
 #     --per-project      enable the plugin in TARGET/.claude/settings.json only
 #                        (default: enable globally in ~/.claude/settings.json)
 #     --no-scaffold      skip copying CLAUDE.md/GEMINI.md/docs/apogee (only enable the plugin)
-#     --no-media         don't enable the apogee-media plugin (image skills) nor allow its
-#                        tools (deno, rembg, python3) in settings.local.json
 #     --no-settings      skip writing TARGET/.claude/settings.local.json
 #     --no-git-init      don't auto `git init` TARGET when it isn't a git repo yet
 #     --no-tracker-init  don't auto `br init` / `git flow init -d` when TARGET has no .beads/ or
@@ -56,7 +54,6 @@ git_exclude() {
 
 MARKETPLACE_NAME="apogee"
 PLUGIN_NAME="apogee"
-MEDIA_PLUGIN_NAME="apogee-media"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCAFFOLD_DIR="$REPO_DIR/scaffold"
 EXCLUDE_LIST="$REPO_DIR/plugins/apogee/hooks/core/config/exclude-list.txt"
@@ -68,7 +65,6 @@ DO_SCAFFOLD=1
 DO_SETTINGS=1
 DO_GIT_INIT=1
 DO_TRACKER_INIT=1
-DO_MEDIA=1
 for arg in "$@"; do
   case "$arg" in
     --per-project) PER_PROJECT=1 ;;
@@ -76,7 +72,6 @@ for arg in "$@"; do
     --no-settings) DO_SETTINGS=0 ;;
     --no-git-init) DO_GIT_INIT=0 ;;
     --no-tracker-init) DO_TRACKER_INIT=0 ;;
-    --no-media) DO_MEDIA=0 ;;
     -*) echo "Unknown flag: $arg" >&2; exit 2 ;;
     *)  TARGET="$(cd "$arg" 2>/dev/null && pwd || true)"
         [[ -z "$TARGET" ]] && { echo "Target dir not found: $arg" >&2; exit 2; } ;;
@@ -158,7 +153,6 @@ if command -v claude >/dev/null 2>&1 && claude plugin --help >/dev/null 2>&1; th
   if [[ -z "$KNOWN_SRC" || "$KNOWN_SRC" == "$REPO_DIR" ]]; then
     claude plugin marketplace add "$REPO_DIR" 2>/dev/null || true
     claude plugin install "${PLUGIN_NAME}@${MARKETPLACE_NAME}" 2>/dev/null && CLI_OK=1 || true
-    [[ $DO_MEDIA -eq 1 ]] && claude plugin install "${MEDIA_PLUGIN_NAME}@${MARKETPLACE_NAME}" 2>/dev/null || true
   else
     echo "  • marketplace '$MARKETPLACE_NAME' is registered from $KNOWN_SRC — left as is (not re-pointed to $REPO_DIR)."
   fi
@@ -175,7 +169,6 @@ mkdir -p "$(dirname "$SETTINGS")"
 [[ -f "$SETTINGS" ]] || echo '{}' > "$SETTINGS"
 
 ENABLE_KEYS="[\"${PLUGIN_NAME}@${MARKETPLACE_NAME}\"]"
-[[ $DO_MEDIA -eq 1 ]] && ENABLE_KEYS="[\"${PLUGIN_NAME}@${MARKETPLACE_NAME}\",\"${MEDIA_PLUGIN_NAME}@${MARKETPLACE_NAME}\"]"
 tmp="$(mktemp)"
 if ! jq --argjson keys "$ENABLE_KEYS" \
    '.enabledPlugins = ((.enabledPlugins // {}) + ($keys | map({(.): true}) | add))' \
@@ -191,7 +184,6 @@ if [[ $CLI_OK -eq 0 ]]; then
   NOTE: register the marketplace once in an interactive Claude session if not already:
         /plugin marketplace add $REPO_DIR
         /plugin install ${PLUGIN_NAME}@${MARKETPLACE_NAME}
-        /plugin install ${MEDIA_PLUGIN_NAME}@${MARKETPLACE_NAME}   # image skills, optional
         /reload-plugins
   After updating the plugin in this repo, refresh installed projects with:
         /plugin marketplace update $MARKETPLACE_NAME
@@ -219,10 +211,6 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
   # push to the production branch or of tags -- prefix rules can't parse refspecs, so the real
   # decision is hooks/git/enforce-git-flow-skill.py Rule 3; these are defense in depth.
   BASELINE='["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(git push origin develop:*)","Bash(git push origin feature/:*)","Bash(git push origin bugfix/:*)","Bash(git push -u origin feature/:*)","Bash(git push -u origin bugfix/:*)","Bash(git push origin --delete feature/:*)","Bash(git push origin --delete bugfix/:*)","mcp__idea__*","mcp__plugin_context7_context7__*"]'
-  # The media plugin's tools (deno, rembg, a Python venv) are only allowed where it is enabled.
-  if [[ $DO_MEDIA -eq 1 ]]; then
-    BASELINE="$(jq -c '. + ["Bash(deno run:*)","Bash(rembg:*)","Bash(python3:*)","Bash(source:*)"]' <<< "$BASELINE")"
-  fi
   if ! jq --argjson baseline "$BASELINE" \
      --argjson denylist '["Bash(sudo:*)","Bash(rm -rf:*)","Bash(rm -fr:*)","Bash(rm -r -f:*)","Bash(rm -f -r:*)","Bash(git push --force:*)","Bash(git push -f:*)","Bash(git push origin main:*)","Bash(git push origin master:*)","Bash(git push --tags:*)","Bash(git push origin --tags:*)","Bash(git push --all:*)","Bash(git push --mirror:*)","Bash(git reset --hard:*)","Bash(git clean -f:*)","Bash(git checkout -- .:*)","Bash(git restore .:*)","Bash(git branch -D:*)"]' \
      --arg plans "./.claude/plans" \

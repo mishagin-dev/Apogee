@@ -184,8 +184,7 @@ git flow hotfix start <version>       # hotfix mode, off main
 Write `<version>` into whatever Pre-flight 5 detected/the user confirmed:
 
 - Apogee-plugin lockstep pair → both `plugin.json` (`.version`) and `marketplace.json`
-  (`.plugins[] | select(.name == "apogee") | .version`; the `apogee-media` entry has its own
-  version and is bumped only when its skills changed, by hand).
+  (`.plugins[] | select(.name == "apogee") | .version`).
 - A standalone candidate (or several, if the user chose to bump multiple ambiguous matches) →
   each one, using its own format (`jq` for JSON, targeted regex replace for `pyproject.toml`/
   `Cargo.toml` to avoid reformatting the rest of the file, plain overwrite for `VERSION`/

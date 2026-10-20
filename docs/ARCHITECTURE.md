@@ -12,7 +12,7 @@ secret leaving the machine, and anything reaching the production branch or a tag
 
 | Layer | What | Where it lives | Delivery |
 |---|---|---|---|
-| **Machinery** | hooks + workflow skills | `plugins/apogee/` (and the optional `plugins/apogee-media/`) | installed once, **enabled** per project (`enabledPlugins`) — never copied |
+| **Machinery** | hooks + workflow skills | `plugins/apogee/` | installed once, **enabled** per project (`enabledPlugins`) — never copied |
 | **Content** | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project; kept out of git via the host's `.git/info/exclude` together with `.claude/` and `.beads/` (the plugin's `exclude-list.txt`, re-asserted every session start) — the repository holds code and project documentation only |
 | **Preferences** | `language`, `defaultMode`, `effortLevel`, `env` | `~/.claude/settings.json` | stays global (can't be delivered per project) |
 | **Per-project settings** | baseline `permissions.allow`, `plansDirectory`, `autoMemoryDirectory` | `TARGET/.claude/settings.local.json` | **written** (non-clobbering merge) by `setup.sh`; personal, git-excluded ([ADR 0002 Amendment](decisions/0002-plugin-not-global-hooks.md)) |
@@ -37,7 +37,6 @@ Apogee/
 │   │              #   + the entry points init, prime, plan-feature, release, merge, run-plan → /apogee:<name>
 │   │              #   (skills, not commands/: Claude Code merged the two formats; user-only ones set
 │   │              #   disable-model-invocation)
-├── plugins/apogee-media/             # second plugin: image-gen, image-edit, bg-remove (own version, optional)
 ├── scaffold/                         # project CONTENT (copied per project)
 │   ├── CLAUDE.md  GEMINI.md          # convention files (Claude + agy)
 │   └── docs/apogee/ai-context/       # {spec,project-structure,progress,deployment-infrastructure}.md
