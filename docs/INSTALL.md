@@ -5,10 +5,13 @@ copied). `setup.sh` does both halves; the plugin must also be registered once wi
 
 ## One-time: register the marketplace + install the plugin
 
-In an interactive Claude session, register the marketplace from GitHub:
+The online installer (below) and `setup.sh` register the marketplace themselves when the `claude`
+CLI is reachable: the `apogee` marketplace points at the clone (`~/.apogee` for the one-liner),
+and updates come from pulling that clone. Register by hand only if `setup.sh` printed a NOTE
+saying it could not:
 
 ```
-/plugin marketplace add mishagin-dev/Apogee
+/plugin marketplace add ~/.apogee
 /plugin install apogee@apogee
 /reload-plugins
 ```
@@ -16,12 +19,9 @@ In an interactive Claude session, register the marketplace from GitHub:
 `apogee@apogee` is `<plugin>@<marketplace>`; both names come from the repo's manifests
 (`marketplace.json` → `name: "apogee"`), independent of how the marketplace was added.
 
-For toolkit development, add the local clone instead so on-disk edits are picked up by
-`/plugin marketplace update apogee`:
-
-```
-/plugin marketplace add /Volumes/DevSpace/Mine/active-projects/Apogee
-```
+Don't run `/plugin marketplace add` for a *different* source once `apogee` is registered: adding a
+known name re-points it, so `git -C ~/.apogee pull` would stop updating anything. To develop the
+toolkit, load the working tree for one session instead: `claude --plugin-dir plugins/apogee`.
 
 This makes the `apogee` plugin available system-wide (cached by the marketplace; files are referenced,
 never copied into projects). Entry points appear namespaced: `/apogee:init`, `/apogee:prime`, `/apogee:plan-feature`,
