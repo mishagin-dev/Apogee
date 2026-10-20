@@ -9,7 +9,8 @@ disable-model-invocation: true
 
 Own a project's release lifecycle up to the finish: detect where its version lives, bump it (in
 lockstep across every place found), refresh the CHANGELOG, gate on the project's test/validate
-command, commit the release prep, then **stop and hand the finish to the operator**. By decision
+command, commit the release prep, write the release notes to a temp file, then **stop and hand
+the finish to the operator**. By decision
 ([ADR 0007](../../../../docs/decisions/0007-production-branch-wall.md)) an agent never merges into
 the production branch, never creates or pushes a tag: the `enforce-git-flow-skill` hook refuses
 `git flow release|hotfix finish` outright. This command ends by printing the two commands the
@@ -281,30 +282,54 @@ Report to the user first, reflecting what actually happened in this run (not a f
 - Which CI-gate command was run (tier 1/2/3 from Step 5) and that it passed.
 - The README badge nudge, if Pre-flight 5e found one.
 
+**Write the release notes file.** Draft the release announcement from the CHANGELOG section
+just written (or already present on resume): a lead sentence on what the release is about, then
+the highlights grouped sensibly, in English, Markdown, no heading for the version itself (the tag
+and the hosting platform add it). This is a short writing task, not a copy of the changelog
+bullets. Write it to the user's temp directory, where the OS cleans it up on its own:
+
+```bash
+notes="${TMPDIR:-/tmp}/apogee-release-<version>.md"
+```
+
+Overwrite the file if it exists (a re-run regenerates it). The file is the release description on
+the hosting platform; the tag message stays short (the version), as every tag before it.
+
 Then print the exact commands for the operator and stop. The tree is on the release/hotfix branch
 with the prep committed; nothing else is pending.
 
 ```
 git flow release finish -m "<version>" <version>     # or: git flow hotfix finish -m "<version>" <version>
 git push origin main develop --tags
+gh release create <version> --notes-file "<notes path>" --verify-tag     # or: glab release create <version> -F "<notes path>"
 ```
 
-**Tag-editor gotcha, for the operator:** `-m "<message>"` is required. `GIT_EDITOR=true` (or any
-editor that writes nothing) produces an empty tag message and a fatal error.
+`-m` is required: without it `finish` opens an editor, and an editor that writes nothing
+(`GIT_EDITOR=true`) produces an empty tag message and a fatal error. The third command publishes
+the release with the notes file as its description; pick `gh` or `glab` from `remote.origin.url`
+(the git-flow skill's "Publishing the release" procedure). If the project's CI already publishes a
+release on tag push, print `gh release edit <version> --notes-file "<notes path>"` instead, so
+the polished notes replace the generated ones rather than colliding with them.
 
-Do not run either command, even if asked in the same breath: the hook denies both to an agent
-([ADR 0007](../../../../docs/decisions/0007-production-branch-wall.md)), and the point of the wall is
-that no phrasing unlocks it.
+Do not run any of them, even if asked in the same breath: the hook denies the finish and the push
+to an agent ([ADR 0007](../../../../docs/decisions/0007-production-branch-wall.md)), and the point
+of the wall is that no phrasing unlocks it.
+
+**After the hand-over, the release branch is the operator's.** Make no further commit on it, not
+even a one-line fix, until the operator says the finish has NOT been run yet. `git flow release
+finish` checks out `main` and runs a merge in this same working tree; a `git commit` issued by the
+agent while that merge is open completes the merge with the agent's message and staged files,
+and the finish fails half-way (no tag, no back-merge). If something must change after the
+hand-over, ask first, then re-run this command, which resumes on the branch idempotently.
 
 ## Step 8: After the operator has finished
 
 If the operator comes back in this session after running the finish and the push, the remaining
 steps are:
 
-1. **Publish the release on GitHub/GitLab.** Follow the `apogee:git-flow` skill's "Publishing the
-   release (gh/glab)" procedure: it defers to CI if one already auto-publishes on tag push,
-   otherwise creates the Release itself via `gh`/`glab` (detected from `remote.origin.url`) with
-   notes drafted from the CHANGELOG entry just written.
+1. **Publish the release.** The third command printed in Step 7 (`gh release create ...
+   --notes-file`, or `glab`) does it; the notes file from Step 7 is the release description, no
+   second draft. Verify with `gh release view <version>`.
 2. **Only when Pre-flight 5a matched (releasing Apogee itself):** propagate to running Claude Code
    sessions:
    ```

@@ -4,6 +4,104 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-10-20
+
+A major release: the toolkit is re-aligned with the current Claude Code harness (skills instead
+of commands, `effort` frontmatter, `claude plugin validate`, the built-in `/code-review`) and two
+behaviours change in ways that are breaking for anyone relying on the old ones. **The release
+finish is now refused to an agent, and the "never push" rule is replaced by a wall around `main`
+and tags.** The full diagnosis behind this release is dated 2026-10-20; the decisions are
+[ADR 0006](docs/decisions/0006-run-plan-autonomy-design.md) and
+[ADR 0007](docs/decisions/0007-production-branch-wall.md).
+
+### Added
+
+- **The production-branch wall** (ADR 0007). `enforce-git-flow-skill.py` Rule 3 denies any
+  `git push` whose destination resolves to the production branch in any spelling (`main`,
+  `HEAD:main`, `feature/x:main`, `refs/heads/main`, `:main`, `--delete main`, a bare `git push`
+  while `main` is checked out), any push of tags (`--tags`, `--follow-tags`, `refs/tags/...`, an
+  existing tag by name), `--all`/`--mirror`/force pushes, `git merge` while `main` is checked out
+  (also `git checkout main && git merge ...`), and `git tag <name>` creation. It applies in **any**
+  repo with a `main`/`master`, git-flow or not, so a submodule is covered too. Everything below the
+  wall is pre-authorized: `develop` and work branches are the agent's to push, publish and delete;
+  `/apogee:run-plan` and `/apogee:merge` push `develop` after each finished branch; committing
+  finished work on a `feature/`/`bugfix/` branch through `apogee:git-commit` needs no question.
+  `setup.sh` adds allow rules for the sanctioned push forms and deny rules for the obvious
+  unsanctioned spellings as defense in depth. Covered by `--test` (40 wall cases) and
+  `tests/smoke-run-plan.sh`.
+- **AI tooling is local-only, by decision.** One exclude list
+  (`hooks/core/config/exclude-list.txt`: `docs/apogee/`, `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`,
+  `.claude/`, `.beads/`) is written by `setup.sh` and re-asserted by the SessionStart hook for the
+  repo root and each first-level submodule, so plans, memory and a submodule's `CLAUDE.md` never
+  surface in `git status`. The scaffold `CLAUDE.md` states the decision so the agent stops checking
+  whether these paths are tracked. `.beads/` is local-only: the `br` skill no longer commits it.
+- **`public-docs` skill** (replaces `doc`): human-facing documentation under `docs/` where every
+  generated doc declares the source paths it covers in `sources:` frontmatter. The new `update`
+  mode refreshes only the docs whose sources changed and is invoked from `merge`, `run-plan` and
+  `update-docs`, so public docs follow the code without anyone remembering to ask.
+- **`docs/apogee/README.md` index**, loaded by `/apogee:prime` and maintained by `update-docs`,
+  with optional `domain/`, `design/`, `diagrams/`, `research/`, `prompts/`, `reports/`
+  directories replacing the unused `business/design-brand/legal/open-issues`.
+- **`ai-clean-room` skill** (manual invocation only): a black-box clean-room procedure for
+  reproducing a closed-source application's functionality without copying it.
+- `validate.sh` Stage 8 runs `claude plugin validate --strict`; Stage 9 runs
+  `tests/smoke-run-plan.sh` against real `br` + `git flow` sandboxes; both skip where the
+  binaries are absent (CI). `apogee-session-start.py --test` covers the exclude maintenance.
+- The secret scanner now covers `WebFetch`, `WebSearch` and `agy` invocations on the Bash surface
+  (the second-opinion skill pipes code to an external model through a heredoc).
+- `second-opinion` reads its model from `APOGEE_SECOND_OPINION_MODEL`.
+- `/apogee:release` writes the release notes to `$TMPDIR/apogee-release-<version>.md` (the OS
+  cleans it up) and prints the three operator commands: `git flow release finish -m "<version>"`
+  (short tag message, as before), the push, and `gh release create --notes-file` pointing at the
+  file, so the release description is never typed by hand and is no longer a copy of the
+  changelog section.
+
+### Changed
+
+- **`/apogee:release` stops before the finish** and prints `git flow release finish` and
+  `git push origin main develop --tags` for the operator; the hook denies both to an agent.
+  Rule 1 is a DENY, no longer an ASK.
+- **The six commands are skills** (`plugins/apogee/skills/<name>/SKILL.md`), as Claude Code now
+  recommends; names are unchanged. `init` and `release` are user-invocable only; `merge` and
+  `run-plan` stay model-invocable because the loop and the plan-approval handoff call them.
+  Commands gained `description`, `argument-hint` and `effort: high` (replacing `ultrathink`).
+- **`review-work` delegates bug and security hunting to the built-in `/code-review`** and keeps
+  the Apogee-specific parts: a rules audit against `CLAUDE.md` whose library/API claims must be
+  Context7-verified (`[unverified]` findings are discarded) and an intent verdict against the
+  recorded plan. The previous parallel-reviewer procedure is kept as a reference.
+- `/apogee:run-plan` takes its cap from `max-epics:` in the arguments (default 3) and its test gate
+  from the project's `CLAUDE.md` Testing section; `pipeline.json` is gone, and with it the
+  plugin-cache lookup. Its 70-line design note is now ADR 0006.
+- `update-docs` ports two CCDK 3.2 rules ("the default for every line is DELETE", a net-line
+  audit) and states the boundary with Claude Code's auto-memory.
+- Rule 2b queries `br show` only for open epics instead of every issue in the backlog.
+- `validate.sh` Stage 7 (language policy) is Python: BSD grep's `[а-я]` range matched every
+  em-dash with `LANG` unset (614 false FAILs on a clean tree); allowlist entries no longer carry
+  a line number. Stage 6 checks every marketplace entry against its `plugin.json`.
+- `setup.sh` no longer re-points an already registered `apogee` marketplace at the directory it
+  runs from, and no longer creates `assets/` in the host project.
+- `br-capture-gate.py` reads `tool_response` and stays silent when the plan was not accepted.
+- Skill and command bodies reference bundled files through `${CLAUDE_PLUGIN_ROOT}`; the
+  frontmatter field is `user-invocable` (the underscore spelling was ignored).
+- Stale references removed throughout: `idea-enforce.json`, the deleted language guard, the
+  gemini-based fallback, `.claude/skills/...` paths, "Explore (Sonnet)".
+
+### Removed
+
+- `idea/idea-nudge.py` and the `idea-mcp` skill: the JetBrains MCP server and JetBrains' own
+  plugin describe their tools; the one rule that mattered is a line in the scaffold `CLAUDE.md`.
+- `core/notify.sh` and the sound files: Claude Code's `inputNeededNotifEnabled` plays the cue.
+- The `deploy` template skill (a template cannot be customized per project from inside the
+  plugin) and the image skills `image-gen`, `image-edit`, `bg-remove` (never used; graphics has
+  better tools). Their tools (`deno`, `rembg`, `python3`, `source`) leave the permission baseline.
+- `hooks/core/config/pipeline.json`; the empty `business/`, `design-brand/`, `legal/`,
+  `open-issues/` scaffold directories; `assets/.gitkeep`.
+- The "never `git push`" rule and "Always ask before: git commits" in the scaffold, superseded by
+  the wall and the pre-authorization above.
+- The `release.yml` workflow that published a GitHub Release from the CHANGELOG on tag push:
+  the operator publishes with `gh release create` and the notes file. It also mislabelled
+  "Latest" when two tags were pushed together.
+
 ## [2.1.0] - 2026-08-29
 
 ### Added
