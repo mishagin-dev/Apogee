@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2026-10-20
+
+### Fixed
+
+- `setup.sh` creates the working-memory directories
+  `docs/apogee/{domain,design,diagrams,research,prompts,reports}/` up front, so the layout is
+  visible from the first session instead of existing only as a convention in the
+  `docs/apogee/README.md` index. They are git-excluded with the rest of `docs/apogee/`.
+- `/apogee:release` prints the finish with `GIT_MERGE_AUTOEDIT=no` and documents the recovery for a
+  merge left open by a GUI editor (`git commit --no-edit --cleanup=strip`, then re-run the finish):
+  on a machine with `core.editor = zed --wait`, the merge commit's editor aborted the finish
+  half-way and the next attempt refused with "Index contains uncommited changes".
+
 ## [3.0.0] - 2026-10-20
 
 A major release: the toolkit is re-aligned with the current Claude Code harness (skills instead
