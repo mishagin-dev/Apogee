@@ -75,6 +75,8 @@ driven by two scripts:
 - Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
   `chore`, `ci`.
 - Scope is optional — omit it when it adds no useful context.
+- A breaking change adds `!` before the colon (`feat(api)!: Drop v1 endpoints`) and a
+  `BREAKING CHANGE: <what breaks>` footer; `/apogee:release` reads both to suggest a major bump.
 - **English only** (ASCII letters; no Cyrillic, no em-dashes).
 
 **Body** (optional)
