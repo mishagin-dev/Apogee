@@ -1,6 +1,0 @@
-{
-  "run_plan": {
-    "max_epics_per_invocation": 3,
-    "test_command": null
-  }
-}

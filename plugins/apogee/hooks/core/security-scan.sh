@@ -1,6 +1,10 @@
 #!/bin/bash
-# security-scan.sh — PreToolUse hook (matcher: mcp__): refuse to send a live credential to an
-# external MCP server.
+# security-scan.sh — PreToolUse hook: refuse to send a live credential to an external service.
+#
+# Wired on three surfaces (hooks.json): every `mcp__*` tool, WebFetch/WebSearch, and Bash -- where
+# it only looks at `agy` invocations, because that is the one shell command this toolkit uses to
+# hand code to an external model (the second-opinion skill pipes diffs through a heredoc). Any
+# other Bash command is skipped untouched.
 #
 # This is the one gate ADR 0005 kept on irreversibility grounds: a secret that reaches a third-party
 # service cannot be unsent, and no amount of `git reset` fixes it. Everything else the enforcement
@@ -56,11 +60,24 @@ scan_values() {
     return 1
 }
 
+# True if a Bash command string invokes `agy` as a command (at the start or after a shell chain
+# operator, optionally preceded by VAR=value assignments). `echo agy` or a path containing "agy"
+# does not count.
+is_agy_command() {
+    printf '%s' "$1" | grep -qE '(^|&&|\|\||;|\|)[[:space:]]*([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*agy([[:space:]]|$)'
+}
+
 main() {
     command -v jq >/dev/null 2>&1 || exit 0
 
-    local input values hit
+    local input values hit tool_name command
     input=$(cat)
+    tool_name=$(printf '%s' "${input}" | jq -r '.tool_name // ""' 2>/dev/null)
+    if [[ "${tool_name}" == "Bash" ]]; then
+        command=$(printf '%s' "${input}" | jq -r '.tool_input.command // ""' 2>/dev/null)
+        is_agy_command "${command}" || exit 0
+    fi
+
     values=$(printf '%s' "${input}" | jq -r '.tool_input | .. | strings' 2>/dev/null | head -c "${MAX_BYTES}")
     [[ -z "${values}" ]] && exit 0
 
@@ -69,7 +86,7 @@ main() {
             hookSpecificOutput: {
                 hookEventName: "PreToolUse",
                 permissionDecision: "deny",
-                permissionDecisionReason: ("Refusing to send this to an external MCP server: the payload contains what looks like a live credential (\($h)). Replace it with a placeholder (YOUR_API_KEY, <token>, ${SECRET}) and retry. If this is a false positive, the pattern list is in hooks/core/config/sensitive-patterns.json.")
+                permissionDecisionReason: ("Refusing to send this to an external service (MCP server, agy, web fetch): the payload contains what looks like a live credential (\($h)). Replace it with a placeholder (YOUR_API_KEY, <token>, ${SECRET}) and retry. If this is a false positive, the pattern list is in hooks/core/config/sensitive-patterns.json.")
             }
         }'
     fi
@@ -112,6 +129,27 @@ run_self_test() {
     check "placeholder token"    "Authorization: Bearer <token>"                     QUIET
     check "shell var conn"       'redis://admin:${REDIS_PASSWORD}@cache:6379'        QUIET
     check "empty input"          ""                                                  QUIET
+
+    echo
+    echo "Bash surface: only agy invocations are inspected"
+    agy_check() {  # agy_check <label> <command> <want: AGY|SKIP>
+        local label="$1" cmd="$2" want="$3" got
+        if is_agy_command "$cmd"; then got="AGY"; else got="SKIP"; fi
+        if [[ "$got" == "$want" ]]; then
+            printf '  ok    %-46s %s\n' "$label" "$got"
+        else
+            printf '  FAIL  %-46s %s (want %s)\n' "$label" "$got" "$want"
+            ok=1
+        fi
+    }
+    agy_check "bare agy"             "agy -p 'review this'"                     AGY
+    agy_check "agy after cd &&"      "cd sub && agy --model x -p 'q'"           AGY
+    agy_check "env prefix then agy"  "FOO=1 agy -p 'q'"                         AGY
+    agy_check "agy as last of pipe"  "cat diff.txt | agy -p 'q'"                AGY
+    agy_check "git commit"           "git commit -F /tmp/msg"                   SKIP
+    agy_check "echo mentioning agy"  "echo agy is great"                        SKIP
+    agy_check "path containing agy"  "cat docs/agy-notes.md"                    SKIP
+    agy_check "empty command"        ""                                         SKIP
 
     echo
     if [[ $ok -eq 0 ]]; then echo "All tests passed."; else echo "SOME TESTS FAILED."; fi

@@ -14,6 +14,9 @@
 #   7. Language policy — no unallowlisted Cyrillic in plugins/apogee/**, scripts/**,
 #                       setup.sh, sync.sh, install.sh, root CLAUDE.md (see
 #                       scripts/lang-check-allowlist.txt for known exceptions)
+#   8. Plugin validator — `claude plugin validate --strict` (skipped without the CLI)
+#   9. Backstop smoke  — tests/smoke-run-plan.sh against real br + git-flow sandboxes
+#                       (skipped without the binaries)
 #
 # Exits 0 if all stages pass, 1 on any failure.
 #
@@ -106,8 +109,12 @@ bad_matchers = []
 for event, groups in data.get("hooks", {}).items():
     for group in groups:
         m = group.get("matcher")
-        if m and m.startswith("mcp__") and not m.endswith("*"):
-            bad_matchers.append(f"{event}: {m!r} matches nothing -- did you mean {m + '.*'!r}?")
+        if not m:
+            continue
+        # A matcher may be an alternation (`mcp__.*|WebFetch`); judge each `mcp__` branch on its own.
+        for alt in m.split("|"):
+            if alt.startswith("mcp__") and not alt.endswith("*"):
+                bad_matchers.append(f"{event}: {alt!r} in {m!r} matches nothing -- did you mean {alt + '.*'!r}?")
 
 for problem in bad_matchers:
     print(f"FAIL matcher {problem}")
@@ -179,39 +186,97 @@ echo "Stage 6 done."
 
 # ---------------------------------------------------------------------------
 # Stage 7: language policy (English-only in code/config; docs/apogee/ is never
-#          scanned since it's not in LANG_SCAN_PATHS below — do NOT add a
-#          --exclude-dir for it: BSD grep's --exclude-dir matches basename
-#          only, and --exclude-dir=apogee would also skip plugins/apogee
-#          itself, since that scan root's own basename is "apogee")
+#          scanned since it's not in the scan list). Implemented in Python on
+#          purpose: a `grep -E '[а-я]'` is locale-dependent -- with LANG unset,
+#          BSD grep treats the range bytewise and matched every em-dash (614
+#          false FAILs on a clean tree), while CI's C.UTF-8 passed.
 # ---------------------------------------------------------------------------
 echo "=== Stage 7: language policy ==="
 LANG_ALLOWLIST="${REPO_ROOT}/scripts/lang-check-allowlist.txt"
-LANG_SCAN_PATHS=(
-    "${REPO_ROOT}/plugins/apogee"
-    "${REPO_ROOT}/scripts"
-    "${REPO_ROOT}/setup.sh"
-    "${REPO_ROOT}/sync.sh"
-    "${REPO_ROOT}/install.sh"
-    "${REPO_ROOT}/CLAUDE.md"
-)
-stage7_hits=0
-while IFS= read -r hit; do
-    [ -z "${hit}" ] && continue
-    if [ -f "${LANG_ALLOWLIST}" ] && grep -qxF "${hit}" "${LANG_ALLOWLIST}"; then
+stage7_out="$(python3 - "${REPO_ROOT}" "${LANG_ALLOWLIST}" <<'PYEOF'
+import os, re, sys
+
+root, allowlist_path = sys.argv[1], sys.argv[2]
+scan = ["plugins/apogee", "scripts", "setup.sh", "sync.sh", "install.sh", "CLAUDE.md"]
+cyrillic = re.compile("[а-яА-ЯёЁ]")
+
+allow = set()
+if os.path.isfile(allowlist_path):
+    with open(allowlist_path, encoding="utf-8") as f:
+        allow = {line.rstrip("\n") for line in f if line.strip() and not line.startswith("#")}
+
+def candidates():
+    for entry in scan:
+        path = os.path.join(root, entry)
+        if os.path.isfile(path):
+            yield path
+            continue
+        for d, _, names in os.walk(path):
+            for n in names:
+                yield os.path.join(d, n)
+
+hits = 0
+for path in candidates():
+    if os.path.abspath(path) == os.path.abspath(allowlist_path):
         continue
-    fi
-    echo "FAIL lang ${hit}"
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.readlines()
+    except (UnicodeDecodeError, OSError):
+        continue  # binary or unreadable: not a text file we police
+    rel = os.path.relpath(path, root)
+    for n, line in enumerate(lines, 1):
+        if cyrillic.search(line):
+            key = f"{rel}:{n}:{line.rstrip(chr(10))}"
+            if key in allow:
+                continue
+            print(f"FAIL lang {key}")
+            hits += 1
+sys.exit(1 if hits else 0)
+PYEOF
+)"
+stage7_rc=$?
+[ -n "${stage7_out}" ] && echo "${stage7_out}"
+if [ "${stage7_rc}" -ne 0 ]; then
     fail=1
-    stage7_hits=$((stage7_hits + 1))
-done < <(
-    grep -rnIE --exclude-dir=.git --exclude="$(basename "${LANG_ALLOWLIST}")" \
-        '[а-яА-ЯёЁ]' "${LANG_SCAN_PATHS[@]}" 2>/dev/null \
-    | sed "s#^${REPO_ROOT}/##"
-)
-if [ "${stage7_hits}" -eq 0 ]; then
+else
     echo "ok  no unallowlisted Cyrillic found"
 fi
 echo "Stage 7 done."
+
+# ---------------------------------------------------------------------------
+# Stage 8: official plugin validator (manifest, frontmatter, hook schema).
+#          Skipped where the claude CLI is absent (CI), so it never blocks there.
+# ---------------------------------------------------------------------------
+echo "=== Stage 8: claude plugin validate --strict ==="
+if command -v claude >/dev/null 2>&1; then
+    if claude plugin validate --strict "${PLUGIN_ROOT}" >/dev/null 2>&1; then
+        echo "ok  claude plugin validate --strict"
+    else
+        echo "FAIL claude plugin validate --strict ${PLUGIN_ROOT} (run it directly for details)"
+        fail=1
+    fi
+else
+    echo "skip  claude CLI not installed"
+fi
+echo "Stage 8 done."
+
+# ---------------------------------------------------------------------------
+# Stage 9: hook integration smoke against real br + git-flow sandboxes.
+#          Skipped when either binary is missing (CI).
+# ---------------------------------------------------------------------------
+echo "=== Stage 9: run-plan backstop smoke ==="
+if command -v br >/dev/null 2>&1 && command -v git-flow >/dev/null 2>&1; then
+    if bash "${REPO_ROOT}/tests/smoke-run-plan.sh" >/dev/null 2>&1; then
+        echo "ok  tests/smoke-run-plan.sh"
+    else
+        echo "FAIL tests/smoke-run-plan.sh (run it directly for details)"
+        fail=1
+    fi
+else
+    echo "skip  br or git-flow not installed"
+fi
+echo "Stage 9 done."
 
 # ---------------------------------------------------------------------------
 # Summary

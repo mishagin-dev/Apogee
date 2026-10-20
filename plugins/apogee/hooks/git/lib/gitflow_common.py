@@ -218,6 +218,11 @@ def br_find_by_external_ref(root, ref):
     if candidates is None:
         return None, False
     for candidate in candidates:
+        # Only an open epic can be linked to a branch being finished (the git-flow skill links one
+        # epic per branch); skipping tasks and closed issues keeps this O(open epics) `br show`
+        # calls instead of one per issue in the backlog.
+        if candidate.get("issue_type") != "epic" or candidate.get("status") == "closed":
+            continue
         show = br_show(root, candidate.get("id", ""))
         if show and show.get("external_ref") == ref:
             return show, True

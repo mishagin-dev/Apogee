@@ -9,9 +9,8 @@ SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // "unknown"' 2>/dev/null |
 
 [[ "$SESSION_ID" == "unknown" ]] && exit 0
 
-# The two surviving per-session files: the nudge counters that stop each reminder
-# after N firings. Everything else this used to clear belonged to the review/br
-# gates deleted by ADR 0005.
-rm -f "/tmp/gitflow-nudge-${SESSION_ID}.count" \
-      "/tmp/idea-nudge-${SESSION_ID}.count"
+# The one surviving per-session file: the unfinished-branch nudge counter that stops the reminder
+# after N firings. Everything else this used to clear belonged to hooks deleted by ADR 0005 or
+# retired since (the idea nudge).
+rm -f "/tmp/gitflow-nudge-${SESSION_ID}.count"
 exit 0
