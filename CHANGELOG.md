@@ -50,6 +50,9 @@ and tags.** The full diagnosis behind this release is dated 2026-10-20; the deci
 - The secret scanner now covers `WebFetch`, `WebSearch` and `agy` invocations on the Bash surface
   (the second-opinion skill pipes code to an external model through a heredoc).
 - `second-opinion` reads its model from `APOGEE_SECOND_OPINION_MODEL`.
+- `/apogee:release` writes the release notes to `$TMPDIR/apogee-release-<version>.md` (the OS
+  cleans it up) and prints the finish, push and `gh release create` commands pointing at it, so
+  the tag message and the release description are never typed by hand.
 
 ### Changed
 
