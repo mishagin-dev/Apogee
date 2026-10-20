@@ -51,8 +51,10 @@ and tags.** The full diagnosis behind this release is dated 2026-10-20; the deci
   (the second-opinion skill pipes code to an external model through a heredoc).
 - `second-opinion` reads its model from `APOGEE_SECOND_OPINION_MODEL`.
 - `/apogee:release` writes the release notes to `$TMPDIR/apogee-release-<version>.md` (the OS
-  cleans it up) and prints the finish, push and `gh release create` commands pointing at it, so
-  the tag message and the release description are never typed by hand.
+  cleans it up) and prints the three operator commands: `git flow release finish -m "<version>"`
+  (short tag message, as before), the push, and `gh release create --notes-file` pointing at the
+  file, so the release description is never typed by hand and is no longer a copy of the
+  changelog section.
 
 ### Changed
 
@@ -96,6 +98,9 @@ and tags.** The full diagnosis behind this release is dated 2026-10-20; the deci
   `open-issues/` scaffold directories; `assets/.gitkeep`.
 - The "never `git push`" rule and "Always ask before: git commits" in the scaffold, superseded by
   the wall and the pre-authorization above.
+- The `release.yml` workflow that published a GitHub Release from the CHANGELOG on tag push:
+  the operator publishes with `gh release create` and the notes file. It also mislabelled
+  "Latest" when two tags were pushed together.
 
 ## [2.1.0] - 2026-08-29
 

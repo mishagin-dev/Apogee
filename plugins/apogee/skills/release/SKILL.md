@@ -292,25 +292,24 @@ bullets. Write it to the user's temp directory, where the OS cleans it up on its
 notes="${TMPDIR:-/tmp}/apogee-release-<version>.md"
 ```
 
-Overwrite the file if it exists (a re-run regenerates it). The same file serves as the annotated
-tag message and as the release description.
+Overwrite the file if it exists (a re-run regenerates it). The file is the release description on
+the hosting platform; the tag message stays short (the version), as every tag before it.
 
 Then print the exact commands for the operator and stop. The tree is on the release/hotfix branch
 with the prep committed; nothing else is pending.
 
 ```
-git flow release finish -f "<notes path>" <version>     # or: git flow hotfix finish -f "<notes path>" <version>
+git flow release finish -m "<version>" <version>     # or: git flow hotfix finish -m "<version>" <version>
 git push origin main develop --tags
+gh release create <version> --notes-file "<notes path>" --verify-tag     # or: glab release create <version> -F "<notes path>"
 ```
 
-`-f` / `--messagefile` takes the tag message from the file; without `-m` or `-f`, `finish` opens
-an editor, and an editor that writes nothing (`GIT_EDITOR=true`) produces an empty tag message and
-a fatal error. If the project has no CI that publishes a release on tag push (the git-flow skill's
-"Publishing the release" detection), add the third command, same file:
-
-```
-gh release create <version> --notes-file "<notes path>" --verify-tag     # or the glab equivalent
-```
+`-m` is required: without it `finish` opens an editor, and an editor that writes nothing
+(`GIT_EDITOR=true`) produces an empty tag message and a fatal error. The third command publishes
+the release with the notes file as its description; pick `gh` or `glab` from `remote.origin.url`
+(the git-flow skill's "Publishing the release" procedure). If the project's CI already publishes a
+release on tag push, print `gh release edit <version> --notes-file "<notes path>"` instead, so
+the polished notes replace the generated ones rather than colliding with them.
 
 Do not run any of them, even if asked in the same breath: the hook denies the finish and the push
 to an agent ([ADR 0007](../../../../docs/decisions/0007-production-branch-wall.md)), and the point
@@ -328,10 +327,9 @@ hand-over, ask first, then re-run this command, which resumes on the branch idem
 If the operator comes back in this session after running the finish and the push, the remaining
 steps are:
 
-1. **Publish the release on GitHub/GitLab.** If CI auto-publishes on tag push, nothing to do.
-   Otherwise the operator runs the `gh release create ... --notes-file` command printed in Step 7
-   (the `apogee:git-flow` skill's "Publishing the release (gh/glab)" procedure has the detection
-   and the `glab` form); the notes file from Step 7 is the release description, no second draft.
+1. **Publish the release.** The third command printed in Step 7 (`gh release create ...
+   --notes-file`, or `glab`) does it; the notes file from Step 7 is the release description, no
+   second draft. Verify with `gh release view <version>`.
 2. **Only when Pre-flight 5a matched (releasing Apogee itself):** propagate to running Claude Code
    sessions:
    ```
