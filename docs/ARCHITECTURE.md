@@ -5,14 +5,15 @@ Apogee is a personal Claude Code toolkit: a fork of the
 a **plugin + local marketplace**. Its job is to keep Claude Code coherent across sessions (durable
 context + repeatable work loop) and to keep a disciplined workflow available via lifecycle hooks.
 Since [ADR 0005](decisions/0005-enforcement-safety-only.md) those hooks mostly *inform* rather than
-*block*: exactly two can refuse an action, and both defend outcomes that cannot be undone.
+*block*: exactly two can refuse an action, and both defend outcomes that cannot be undone — a
+secret leaving the machine, and anything reaching the production branch or a tag (ADR 0007).
 
 ## Three layers (the core model)
 
 | Layer | What | Where it lives | Delivery |
 |---|---|---|---|
-| **Machinery** | hooks + commands + workflow skills | `plugins/apogee/` | installed once, **enabled** per project (`enabledPlugins`) — never copied |
-| **Content** | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project; `docs/apogee/` excluded via the host's `.git/info/exclude` |
+| **Machinery** | hooks + workflow skills | `plugins/apogee/` | installed once, **enabled** per project (`enabledPlugins`) — never copied |
+| **Content** | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project; kept out of git via the host's `.git/info/exclude` together with `.claude/` and `.beads/` (the plugin's `exclude-list.txt`, re-asserted every session start) — the repository holds code and project documentation only |
 | **Preferences** | `language`, `defaultMode`, `effortLevel`, `env` | `~/.claude/settings.json` | stays global (can't be delivered per project) |
 | **Per-project settings** | baseline `permissions.allow`, `plansDirectory`, `autoMemoryDirectory` | `TARGET/.claude/settings.local.json` | **written** (non-clobbering merge) by `setup.sh`; personal, git-excluded ([ADR 0002 Amendment](decisions/0002-plugin-not-global-hooks.md)) |
 
@@ -30,16 +31,16 @@ Apogee/
 │   │   ├── hooks.json                # lifecycle wiring; all paths via ${CLAUDE_PLUGIN_ROOT}
 │   │   ├── br/    # br-capture-gate (plan -> epic), br-prime (agent guide)
 │   │   ├── git/   # enforce-git-flow-skill (the only Bash gate) + unfinished-branch-nudge, lib/
-│   │   ├── idea/  # idea-nudge (prefer mcp__idea__* for code intelligence)
-│   │   └── core/  # security-scan, notify, cleanup, apogee-session-start + config/ + sounds/
-│   ├── skills/    # update-docs, review-work, second-opinion, deploy, image-gen, image-edit,
-│   │              #   bg-remove, doc, readme, br, git-commit, git-flow, idea-mcp
-│   └── commands/  # init.md, prime.md, plan-feature.md, release.md, merge.md  → /apogee:<name>
+│   │   └── core/  # security-scan (+ config/sensitive-patterns.json), cleanup, apogee-session-start
+│   ├── skills/    # update-docs, review-work, second-opinion, public-docs, readme, symfony,
+│   │              #   ai-clean-room, br, git-commit, git-flow
+│   │              #   + the entry points init, prime, plan-feature, release, merge, run-plan → /apogee:<name>
+│   │              #   (skills, not commands/: Claude Code merged the two formats; user-only ones set
+│   │              #   disable-model-invocation)
 ├── scaffold/                         # project CONTENT (copied per project)
 │   ├── CLAUDE.md  GEMINI.md          # convention files (Claude + agy)
-│   └── docs/apogee/                  # excluded via .git/info/exclude in the host project
-│       ├── ai-context/{spec,project-structure,progress,deployment-infrastructure}.md
-│       └── {business,design-brand,legal,open-issues}/
+│   └── docs/apogee/ai-context/       # {spec,project-structure,progress,deployment-infrastructure}.md
+├── tests/     # smoke-run-plan.sh: the hook backstop against real br + git-flow sandboxes
 ├── install.sh # online one-liner: clone the toolkit into ~/.apogee + run setup.sh
 ├── setup.sh   # scaffold (copy) + enable plugin (link)
 ├── sync.sh    # re-scaffold new template files into an installed project
@@ -64,9 +65,9 @@ that every `${CLAUDE_PLUGIN_ROOT}` path in `hooks.json` still resolves.
 Every hook no-ops unless its trigger is present in the project:
 
 - **`.beads/`** → `br-capture-gate`, `br-prime`, `apogee-session-start`.
-- **`.idea/` or `*.iml` + a running JetBrains IDE** → `idea-nudge`.
 - **git-flow config** (`gitflow.branch.*`) → `enforce-git-flow-skill`, `unfinished-branch-nudge`.
-- **any `mcp__` tool call** → `security-scan.sh` (the one unconditional hook).
+- **any `mcp__` tool call, `WebFetch`, `WebSearch`, or an `agy` command via Bash** →
+  `security-scan.sh` (the one unconditional hook).
 
 So enabling the plugin globally behaves like the old global wiring — the machinery only engages in real
 managed projects. A project is considered **Apogee-managed** when it has both `.beads/` **and**

@@ -54,11 +54,32 @@ def _beads_root(start: str):
         d = parent
 
 
+def _plan_approved(tool_response) -> bool:
+    """True unless the ExitPlanMode response says the plan was not accepted.
+
+    PostToolUse only fires for a completed call, but the harness still reports the outcome in
+    `tool_response` (a dict carrying `plan`, `filePath` and status flags). A dict with a non-empty
+    `plan` and no rejection wording is the approved shape. A bare string or an error-looking payload
+    is treated as not approved. A missing field is treated as approved: older harness versions did
+    not pass it, and the directive is context, not enforcement.
+    """
+    if tool_response is None:
+        return True
+    if not isinstance(tool_response, dict):
+        return False
+    flat = json.dumps(tool_response).lower()
+    if "reject" in flat or "denied" in flat or "cancel" in flat:
+        return False
+    return bool(tool_response.get("plan")) or "error" not in tool_response
+
+
 def main() -> None:
     raw = sys.stdin.read()
     data = json.loads(raw) if raw.strip() else {}
     cwd = data.get("cwd") or os.getcwd()
     if not os.path.isdir(cwd) or not _beads_root(cwd):
+        return
+    if not _plan_approved(data.get("tool_response")):
         return
     print(json.dumps({
         "hookSpecificOutput": {

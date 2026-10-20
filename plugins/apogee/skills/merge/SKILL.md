@@ -1,0 +1,286 @@
+---
+name: merge
+description: "Finalize a branch: verify docs and a clean tree, then finish it (git-flow finish, or merge to main in plain repos)."
+argument-hint: "[Verified: <note>] [summary: <override>]"
+---
+
+# Merge Command
+
+Finalize work on a branch: verify docs + tree are clean, then ship. In **Git Flow repos** `/merge` is verify-only and hands the actual finish to the `apogee:git-flow` skill (a manual merge into the production branch would skip the tag and the back-merge into develop). In **plain repos** it merges to main directly. Supports both standard `git checkout -b` branches and `git worktree` flows — all auto-detected at pre-flight.
+
+**Context from user:** $ARGUMENTS
+
+---
+
+## Philosophy
+
+`/merge` is a **verify + ship** command, not a do-everything-at-end-of-session cleanup. Doc updates, commits, and testing belong to the **work session** on the branch. By the time `/merge` runs — typically in a fresh `claude` session — those things should already be done. This command verifies the invariant, surfaces violations, and ships if clean.
+
+Rule of thumb: if you're tempted to have `/merge` silently fix something, STOP and surface it to the user instead. Merges are semi-destructive; a missed doc update or an accidentally-committed build artifact is much harder to undo after the fact.
+
+---
+
+## $ARGUMENTS conventions
+
+Two documented uses for `$ARGUMENTS`:
+
+- `Verified: <context>` — appended as a `Verified:` line in the merge commit. Opt-in; only include if user passed one.
+  Example: `/apogee:merge Verified: integration tests pass + manual smoke check`
+- `summary: <override>` — use as the merge-message summary instead of synthesizing from the diff.
+  Example: `/apogee:merge summary: swap payment provider from Stripe to Adyen`
+
+Do not prompt the user for verification notes. Most merges don't carry a `Verified:` line, and it's a deliberate signal rather than a checkbox.
+
+---
+
+## Pre-flight
+
+1. **Detect mode.** Compare the current git dir to the main git dir:
+   ```bash
+   git rev-parse --git-dir
+   git rev-parse --git-common-dir
+   ```
+   - **Equal** → **standard mode** (regular clone, or operating from the main repo itself).
+   - **Different** → **worktree mode** (current dir is a linked worktree created via `git worktree add`).
+
+   Remember the mode — it controls how Step 4 (merge) and Step 5 (cleanup) behave.
+
+1b. **Detect Git Flow.** Run:
+   ```bash
+   git config --get-regexp '^gitflow\.branch\.'
+   ```
+   - **Non-empty** → **Git Flow repo**. Step 4 must NOT run `git checkout main`/`git merge` itself — that skips the tag and the back-merge into develop, which `git flow finish` handles. Use the **Git Flow finish** path in Step 4 instead.
+   - **Empty** → plain repo; use the standard/worktree merge path in Step 4.
+
+2. **Verify branch.** Run `git branch --show-current`.
+   - Branch is `main` → stop: "You're on main — nothing to merge. Create a feature branch with `git checkout -b <name>` (standard mode) or run this from a worktree on the branch you want to merge (worktree mode)."
+   - Otherwise → capture `<branch>` = current branch name.
+
+3. **Worktree mode only — capture `<main-repo-path>`:** the path listed for branch `main` in `git worktree list`. Standard mode doesn't need this (everything happens in the cwd).
+
+4. **Survey the branch:**
+   ```bash
+   git log main..HEAD --oneline
+   git diff main --stat
+   git log main..HEAD --name-only --format= | sort -u | cut -d/ -f1 | sort -u
+   git status
+   ```
+   In worktree mode, also run `git -C <main-repo-path> status` to spot uncommitted changes in the main repo.
+
+   The third command gives you the top-level directories touched — this drives the docs check in Step 2. Note lines-changed and file-count from `git diff main --stat` — this drives the Step 1 branch.
+
+---
+
+## Step 1: Form a mental model
+
+You have no implicit session context (fresh session). Read the branch before drafting anything.
+
+- **Small diffs** (<200 lines changed AND <10 files): `git diff main` inline.
+- **Large diffs** (>200 lines OR >10 files): delegate to an `Explore` sub-agent to keep context clean.
+
+  ```
+  Agent({
+    description: "Summarize <branch> vs main",
+    subagent_type: "Explore",
+    prompt: "Summarize what branch <branch> does relative to main. Focus on: which systems/areas it touches, what new capabilities or changes it introduces, and risk areas (migrations, auth, infra). Under 300 words."
+  })
+  ```
+
+Use the summary + diff stat to draft the merge message in Step 4. If `$ARGUMENTS` contained `summary: <override>`, use that instead and skip the synthesis.
+
+---
+
+## Step 2: Docs-current guardrail
+
+From the top-level dirs touched (Pre-flight step 4 command), map to docs that might need updating:
+
+| Top-level dir touched | Docs to consider |
+|---|---|
+| Any code dir | `docs/apogee/ai-context/*.md`, root `CLAUDE.md` |
+| Any code dir, when `docs/**/*.md` declare `sources:` | those public docs, via `apogee:public-docs update` |
+| `assets/` (if present) | `assets/CLAUDE.md` |
+| Other top-level dirs | their local `CLAUDE.md` if one exists |
+
+For monorepos with per-product subdirs (e.g., `ProductA/`, `ProductB/`), map each touched product dir to its own `<product>/docs/apogee/ai-context/` and `<product>/CLAUDE.md`.
+
+**Decision flow:**
+
+1. **Apply skip criteria** (from the `apogee:update-docs` skill's "When to Skip" section): bug fixes, small refactors, code cleanup, UI tweaks, single-file additions within existing patterns, perf opts without arch impact, comment/formatting changes. If the branch fits these → skip silently, proceed to Step 3.
+
+2. **Check whether docs were already touched on this branch:**
+   ```bash
+   git log main..HEAD --name-only --format= | grep -E 'docs/apogee/ai-context/|CLAUDE\.md'
+   ```
+   If yes → docs were handled in the work session. Skip silently, proceed to Step 3.
+
+3. **If substantive diff AND no doc touches on branch:**
+   - **Invoked as part of `/apogee:run-plan`'s autonomous loop** (you already know this from your own
+     context — no file/flag check needed, this is agent-followed prose, not code): auto-invoke the
+     `apogee:update-docs` skill now, wait for it to finish, then re-run the point-2 check. Proceed to
+     Step 3 once it passes. Never stop here in this mode — in practice this branch is a backstop,
+     since `run-plan.md`'s own loop already runs `update-docs` per epic before ever calling `/merge`.
+   - **Otherwise (ordinary interactive `/merge`):** STOP. List the specific files likely needing
+     attention, then present three options:
+     - **(a)** Abort the merge so the user can invoke `/apogee:update-docs` in this or another session.
+     - **(b)** Proceed anyway (user explicitly accepts doc drift — note this for Step 6).
+     - **(c)** Cancel entirely.
+
+     **Wait for user choice. Do NOT auto-invoke `/apogee:update-docs`.** Merge is semi-destructive; this is a deliberate exception to the usual "skip redundant confirmation" preference.
+
+4. **Public docs.** If any `*.md` under the docs location declares `sources:` overlapping the
+   branch's changed files and was not itself touched on the branch, run `apogee:public-docs
+   update` (it refreshes only the affected docs and commits them). This is cheap and reversible,
+   so it runs in both modes without asking; a project with no `sources:` docs gets a one-line
+   no-op.
+
+---
+
+## Step 3: Clean-tree guardrail
+
+- **Clean worktree** (`git status` shows nothing) → proceed silently to Step 4.
+- **Dirty worktree** → STOP. Show:
+  - `git status` output
+  - `git diff --stat` summary
+  - A one-line categorization hint ("looks like build artifacts / generated files" vs "looks like code changes")
+
+  Ask the user to choose:
+  - **(a)** Commit specific named files — user names them. Follow repo commit style (conventional `feat:`/`fix:`/`chore:` prefix, HEREDOC message, `Co-Authored-By: Claude <noreply@anthropic.com>` trailer).
+  - **(b)** Discard the uncommitted changes.
+  - **(c)** Abort the merge.
+
+**Never `git add -A` or `git add .`.** Never auto-commit without the user naming files. A merge commit that quietly swallows regenerated build output or stale `.DS_Store`s is painful to undo.
+
+**No exception for `/apogee:run-plan`'s autonomous loop.** A dirty worktree at merge time — even
+from a file the loop itself touched earlier — means the loop's own per-step commit discipline
+already broke down somewhere; that is exactly the moment to stop and surface it to a human, not to
+guess that whatever's lingering is safe to ship. Treat this guardrail identically in autonomous and
+interactive use: STOP, same as above.
+
+---
+
+## Step 4: Merge to main
+
+**If Pre-flight 1b detected a Git Flow repo, use the Git Flow finish path below — it takes precedence over Standard/Worktree mode.** Otherwise branch on the standard/worktree mode detected at pre-flight.
+
+### Git Flow mode (takes precedence when 1b is non-empty)
+
+Do NOT `git checkout main` or `git merge` — nothing blocks you since ADR 0005, but it produces a wrong result. Finishing must go through the **`apogee:git-flow` skill** (which drives the `git flow` binary, tags, and back-merge to develop).
+
+1. Confirm commits exist (`git log <base>..HEAD --oneline`, where `<base>` is the gitflow develop branch from `gitflow.branch.develop`, falling back to `develop`/`main`). If empty → ask the user whether to just run Step 5 cleanup.
+
+2. Branch on the current branch's gitflow prefix:
+   - `feature/<slug>` or `bugfix/<slug>` → **invoke the `apogee:git-flow` skill** to finish it (`git flow feature finish <slug>` / `bugfix finish`). (`git-flow` is bundled with this plugin as `apogee:git-flow`; if it isn't available, run that `git flow … finish` command directly.) The skill handles the merge to develop and branch deletion — so **Step 5 cleanup is a no-op in this path**. **Invoked from `/apogee:run-plan`'s loop:** prefix the actual `git flow feature|bugfix finish <slug>` command with `APOGEE_RUN_PLAN=1` (e.g. `APOGEE_RUN_PLAN=1 git flow feature finish <slug>`) — this is what lets the enforcement hook apply the stricter fail-closed check on open child steps instead of its ordinary fail-open behavior; never add this prefix outside of actually running that loop.
+   - `release/<slug>` or `hotfix/<slug>` → the release/hotfix lifecycle is owned by the **`/apogee:release`** command (version bump if a manifest is found, CHANGELOG, the project's own test gate), and the finish itself belongs to the operator in a terminal (ADR 0007). STOP and tell the user to run `/apogee:release`.
+   - Any other prefix (not a gitflow-managed branch) → STOP and ask the user how to proceed; do not guess.
+
+3. **Worktree + Git Flow is unsupported by AVH git-flow** (can't `git flow … finish` from a linked worktree). If Pre-flight detected worktree mode here, STOP and tell the user to finish from the main checkout (`<main-repo-path>`), then return to remove the worktree.
+
+4. After the `apogee:git-flow` skill reports success, push `develop` if the repo has a remote
+   (`git push origin develop`; in a superproject push each submodule's branch first). Never
+   `main`, never tags (ADR 0007). Then skip to Step 6 (cleanup already done by the skill).
+
+### Standard mode
+
+You can check out main directly in the cwd.
+
+1. Confirm commits exist:
+   ```bash
+   git log main..HEAD --oneline
+   ```
+   If empty → ask the user whether to just run Step 5 cleanup (zero-commit edge case; the branch had no work).
+
+2. Check out main and merge with `--no-ff`:
+   ```bash
+   git checkout main
+   git merge <branch> --no-ff -m "$(cat <<'EOF'
+   Merge branch '<branch>' — <short summary>
+
+   [optional Verified: line ONLY if provided via $ARGUMENTS]
+
+   Co-Authored-By: Claude <noreply@anthropic.com>
+   EOF
+   )"
+   ```
+
+3. Sanity-check: `git log -1 --oneline`.
+
+### Worktree mode
+
+**Critical:** you cannot `git checkout main` inside a worktree — main is checked out in the main repo. Use `git -C <main-repo-path>` for all merge operations.
+
+1. Confirm commits exist:
+   ```bash
+   git log main..HEAD --oneline
+   ```
+   If empty → ask the user whether to just run Step 5 cleanup.
+
+2. Merge from the main repo:
+   ```bash
+   git -C <main-repo-path> merge <branch> --no-ff -m "$(cat <<'EOF'
+   Merge branch '<branch>' — <short summary>
+
+   [optional Verified: line ONLY if provided via $ARGUMENTS]
+
+   Co-Authored-By: Claude <noreply@anthropic.com>
+   EOF
+   )"
+   ```
+
+3. Sanity-check: `git -C <main-repo-path> log -1 --oneline`.
+
+### Both modes — merge message summary style
+
+One em-dash-separated clause capturing what the branch accomplished. Synthesize from Step 1 mental model or use `summary:` override from `$ARGUMENTS`. Examples of good summary clauses:
+- "auth middleware rewrite for compliance — drops session-token storage"
+- "swap payment provider from Stripe to Adyen"
+- "feature flag for new onboarding flow + telemetry plumbing"
+
+### Both modes — on merge conflicts
+
+**STOP.**
+- Report the conflicted files.
+- Do NOT clean up. The user needs the working dir intact to resolve conflicts.
+- Do NOT attempt auto-resolution.
+
+---
+
+## Step 5: Clean up
+
+**Git Flow mode:** skip this step — `git flow … finish` already merged and deleted the branch. Go to Step 6.
+
+Only after a **successful** merge in Step 4 (Standard/Worktree mode).
+
+### Standard mode
+
+You're already on main with the branch merged. Just delete the branch ref:
+
+```bash
+git branch -d <branch>
+```
+
+`-d` (lowercase) refuses to delete an unmerged branch — self-checking. If it errors, surface it to the user; do NOT escalate to `-D`.
+
+### Worktree mode
+
+1. Remove the worktree directory using the `ExitWorktree` tool:
+   - `action: "remove"`
+   - `discard_changes: true`
+
+   This is safe because all work is now on main. The tool warns about "unmerged commits" because it checks the worktree branch, not main — but the commits ARE on main after Step 4.
+
+2. Delete the branch ref. Without this, the branch sits at its pre-merge tip; a later `git worktree add` matching the same name will reuse the stale branch instead of branching off current main.
+   ```bash
+   git -C <main-repo-path> branch -d <branch>
+   ```
+   `-d` (lowercase) refuses to delete an unmerged branch. If it errors, surface it; do NOT escalate to `-D`.
+
+---
+
+## Step 6: Confirm
+
+Report to the user:
+- Branch name + commit count merged
+- File/line summary (from Pre-flight stat)
+- One-line shipped summary (from Step 1 mental model or `$ARGUMENTS` override)
+- Any flags carried forward (e.g., "docs flagged as possibly stale but you chose to proceed")
+- "Back on main." — append "(worktree removed)" if you were in worktree mode.

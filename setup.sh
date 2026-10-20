@@ -4,7 +4,7 @@
 #
 # Three clearly separated halves:
 #   COPY     — project CONTENT is scaffolded (copied) into the target: CLAUDE.md, GEMINI.md,
-#              docs/apogee/*, doc scaffolding dirs, assets/. Lives in the target's working tree
+#              docs/apogee/ai-context/*. Lives in the target's working tree
 #              (the agent reads/writes it normally — an IDE with "respect gitignore" off still
 #              shows it) but stays OUT of the host project's git history via .git/info/exclude:
 #              it's personal AI-tooling context, not a project deliverable. Back it up yourself
@@ -56,6 +56,7 @@ MARKETPLACE_NAME="apogee"
 PLUGIN_NAME="apogee"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCAFFOLD_DIR="$REPO_DIR/scaffold"
+EXCLUDE_LIST="$REPO_DIR/plugins/apogee/hooks/core/config/exclude-list.txt"
 
 # ---- args ----
 TARGET="$PWD"
@@ -109,8 +110,15 @@ if [[ $DO_SCAFFOLD -eq 1 ]]; then
       echo "  • $conv created."
     fi
   done
-  # docs/apogee/ai-context/* — preserve existing files, add missing ones.
+  # docs/apogee/README.md (the index /apogee:prime reads) + ai-context/* — preserve existing
+  # files, add missing ones.
   mkdir -p "$TARGET/docs/apogee/ai-context"
+  if [[ -f "$TARGET/docs/apogee/README.md" ]]; then
+    echo "  • docs/apogee/README.md exists — skipped."
+  else
+    cp "$SCAFFOLD_DIR/docs/apogee/README.md" "$TARGET/docs/apogee/README.md"
+    echo "  • docs/apogee/README.md created."
+  fi
   for f in "$SCAFFOLD_DIR"/docs/apogee/ai-context/*.md; do
     base="$(basename "$f")"
     if [[ -f "$TARGET/docs/apogee/ai-context/$base" ]]; then
@@ -120,30 +128,34 @@ if [[ $DO_SCAFFOLD -eq 1 ]]; then
       echo "  • docs/apogee/ai-context/$base created."
     fi
   done
-  # empty scaffolding dirs (all under docs/apogee/ — the single Apogee dir) + assets
-  for d in business design-brand legal open-issues; do
-    mkdir -p "$TARGET/docs/apogee/$d"; [[ -e "$TARGET/docs/apogee/$d/.gitkeep" ]] || touch "$TARGET/docs/apogee/$d/.gitkeep"
-  done
-  mkdir -p "$TARGET/assets"; [[ -e "$TARGET/assets/.gitkeep" ]] || touch "$TARGET/assets/.gitkeep"
-  echo "  • doc/asset scaffolding ensured."
-
-  # docs/apogee/ is Apogee's working memory, and CLAUDE.md/GEMINI.md are personal AI-tooling
-  # context (not a project deliverable) -- keep all three out of the host project's git. See the
-  # COPY note in the file header for why .git/info/exclude, not .gitignore.
-  git_exclude "$TARGET" "docs/apogee/" "Apogee toolkit working memory (local-only)"
-  git_exclude "$TARGET" "CLAUDE.md" "Apogee AI-tooling context (local-only)"
-  git_exclude "$TARGET" "GEMINI.md" "Apogee AI-tooling context (local-only)"
+  # AI tooling is local-only by decision: the repository holds code and project documentation
+  # only. The list (docs/apogee/, CLAUDE.md, GEMINI.md, .claude/, .beads/, ...) lives in the
+  # plugin so the session-start hook can re-assert it later for the root and every first-level
+  # submodule. See the COPY note in the file header for why .git/info/exclude, not .gitignore.
+  while IFS= read -r pattern; do
+    [[ -z "$pattern" || "$pattern" == \#* ]] && continue
+    git_exclude "$TARGET" "$pattern" "Apogee: AI tooling is local-only by decision"
+  done < "$EXCLUDE_LIST"
   echo
 fi
 
 # ---- ENABLE: register marketplace + enable the plugin (link, not copy) ----
 echo "→ Enabling the apogee plugin (link)…"
 
-# Best-effort: use the claude CLI if it exposes plugin management.
+# Best-effort: use the claude CLI if it exposes plugin management. `marketplace add` on an already
+# registered name silently RE-POINTS that marketplace at the new source, so it only runs when the
+# `apogee` marketplace is unknown or already points here -- running setup.sh from a dev checkout
+# must not hijack an install that comes from ~/.apogee or GitHub.
 CLI_OK=0
 if command -v claude >/dev/null 2>&1 && claude plugin --help >/dev/null 2>&1; then
-  claude plugin marketplace add "$REPO_DIR" 2>/dev/null || true
-  claude plugin install "${PLUGIN_NAME}@${MARKETPLACE_NAME}" 2>/dev/null && CLI_OK=1 || true
+  KNOWN_SRC="$(jq -r --arg m "$MARKETPLACE_NAME" '.[$m].source | (.path // .repo // .url // empty)' \
+    "$HOME/.claude/plugins/known_marketplaces.json" 2>/dev/null || true)"
+  if [[ -z "$KNOWN_SRC" || "$KNOWN_SRC" == "$REPO_DIR" ]]; then
+    claude plugin marketplace add "$REPO_DIR" 2>/dev/null || true
+    claude plugin install "${PLUGIN_NAME}@${MARKETPLACE_NAME}" 2>/dev/null && CLI_OK=1 || true
+  else
+    echo "  • marketplace '$MARKETPLACE_NAME' is registered from $KNOWN_SRC — left as is (not re-pointed to $REPO_DIR)."
+  fi
 fi
 
 # Reliable fallback / source of truth: write enabledPlugins into the chosen settings
@@ -156,14 +168,15 @@ fi
 mkdir -p "$(dirname "$SETTINGS")"
 [[ -f "$SETTINGS" ]] || echo '{}' > "$SETTINGS"
 
+ENABLE_KEYS="[\"${PLUGIN_NAME}@${MARKETPLACE_NAME}\"]"
 tmp="$(mktemp)"
-if ! jq --arg key "${PLUGIN_NAME}@${MARKETPLACE_NAME}" \
-   '.enabledPlugins = ((.enabledPlugins // {}) + {($key): true})' \
+if ! jq --argjson keys "$ENABLE_KEYS" \
+   '.enabledPlugins = ((.enabledPlugins // {}) + ($keys | map({(.): true}) | add))' \
    "$SETTINGS" > "$tmp"; then
   rm -f "$tmp"; echo "  ! enabledPlugins merge failed (is $SETTINGS valid JSON?)" >&2; exit 1
 fi
 mv "$tmp" "$SETTINGS"
-echo "  • enabledPlugins[\"${PLUGIN_NAME}@${MARKETPLACE_NAME}\"] = true  ($SETTINGS)"
+echo "  • enabledPlugins $ENABLE_KEYS = true  ($SETTINGS)"
 
 if [[ $CLI_OK -eq 0 ]]; then
   cat <<EOF
@@ -193,8 +206,13 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
   [[ -f "$LOCAL" ]] || echo '{}' > "$LOCAL"
 
   tmp="$(mktemp)"
-  if ! jq --argjson baseline '["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(deno run:*)","Bash(rembg:*)","Bash(python3:*)","Bash(source:*)","mcp__idea__*","mcp__plugin_context7_context7__*"]' \
-     --argjson denylist '["Bash(sudo:*)","Bash(rm -rf:*)","Bash(rm -fr:*)","Bash(rm -r -f:*)","Bash(rm -f -r:*)","Bash(git push --force:*)","Bash(git push -f:*)","Bash(git reset --hard:*)","Bash(git clean -f:*)","Bash(git checkout -- .:*)","Bash(git restore .:*)","Bash(git branch -D:*)"]' \
+  # Allow: the plugin's own tools plus the sanctioned push forms (ADR 0007: develop and work
+  # branches are the agent's to push). Deny: destructive shell, and the obvious spellings of a
+  # push to the production branch or of tags -- prefix rules can't parse refspecs, so the real
+  # decision is hooks/git/enforce-git-flow-skill.py Rule 3; these are defense in depth.
+  BASELINE='["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(git push origin develop:*)","Bash(git push origin feature/:*)","Bash(git push origin bugfix/:*)","Bash(git push -u origin feature/:*)","Bash(git push -u origin bugfix/:*)","Bash(git push origin --delete feature/:*)","Bash(git push origin --delete bugfix/:*)","mcp__idea__*","mcp__plugin_context7_context7__*"]'
+  if ! jq --argjson baseline "$BASELINE" \
+     --argjson denylist '["Bash(sudo:*)","Bash(rm -rf:*)","Bash(rm -fr:*)","Bash(rm -r -f:*)","Bash(rm -f -r:*)","Bash(git push --force:*)","Bash(git push -f:*)","Bash(git push origin main:*)","Bash(git push origin master:*)","Bash(git push --tags:*)","Bash(git push origin --tags:*)","Bash(git push --all:*)","Bash(git push --mirror:*)","Bash(git reset --hard:*)","Bash(git clean -f:*)","Bash(git checkout -- .:*)","Bash(git restore .:*)","Bash(git branch -D:*)"]' \
      --arg plans "./.claude/plans" \
      --arg mem   "$TARGET/.claude/memory" \
      '.permissions.allow = ((.permissions.allow // []) + $baseline | unique)
@@ -206,9 +224,6 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
   fi
   mv "$tmp" "$LOCAL"
   echo "  • settings.local.json merged ($LOCAL)"
-
-  # keep the personal file out of the host project's git (mirror docs/apogee/)
-  git_exclude "$TARGET" ".claude/settings.local.json" "Apogee personal settings (local-only)"
   echo
 fi
 

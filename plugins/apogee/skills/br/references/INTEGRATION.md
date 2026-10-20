@@ -107,10 +107,8 @@ br update --actor "$ACTOR" <id> --status in_progress --claim
 # 5. Complete
 br close --actor "$ACTOR" <id> --reason "Implemented feature X"
 
-# 6. Sync to git
+# 6. Flush to JSONL (.beads/ is local-only in Apogee projects, never committed)
 br sync --flush-only
-git add .beads/
-git commit -m "feat: implement X (<id>)"
 ```
 
 ---
@@ -120,11 +118,7 @@ git commit -m "feat: implement X (<id>)"
 Before ending any session:
 
 ```bash
-git pull --rebase
-br sync --flush-only
-git add .beads/ && git commit -m "Update issues"
-git push
-git status  # MUST show "up to date with origin"
+br sync --flush-only   # JSONL current for the operator's backup; nothing is committed
 ```
 
 ---

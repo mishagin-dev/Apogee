@@ -122,8 +122,8 @@ def open_work_branches(cwd, prefixes):
     by some means other than `git flow ... finish` (that would have deleted it) -- a stale
     candidate for cleanup, distinct from genuinely unfinished work.
 
-    Used both to ASK before starting a new one (enforce-git-flow-skill.py) and to nudge the
-    agent to mention them when a new user prompt arrives (unfinished-branch-nudge.py).
+    Used to nudge the agent to mention them when a new user prompt arrives
+    (unfinished-branch-nudge.py).
     """
     out = run(["git", "-C", cwd, "branch", "--format=%(refname:short)"], cwd)
     base = develop_branch(cwd)
@@ -218,6 +218,11 @@ def br_find_by_external_ref(root, ref):
     if candidates is None:
         return None, False
     for candidate in candidates:
+        # Only an open epic can be linked to a branch being finished (the git-flow skill links one
+        # epic per branch); skipping tasks and closed issues keeps this O(open epics) `br show`
+        # calls instead of one per issue in the backlog.
+        if candidate.get("issue_type") != "epic" or candidate.get("status") == "closed":
+            continue
         show = br_show(root, candidate.get("id", ""))
         if show and show.get("external_ref") == ref:
             return show, True

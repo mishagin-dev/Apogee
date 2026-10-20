@@ -1,7 +1,7 @@
 ---
 name: readme
 description: 'Generate a gold-standard README for any project. Interviews you about the problem, generates a draft following battle-tested patterns, then validates it via the review-work skill. Use when asked to write, generate, improve, or rewrite a README. Triggers: "readme", "write readme", "generate readme", "improve readme", "rewrite readme".'
-user_invocable: true
+user-invocable: true
 ---
 
 # /apogee:readme — Gold-Standard README Generation
@@ -351,6 +351,6 @@ When rewriting or validating, flag these:
 
 ## See Also
 
-- `/apogee:doc` — professional human-facing project documentation (different scope — guides/API docs, not the README)
+- `/apogee:public-docs` — professional human-facing project documentation (different scope — guides/API docs, not the README)
 - `/apogee:review-work` — the multi-agent review used in Step 5
 - `/apogee:second-opinion` — independent `agy` review, fallback for Step 5

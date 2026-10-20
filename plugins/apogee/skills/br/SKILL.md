@@ -27,7 +27,9 @@ metadata:
 
 # br -- Beads Rust Issue Tracker (Official Skill)
 
-> **Non-invasive:** br NEVER runs git commands. Sync and commit are YOUR responsibility.
+> **Non-invasive:** br NEVER runs git commands. In Apogee projects `.beads/` is local-only
+> (kept out of git via `.git/info/exclude`): `br sync --flush-only` keeps the JSONL current for
+> backups, and nothing under `.beads/` is ever staged or committed.
 
 ## Critical Rules for Agents
 
@@ -37,7 +39,7 @@ metadata:
 | **ALWAYS use `--json`** | Structured output for parsing; `--format toon` for reduced tokens |
 | **NEVER run bare `bv`** | Blocks session in interactive TUI mode |
 | **Sync is EXPLICIT** | `br sync --flush-only` exports DB to JSONL only |
-| **Git is YOUR job** | br only touches `.beads/` -- you must `git add .beads/ && git commit` |
+| **`.beads/` is local-only** | Never `git add .beads/`; it is excluded from git by decision, backed up with the rest of the local context |
 | **No cycles allowed** | `br dep cycles` must return empty |
 | **Resolve actor at runtime** | Use `ACTOR="${BR_ACTOR:-assistant}"` and pass `--actor "$ACTOR"` |
 
@@ -57,9 +59,8 @@ br update --actor "$ACTOR" <id> --status in_progress
 # 4. Complete
 br close --actor "$ACTOR" <id> --reason "Implemented X"
 
-# 5. Sync to git (EXPLICIT!)
+# 5. Flush to JSONL (EXPLICIT!) -- .beads/ stays out of git
 br sync --flush-only
-git add .beads/ && git commit -m "feat: X (<id>)"
 ```
 
 ## Essential Commands
@@ -157,20 +158,18 @@ br comments list <id> --json
 ### Sync (EXPLICIT -- never automatic)
 
 ```bash
-br sync --flush-only                 # Export DB to JSONL (before git commit)
-br sync --import-only                # Import JSONL to DB (after git pull)
+br sync --flush-only                 # Export DB to JSONL (the backup-able form)
+br sync --import-only                # Import JSONL to DB (after restoring a backup)
 br sync --status                     # Check sync status
 ```
 
 Workflow after making changes:
 ```bash
 br sync --flush-only
-git add .beads/ && git commit -m "Update issues"
 ```
 
-Workflow after pulling:
+Workflow after restoring `.beads/issues.jsonl` from a backup:
 ```bash
-git pull
 br sync --import-only
 ```
 
@@ -266,11 +265,8 @@ release_file_reservations(...)
 Before ending any work session:
 
 ```bash
-git pull --rebase
-br sync --flush-only
-git add .beads/ && git commit -m "Update issues"
-git push
-git status  # MUST show "up to date with origin"
+br sync --flush-only   # JSONL current for the operator's backup; .beads/ is not committed
+br ready --json        # leave the queue in a state the next session can pick up
 ```
 
 ## Standard Agent Workflow (Full)
@@ -299,10 +295,8 @@ br close --actor "$ACTOR" <id> --reason "Implemented X in commit abc123"
 br ready --json
 br blocked --json
 
-# 7. Sync to git
+# 7. Flush to JSONL (never committed)
 br sync --flush-only
-git add .beads/ && git commit -m "feat: X (<id>)"
-git push
 ```
 
 ## Triage Decision Matrix
@@ -325,7 +319,7 @@ br blocked --json
 ## Anti-Patterns
 
 - Running `br sync` without `--flush-only` or `--import-only`
-- Forgetting sync before git commit
+- Forgetting `br sync --flush-only` at the end of a session
 - Creating circular dependencies
 - Running bare `bv` (blocks session)
 - Assuming auto-commit behavior (br NEVER auto-commits)
@@ -340,7 +334,7 @@ br blocked --json
   beads.db        # SQLite database (primary storage)
   beads.db-shm    # SQLite shared memory (WAL mode)
   beads.db-wal    # SQLite write-ahead log
-  issues.jsonl    # JSONL export (for git)
+  issues.jsonl    # JSONL export (backup form; local-only in Apogee projects)
   config.yaml     # Project configuration
   metadata.json   # Workspace metadata
 ```

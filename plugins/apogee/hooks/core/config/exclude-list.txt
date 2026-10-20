@@ -1,0 +1,13 @@
+# Paths Apogee keeps out of a host project's git via .git/info/exclude (local-only, never
+# .gitignore, so the toolkit leaves no trace in the repository). One pattern per line, git
+# exclude syntax; a leading slash anchors at the repo root. Read by setup.sh at install time and
+# re-asserted by hooks/core/apogee-session-start.py at every session start, for the project root
+# and each first-level submodule. The decision behind this list: the repository holds code and
+# project documentation only -- AI tooling context, the tracker, plans and memory are personal
+# working state, backed up by the operator, not committed.
+docs/apogee/
+/CLAUDE.md
+/GEMINI.md
+/AGENTS.md
+/.claude/
+/.beads/

@@ -1,7 +1,7 @@
 ---
 name: update-docs
 description: Update project documentation after code changes. Maintains the 4 core docs/apogee files (spec, project-structure, progress, deployment-infrastructure) and CLAUDE.md. Use after completing features, refactors, or any changes that affect project structure, capabilities, or status. Also creates initial documentation if files don't exist yet.
-user_invocable: true
+user-invocable: true
 ---
 
 # Update Docs — Documentation Maintenance
@@ -16,6 +16,15 @@ Keep project documentation synchronized with the current state of the code. Upda
 - No "previously", "was changed from", "used to be", or "improved" language
 - No migration notes or upgrade paths within the docs themselves
 - If something was removed, remove it from docs — don't leave a "removed X" note
+
+**Compress aggressively — the default for every line is DELETE.** A line earns its place only when
+it encodes something an agent cannot derive from the code, the git log, or another core doc. Every
+run prunes as much as it adds.
+
+**Two memories, two owners.** `docs/apogee/` is project state for *any* agent that primes on it.
+Claude Code's auto-memory (`.claude/memory/`) is *this* agent's own lessons and preferences. Don't
+copy one into the other: a fact about the project goes here, a lesson about how to work with the
+user goes to memory.
 
 ## When to Skip
 
@@ -115,11 +124,26 @@ A core doc is **missing** when it does not exist **or** still carries the `apoge
 - Only rules that change Claude's behavior — if removing a line wouldn't cause Claude to do anything differently, delete it
 - Not a reference doc: no test structure tables, no naming convention tables for standard patterns
 
+### Step 6: Index and hand-off
+
+- `docs/apogee/README.md` is the index `/apogee:prime` reads. Any file created under
+  `docs/apogee/` outside `ai-context/` in this session (a domain note, a research report, a design
+  file) gets one line there: path, what it is, when to read it. A file without an index line is
+  invisible to the next session.
+- If the project has human-facing docs under `docs/` that declare `sources:` frontmatter, invoke
+  `apogee:public-docs update` now; it refreshes only the docs whose sources changed. A project
+  without such docs gets a one-line no-op; don't generate public docs unasked.
+
 ## Bloat Check
 
 After updating, silently check `progress.md`:
 - Each completed phase row: ~10 words max in "What" column — trim immediately if longer
 - No duplication with spec.md — if progress.md restates architecture details, delete and cross-reference
 - Dead items: remove completed checklist items done 2+ weeks with no ongoing relevance
+
+**Net-line audit.** Run `git diff --stat` on the docs you touched. If this run added 10 or more
+lines and deleted none, stop and re-read what you added: documentation that only grows is
+documentation nobody prunes. Find the lines the additions made redundant, or justify to yourself
+why none exist, before finishing.
 
 Then check if CLAUDE.md would also benefit from an update based on the changes made.

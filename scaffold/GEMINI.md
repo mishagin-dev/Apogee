@@ -6,6 +6,7 @@ You are being invoked by Claude Code (via the `agy` CLI) as a **second opinion c
 
 Read these project documentation files to understand the codebase before answering any question:
 
+0. `docs/apogee/README.md` — Index of the working memory (domain notes, design system, research)
 1. `docs/apogee/ai-context/spec.md` — What the product does, API contracts, data flows
 2. `docs/apogee/ai-context/project-structure.md` — File tree, tech stack, directory organization
 3. `docs/apogee/ai-context/progress.md` — What's done, what's next, current status
