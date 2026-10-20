@@ -42,8 +42,9 @@ default conventions non-interactively) before any branch work.
 
 ## Command map
 
-In Apogee projects a work branch is opened with `/apogee:start` (fresh `develop`, br link,
-publish) and closed with `/apogee:merge`; the raw commands below are what those run.
+In Apogee projects every unit of work is opened with `/apogee:start` and closed with
+`/apogee:finish` (feature, bugfix, hotfix, research); releases are cut with `/apogee:release`.
+The raw commands below are what those run: reference material, not something to call directly.
 
 `<name>` is a slug (`PROJ-142-login`); `<version>` is a version (`2.4.0`).
 `finish` operates on the current branch's type and, by default, **merges,

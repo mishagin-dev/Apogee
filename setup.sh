@@ -215,7 +215,7 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
   # branches are the agent's to push). Deny: destructive shell, and the obvious spellings of a
   # push to the production branch or of tags -- prefix rules can't parse refspecs, so the real
   # decision is hooks/git/enforce-git-flow-skill.py Rule 3; these are defense in depth.
-  BASELINE='["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(git push origin develop:*)","Bash(git push origin feature/:*)","Bash(git push origin bugfix/:*)","Bash(git push -u origin feature/:*)","Bash(git push -u origin bugfix/:*)","Bash(git push origin --delete feature/:*)","Bash(git push origin --delete bugfix/:*)","mcp__idea__*","mcp__plugin_context7_context7__*"]'
+  BASELINE='["Bash(br:*)","Bash(agy:*)","Bash(git diff:*)","Bash(git push origin develop:*)","Bash(git push origin feature/:*)","Bash(git push origin bugfix/:*)","Bash(git push -u origin feature/:*)","Bash(git push -u origin bugfix/:*)","Bash(git push origin --delete feature/:*)","Bash(git push origin --delete bugfix/:*)","Bash(git push -u origin hotfix/:*)","Bash(git push origin hotfix/:*)","mcp__idea__*","mcp__plugin_context7_context7__*"]'
   if ! jq --argjson baseline "$BASELINE" \
      --argjson denylist '["Bash(sudo:*)","Bash(rm -rf:*)","Bash(rm -fr:*)","Bash(rm -r -f:*)","Bash(rm -f -r:*)","Bash(git push --force:*)","Bash(git push -f:*)","Bash(git push origin main:*)","Bash(git push origin master:*)","Bash(git push --tags:*)","Bash(git push origin --tags:*)","Bash(git push --all:*)","Bash(git push --mirror:*)","Bash(git reset --hard:*)","Bash(git clean -f:*)","Bash(git checkout -- .:*)","Bash(git restore .:*)","Bash(git branch -D:*)"]' \
      --arg plans "./.claude/plans" \

@@ -31,8 +31,8 @@ allowed='feat|fix|docs|style|refactor|perf|test|chore|ci'
 if [ -z "$subject" ]; then
   err "subject line is empty"
 else
-  if ! printf '%s' "$subject" | grep -qE "^($allowed)(\([a-z0-9._/-]+\))?: .+"; then
-    err "subject must match '<type>(<scope>): <Summary>' with type in: $allowed"
+  if ! printf '%s' "$subject" | grep -qE "^($allowed)(\([a-z0-9._/-]+\))?!?: .+"; then
+    err "subject must match '<type>(<scope>)[!]: <Summary>' with type in: $allowed"
   else
     # Summary = text after the first ": "
     summary="${subject#*: }"
