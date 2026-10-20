@@ -111,8 +111,13 @@ if [[ $DO_SCAFFOLD -eq 1 ]]; then
     fi
   done
   # docs/apogee/README.md (the index /apogee:prime reads) + ai-context/* — preserve existing
-  # files, add missing ones.
+  # files, add missing ones. The working-memory directories are created empty up front (they are
+  # git-excluded, so no .gitkeep is needed): a layout that exists is a layout that gets used.
   mkdir -p "$TARGET/docs/apogee/ai-context"
+  for d in domain design diagrams research prompts reports; do
+    mkdir -p "$TARGET/docs/apogee/$d"
+  done
+  echo "  • docs/apogee/{domain,design,diagrams,research,prompts,reports}/ ensured."
   if [[ -f "$TARGET/docs/apogee/README.md" ]]; then
     echo "  • docs/apogee/README.md exists — skipped."
   else

@@ -70,8 +70,9 @@ What it does:
 - **GIT INIT (auto):** if `TARGET` isn't a git repo yet, runs `git init` first — the
   `.git/info/exclude` writes below need a repo to write into. Skip with `--no-git-init`.
 - **COPY (content):** `CLAUDE.md` + `GEMINI.md` at the project root (never clobbered if present);
-  `docs/apogee/ai-context/*.md` and the empty `docs/apogee/{business,design-brand,legal,open-issues}/`
-  dirs; `assets/.gitkeep`. Existing files are preserved.
+  `docs/apogee/README.md` (the index `/apogee:prime` reads), `docs/apogee/ai-context/*.md`, and the
+  empty working-memory directories `docs/apogee/{domain,design,diagrams,research,prompts,reports}/`
+  so the layout is visible from day one. Existing files are preserved.
 - **EXCLUDE:** appends the plugin's AI-tooling exclude list
   (`plugins/apogee/hooks/core/config/exclude-list.txt`: `docs/apogee/`, `CLAUDE.md`, `GEMINI.md`,
   `AGENTS.md`, `.claude/`, `.beads/`) to the project's `.git/info/exclude`. All of it is personal
