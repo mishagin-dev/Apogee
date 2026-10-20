@@ -11,9 +11,9 @@
 - **Decompose complex work**: split a complex task or a batch of bugs into separate, focused units of work (in git-flow projects, one `feature/`/`bugfix/` branch each) instead of one big change. Run them sequentially when they touch overlapping files, or in parallel when their file sets are disjoint. State the split and the chosen order before starting. When a `feature/`/`bugfix/` branch's work is complete, finish it through `/apogee:merge` (it runs the docs/clean-tree guardrails, then delegates to the git-flow finish) — not hand-rolled merges; `release`/`hotfix` finish only on explicit request.
 - **Always ask before**: git commits, breaking changes, major architecture decisions, deleting files.
 - **Stop-and-Replan Rule**: If an approach fails or you discover unexpected complexity, stop and reassess rather than pushing through.
-- **Use available skills proactively**: `/apogee:review-work` for code review, `/apogee:update-docs` after significant changes, `/apogee:deploy` for deployments.
+- **Use available skills proactively**: `/apogee:review-work` for code review, `/apogee:update-docs` after significant changes.
 - **Context7 first**: When working with external libraries, check Context7 for current documentation before relying on training data.
-- **idea-mcp first** (only when the JetBrains IDE MCP `mcp__idea__*` is connected): prefer IDE tools — symbol search, inspections, refactoring — over terminal equivalents. Ignore entirely when the IDE is absent.
+- **JetBrains IDE tools** (only when `mcp__idea__*` tools are listed): load one with `ToolSearch("select:mcp__idea__<tool>")` before calling it, and reach for them only where the shell has no equivalent — inspections (`get_file_problems`, `get_inspections`), rename across references, call graphs, run configurations. For text and symbol search a bounded grep is cheaper; keep using it. Ignore entirely when no JetBrains IDE is open.
 - **Language split**: user-facing dialogue in your working language; everything else — code, identifiers, comments, commit messages, docs, branch names, and anything sent to external tools (agy / CLIs) — in **English**. The `apogee:git-commit` skill is the canonical example (commit messages always English).
 - **Git**: never `git push` (push manually after review); commit only via the `apogee:git-commit` skill (never `git commit -m` ad hoc). Exclude unrelated/generated files; never force-add `.gitignore`d files. In git-flow repos, run branch lifecycle through the `apogee:git-flow` skill and commit only on `feature/`/`bugfix/` branches — never on `main`/`develop`.
 - **Track work in `br`** (beads projects only — those with a `.beads/` dir): before editing code, the work should exist as an issue. Claim the step you're starting (`br update <id> --claim --actor "${BR_ACTOR:-assistant}"`), close it when it's done, and link one epic to one `feature/`/`bugfix/` branch via the epic's `external_ref`. `br` is the project's memory across sessions — a session that ends with code no issue reflects has lost that work to the next session. Nothing blocks you if you skip this; it degrades silently, which is exactly why it's written here.
@@ -73,11 +73,10 @@ Example:
 |------|----------|
 | Project onboarding / fill docs | `/apogee:init` (run once on a new project) |
 | Library docs lookup | Context7 plugin (check FIRST) |
-| Code intelligence / refactoring (JetBrains) | `apogee:idea-mcp` `mcp__idea__*` (when the IDE is connected) |
+| IDE inspections / rename / run configs (JetBrains) | `mcp__idea__*` via `ToolSearch` (when the IDE is open) |
 | Code review | `/apogee:review-work` skill |
 | Second opinion | Ask for "second opinion" / "ask agy" (runs the `agy` CLI) |
 | Documentation update | `/apogee:update-docs` skill |
-| Deployment | `/apogee:deploy` skill |
 
 ## 6. Coding Standards
 

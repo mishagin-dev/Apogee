@@ -1,3 +1,8 @@
+---
+description: "Cut a release: decide the version, bump it in lockstep, refresh the CHANGELOG, run the validate gate, finish the git-flow release."
+argument-hint: "[<version>|major|minor|patch] [hotfix]"
+---
+
 # Release Command
 
 Own a project's release lifecycle end to end: detect where its version lives, bump it (in

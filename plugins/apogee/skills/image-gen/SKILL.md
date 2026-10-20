@@ -1,7 +1,7 @@
 ---
 name: image-gen
 description: Generate character art and image variations using AI image generation (Google Gemini) with reference images for style and character consistency. Use this skill when the user asks to generate new character poses, mascot variations, art assets, illustrations, or any AI-generated images — especially when maintaining consistency with an existing character or style.
-user_invocable: true
+user-invocable: true
 ---
 
 # AI Image Generation (Gemini)
@@ -57,7 +57,7 @@ Run the bundled generation script:
 
 ```bash
 deno run --allow-env --allow-read --allow-write --allow-net \
-  .claude/skills/image-gen/scripts/generate.ts \
+  ${CLAUDE_PLUGIN_ROOT}/skills/image-gen/scripts/generate.ts \
   --prompt "your prompt here" \
   --ref path/to/primary-reference.png \
   --ref path/to/style-reference.png \

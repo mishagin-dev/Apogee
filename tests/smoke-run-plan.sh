@@ -9,14 +9,14 @@
 # helpers), this drives the REAL hook script against a REAL `br` + `git flow` sandbox, end to end.
 # Never touches the repository you are working in.
 #
-# Usage: bash plugins/apogee/skills/git-flow/smoke-run-plan.sh
+# Usage: bash tests/smoke-run-plan.sh
 set -euo pipefail
 
 command -v git-flow >/dev/null 2>&1 || { echo "FAIL: git-flow binary not found"; exit 1; }
 command -v br >/dev/null 2>&1 || { echo "FAIL: br binary not found"; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOOK="$SCRIPT_DIR/../../hooks/git/enforce-git-flow-skill.py"
+HOOK="$SCRIPT_DIR/../plugins/apogee/hooks/git/enforce-git-flow-skill.py"
 [ -f "$HOOK" ] || { echo "FAIL: hook not found at $HOOK"; exit 1; }
 
 ok=1

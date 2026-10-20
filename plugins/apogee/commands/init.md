@@ -1,3 +1,9 @@
+---
+description: "Bootstrap a project's Apogee context: research the codebase, fill docs/apogee/ai-context and the root CLAUDE.md, seed a CLAUDE.md per first-level submodule. Run once per project, in Plan Mode."
+argument-hint: "[notes]"
+effort: high
+---
+
 # Init Command
 
 Bootstrap a project's Apogee context: research the codebase, plan, then fill the full doc set
@@ -75,9 +81,6 @@ grep -qxF "CLAUDE.md" "$EXCLUDE" 2>/dev/null || printf '\n# Apogee AI-tooling co
 
 **Finish.** Load the freshly written core docs (as `/apogee:prime` would) so the session continues
 primed, then summarize what was created vs skipped (and any submodules left untouched).
-
-ultrathink
-
 ---
 
 **Notes / focus:** $ARGUMENTS

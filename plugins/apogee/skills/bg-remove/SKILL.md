@@ -1,7 +1,7 @@
 ---
 name: bg-remove
 description: Remove backgrounds from images using local AI (rembg). Use when removing backgrounds from character art, mascot images, photos, or any image that needs a transparent background.
-user_invocable: true
+user-invocable: true
 ---
 
 # Background Remove — Local AI Background Removal

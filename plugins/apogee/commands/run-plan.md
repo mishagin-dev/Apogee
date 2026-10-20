@@ -1,3 +1,8 @@
+---
+description: "Autonomously drive a br-recorded plan epic by epic in a beads + git-flow project; never pushes."
+argument-hint: "[max-epics: <N>] [notes]"
+---
+
 # Run Plan Command
 
 Drive a beads-recorded plan to completion autonomously: pick the next ready epic, open its
@@ -16,10 +21,9 @@ breaker (default: 3 epics per invocation) stops the loop periodically so you can
 
 One documented use for `$ARGUMENTS`:
 
-- `max-epics: <N>` — override `pipeline.json`'s `run_plan.max_epics_per_invocation` for this
-  invocation only (does not edit the config file). `max-epics: 0` means unlimited for this run.
-  Example: `/apogee:run-plan max-epics: 1` to watch the very first autonomous epic closely before
-  trusting the default cap.
+- `max-epics: <N>` — the circuit-breaker cap for this invocation. Default 3; `max-epics: 0`
+  means unlimited for this run. Example: `/apogee:run-plan max-epics: 1` to watch the very first
+  autonomous epic closely before trusting the default cap.
 
 Anything else in `$ARGUMENTS` is free-form context for you to factor into which epic you pick first
 (e.g. "prioritize the auth epic") — it does not change any safety behavior below.
@@ -51,26 +55,12 @@ narrowed to *only* the commands this command tags, and fail-closed. Every other 
 follows (commit through the skill, one epic per branch, never `git push`) is prose you must actually
 follow; nothing will stop you.
 
-**Design note (why this reads the way it does):** this command's design went through an adversarial
-second-opinion review before being built, and the implementation went through a two-reviewer
-code-review pass (Bug Hunter + Rules Auditor) afterward. The second-opinion reviewer correctly
-rejected a stateful "autonomous mode" marker file (crash-unsafe — see `enforce-git-flow-skill.py`'s
-module docstring for why), rejected an autonomous exception to the clean-tree guardrail (a dirty
-file at merge time is a signal of a bug, not something to paper over), pushed the new
-safety-backstop DENY rule from fail-open to fail-closed specifically for this command's tagged
-invocations, and pushed the circuit-breaker default from unlimited to 3. It later re-argued the
-point during the ADR 0005 teardown, when the draft plan proposed replacing the backstop with prose:
-prose relies on a human backstop an unattended loop does not have. That argument is why the rule
-survived. The code review then found
-(and the fixes are already in `enforce-git-flow-skill.py`) two high-severity gaps in the first
-implementation of that backstop: it could be shadowed entirely by a compound Bash command
-(`git flow feature start decoy && git flow feature finish <slug>` let an earlier rule's
-unconditional exit skip the finish-side check — fixed by evaluating the backstop before any other
-rule can short-circuit), and a slug-less `git flow feature finish` (valid AVH usage — operates on
-the checked-out branch) bypassed the check entirely by returning "nothing to verify" instead of
-resolving the current branch — fixed with an explicit fallback. All of this is reflected below and
-covered by both `enforce-git-flow-skill.py --test` and `plugins/apogee/skills/git-flow/smoke-run-
-plan.sh`; don't relitigate any of it without a comparable review.
+**Design record:** the reasoning behind the stateless command tag, the fail-closed backstop, the
+no-exception clean-tree rule and the circuit-breaker default is recorded in
+[ADR 0006](../../../docs/decisions/0006-run-plan-autonomy-design.md), together with the two
+high-severity gaps the first implementation had. Don't relitigate any of it without a comparable
+review; the regression coverage lives in `enforce-git-flow-skill.py --test` and
+`tests/smoke-run-plan.sh`.
 
 ---
 
@@ -83,31 +73,12 @@ plan.sh`; don't relitigate any of it without a comparable review.
 2. **Dependency graph must be sane.** Run `br dep cycles --json`. Non-empty → abort before touching
    anything; a broken dependency graph makes `br ready` unreliable, and there is nothing safe to
    automate on top of it.
-3. **Locate and read the circuit-breaker config, `pipeline.json`.** This file ships as plugin
-   machinery, not project content — `setup.sh` never copies it into a host project, so it will
-   never be present at a path relative to the project you're running this command in. Locate it
-   with (in order):
-   - **Working inside the Apogee source repo itself** (this file's own repo): relative path
-     `plugins/apogee/hooks/core/config/pipeline.json` from the repo root.
-   - **Any other project** (the common case — the plugin is *enabled* there, not vendored):
-     `${CLAUDE_PLUGIN_ROOT}` is a harness substitution available only inside `hooks.json` command
-     strings, not a Bash-visible environment variable an agent can read (`echo $CLAUDE_PLUGIN_ROOT`
-     is empty in a normal tool call) — don't rely on it here. Instead resolve the plugin's actual
-     install path, which is version-pinned and changes on every update, so never hardcode it:
-     ```bash
-     find ~/.claude/plugins/cache/apogee -path '*/hooks/core/config/pipeline.json' 2>/dev/null | sort -V | tail -1
-     ```
-     (`sort -V | tail -1` picks the highest installed version if more than one is cached.) If that
-     finds nothing, the plugin cache may live elsewhere — cross-check
-     `~/.claude/plugins/installed_plugins.json`'s `.plugins["apogee@apogee"][0].installPath` and
-     append `/hooks/core/config/pipeline.json`.
-   - **File genuinely not found either way** → proceed with the documented defaults (3 epics,
-     no test-command gate) rather than blocking the loop on a missing optional config.
-
-   Read `run_plan.max_epics_per_invocation` (default 3; `0` means unlimited — only if the user has
-   explicitly raised it, or passed `max-epics: 0` for this invocation via `$ARGUMENTS`) and
-   `run_plan.test_command` (if set, gates every epic's finish; `null` skips that gate). A
-   `max-epics:` value in `$ARGUMENTS` overrides the config file's value for this invocation only.
+3. **Resolve the circuit breaker and the test gate.** `max_epics` is the `max-epics:` value from
+   `$ARGUMENTS`, default 3 (`0` = unlimited). The test gate is the project's full-suite command
+   documented in the Testing section of its `CLAUDE.md` -- strip HTML comments before scanning,
+   exactly as `/apogee:release` Step 5 does, because the scaffold ships that section as
+   commented-out boilerplate. No command documented → there is no test gate; state that in the
+   pre-flight summary rather than silently skipping it.
 4. Initialize an in-context epic counter at 0 (tracked across this session's turns — no file
    needed, the whole loop runs within one continuous session).
 
@@ -170,7 +141,7 @@ Repeat until termination (see below). Each iteration:
    that keeps an unattended run honest:
    - Invoke the `apogee:review-work` skill.
    - Invoke the `apogee:update-docs` skill; commit any doc changes via `git-commit`.
-   - **If `pipeline.json`'s `run_plan.test_command` is set**, run it now. A failure halts here — the
+   - **If a test command was resolved in Pre-flight 3**, run it now. A failure halts here — the
      branch stays open, uncommitted work (if any) stays as-is, and this is surfaced to the user as a
      hard stop. **Closing br steps is not evidence the code actually works** — this check exists
      specifically because it isn't.
@@ -199,7 +170,7 @@ Repeat until termination (see below). Each iteration:
   softenable confirmation.
 - **A genuine hard-stop fires**, exactly as in interactive use: a merge conflict, worktree+gitflow
   being unsupported, ANY dirty file at merge time (no exceptions — see Philosophy), a
-  `test_command` failure, or a release/hotfix epic (route to `/apogee:release`, which keeps its own
+  test-gate failure, or a release/hotfix epic (route to `/apogee:release`, which keeps its own
   ASK gate — out of scope for this command).
 - **The user interrupts the session.**
 

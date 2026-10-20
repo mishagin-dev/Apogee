@@ -4,7 +4,7 @@
 #
 # Three clearly separated halves:
 #   COPY     — project CONTENT is scaffolded (copied) into the target: CLAUDE.md, GEMINI.md,
-#              docs/apogee/*, doc scaffolding dirs, assets/. Lives in the target's working tree
+#              docs/apogee/ai-context/*. Lives in the target's working tree
 #              (the agent reads/writes it normally — an IDE with "respect gitignore" off still
 #              shows it) but stays OUT of the host project's git history via .git/info/exclude:
 #              it's personal AI-tooling context, not a project deliverable. Back it up yourself
@@ -120,13 +120,6 @@ if [[ $DO_SCAFFOLD -eq 1 ]]; then
       echo "  • docs/apogee/ai-context/$base created."
     fi
   done
-  # empty scaffolding dirs (all under docs/apogee/ — the single Apogee dir) + assets
-  for d in business design-brand legal open-issues; do
-    mkdir -p "$TARGET/docs/apogee/$d"; [[ -e "$TARGET/docs/apogee/$d/.gitkeep" ]] || touch "$TARGET/docs/apogee/$d/.gitkeep"
-  done
-  mkdir -p "$TARGET/assets"; [[ -e "$TARGET/assets/.gitkeep" ]] || touch "$TARGET/assets/.gitkeep"
-  echo "  • doc/asset scaffolding ensured."
-
   # docs/apogee/ is Apogee's working memory, and CLAUDE.md/GEMINI.md are personal AI-tooling
   # context (not a project deliverable) -- keep all three out of the host project's git. See the
   # COPY note in the file header for why .git/info/exclude, not .gitignore.

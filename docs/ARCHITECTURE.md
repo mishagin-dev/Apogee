@@ -30,16 +30,14 @@ Apogee/
 │   │   ├── hooks.json                # lifecycle wiring; all paths via ${CLAUDE_PLUGIN_ROOT}
 │   │   ├── br/    # br-capture-gate (plan -> epic), br-prime (agent guide)
 │   │   ├── git/   # enforce-git-flow-skill (the only Bash gate) + unfinished-branch-nudge, lib/
-│   │   ├── idea/  # idea-nudge (prefer mcp__idea__* for code intelligence)
-│   │   └── core/  # security-scan, notify, cleanup, apogee-session-start + config/ + sounds/
-│   ├── skills/    # update-docs, review-work, second-opinion, deploy, image-gen, image-edit,
-│   │              #   bg-remove, doc, readme, br, git-commit, git-flow, idea-mcp
-│   └── commands/  # init.md, prime.md, plan-feature.md, release.md, merge.md  → /apogee:<name>
+│   │   └── core/  # security-scan (+ config/sensitive-patterns.json), cleanup, apogee-session-start
+│   ├── skills/    # update-docs, review-work, second-opinion, image-gen, image-edit, bg-remove,
+│   │              #   doc, readme, symfony, ai-clean-room, br, git-commit, git-flow
+│   └── commands/  # init, prime, plan-feature, release, merge, run-plan  → /apogee:<name>
 ├── scaffold/                         # project CONTENT (copied per project)
 │   ├── CLAUDE.md  GEMINI.md          # convention files (Claude + agy)
-│   └── docs/apogee/                  # excluded via .git/info/exclude in the host project
-│       ├── ai-context/{spec,project-structure,progress,deployment-infrastructure}.md
-│       └── {business,design-brand,legal,open-issues}/
+│   └── docs/apogee/ai-context/       # {spec,project-structure,progress,deployment-infrastructure}.md
+├── tests/     # smoke-run-plan.sh: the hook backstop against real br + git-flow sandboxes
 ├── install.sh # online one-liner: clone the toolkit into ~/.apogee + run setup.sh
 ├── setup.sh   # scaffold (copy) + enable plugin (link)
 ├── sync.sh    # re-scaffold new template files into an installed project
@@ -64,9 +62,9 @@ that every `${CLAUDE_PLUGIN_ROOT}` path in `hooks.json` still resolves.
 Every hook no-ops unless its trigger is present in the project:
 
 - **`.beads/`** → `br-capture-gate`, `br-prime`, `apogee-session-start`.
-- **`.idea/` or `*.iml` + a running JetBrains IDE** → `idea-nudge`.
 - **git-flow config** (`gitflow.branch.*`) → `enforce-git-flow-skill`, `unfinished-branch-nudge`.
-- **any `mcp__` tool call** → `security-scan.sh` (the one unconditional hook).
+- **any `mcp__` tool call, `WebFetch`, `WebSearch`, or an `agy` command via Bash** →
+  `security-scan.sh` (the one unconditional hook).
 
 So enabling the plugin globally behaves like the old global wiring — the machinery only engages in real
 managed projects. A project is considered **Apogee-managed** when it has both `.beads/` **and**

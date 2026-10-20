@@ -1,7 +1,7 @@
 ---
 name: doc
 description: 'Generate and maintain professional, human-readable documentation for a code project: feature/API reference, a code-map (architecture overview), and usage guides written for human readers. Validates docs against the code. Use to document a project for people (not agent context). Triggers: "doc", "document this", "code-map", "API docs", "generate documentation", "write docs", "find missing docs".'
-user_invocable: true
+user-invocable: true
 ---
 
 # /apogee:doc — Professional Project Documentation

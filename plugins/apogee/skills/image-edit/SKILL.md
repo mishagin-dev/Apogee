@@ -1,7 +1,7 @@
 ---
 name: image-edit
 description: Edit images with precision — crop, resize, mirror, rotate, trim, and reframe. Use this skill whenever the user asks to crop, resize, trim, mirror, flip, rotate, reframe, or otherwise manipulate an image. Also use for creating square crops, portraits/headshots from full-body images, icon sizes, or any image transformation. Even if the request sounds simple, this skill prevents common pitfalls and ensures correct results on the first try.
-user_invocable: true
+user-invocable: true
 ---
 
 # Image Edit — Crop, Resize & Transform
@@ -35,7 +35,7 @@ Use the Read tool to look at the image. Understand what's in it and what the use
 Run the bundled analysis script to find where content actually lives:
 
 ```bash
-/tmp/imgcrop/bin/python3 .claude/skills/image-edit/scripts/analyze_bounds.py <image_path>
+/tmp/imgcrop/bin/python3 ${CLAUDE_PLUGIN_ROOT}/skills/image-edit/scripts/analyze_bounds.py <image_path>
 ```
 
 This outputs JSON with:
@@ -63,7 +63,7 @@ Use the analysis output to compute exact crop coordinates:
 Use the bundled script. All operations are optional and composable — applied in order: crop -> mirror -> rotate -> resize.
 
 ```bash
-/tmp/imgcrop/bin/python3 .claude/skills/image-edit/scripts/crop_image.py \
+/tmp/imgcrop/bin/python3 ${CLAUDE_PLUGIN_ROOT}/skills/image-edit/scripts/crop_image.py \
   <input_path> <output_path> \
   [--left L --top T --right R --bottom B] \
   [--mirror horizontal|vertical] \
@@ -95,7 +95,7 @@ Read the output image with the Read tool to visually confirm the result. If it d
 
 ### Mirror an image
 ```bash
-/tmp/imgcrop/bin/python3 .claude/skills/image-edit/scripts/crop_image.py \
+/tmp/imgcrop/bin/python3 ${CLAUDE_PLUGIN_ROOT}/skills/image-edit/scripts/crop_image.py \
   input.png output-mirrored.png --mirror horizontal
 ```
 

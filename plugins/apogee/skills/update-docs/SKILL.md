@@ -1,7 +1,7 @@
 ---
 name: update-docs
 description: Update project documentation after code changes. Maintains the 4 core docs/apogee files (spec, project-structure, progress, deployment-infrastructure) and CLAUDE.md. Use after completing features, refactors, or any changes that affect project structure, capabilities, or status. Also creates initial documentation if files don't exist yet.
-user_invocable: true
+user-invocable: true
 ---
 
 # Update Docs — Documentation Maintenance

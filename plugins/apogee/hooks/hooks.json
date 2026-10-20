@@ -4,11 +4,12 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/git/enforce-git-flow-skill.py\"" }
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/git/enforce-git-flow-skill.py\"" },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/core/security-scan.sh\"" }
         ]
       },
       {
-        "matcher": "mcp__.*",
+        "matcher": "mcp__.*|WebFetch|WebSearch",
         "hooks": [
           { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/core/security-scan.sh\"" }
         ]
@@ -25,15 +26,7 @@
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/idea/idea-nudge.py\"" },
           { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/git/unfinished-branch-nudge.py\"" }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/core/notify.sh\" input" }
         ]
       }
     ],
