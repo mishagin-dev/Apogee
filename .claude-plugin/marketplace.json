@@ -5,18 +5,29 @@
     "email": "mishagin.a.a@gmail.com"
   },
   "metadata": {
-    "description": "Apogee — personal fork of the Claude Code Development Kit (CCDK). Per-project install of the workflow machinery (durable docs context, br issue memory, git-flow and idea-mcp conventions, two safety hooks) plus the prime/plan/run-plan/merge/release entry points and the docs/apogee doc loop."
+    "description": "Apogee — personal fork of the Claude Code Development Kit (CCDK). `apogee`: the workflow machinery (durable docs context, br issue memory, git-flow conventions, two safety hooks, the prime/plan/run-plan/merge/release entry points, the docs/apogee doc loop). `apogee-media`: the image skills (generation via agy/Gemini, precise edits, background removal), enabled separately."
   },
   "plugins": [
     {
       "name": "apogee",
       "source": "./plugins/apogee",
-      "description": "Claude Code workflow machinery: lifecycle hooks (secret scan + release ASK, plus context injectors), workflow skills (update-docs, review-work, second-opinion, public-docs, readme, symfony, ai-clean-room, image-gen/edit, bg-remove, br, git-commit, git-flow), and the init/prime/plan-feature/release/merge/run-plan entry-point skills. Install once, enable per project.",
+      "description": "Claude Code workflow machinery: lifecycle hooks (secret scan + the production-branch wall, plus context injectors), workflow skills (update-docs, review-work, second-opinion, public-docs, readme, symfony, ai-clean-room, br, git-commit, git-flow), and the init/prime/plan-feature/release/merge/run-plan entry-point skills. Install once, enable per project.",
       "version": "2.1.0",
       "author": {
         "name": "mishagin.dev (fork of peterkrueck/Claude-Code-Development-Kit)"
       },
       "category": "workflows",
+      "license": "MIT"
+    },
+    {
+      "name": "apogee-media",
+      "source": "./plugins/apogee-media",
+      "description": "Image skills that travel with Apogee but are not part of the work loop: image-gen (character art and variations via agy/Gemini), image-edit (crop, resize, mirror, trim), bg-remove (rembg). Enable only in projects that produce visual assets.",
+      "version": "1.0.0",
+      "author": {
+        "name": "mishagin.dev"
+      },
+      "category": "media",
       "license": "MIT"
     }
   ]

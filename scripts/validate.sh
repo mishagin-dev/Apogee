@@ -161,15 +161,17 @@ echo "Stage 5 done."
 # Stage 6: version lockstep (plugin.json <-> marketplace.json <-> CHANGELOG.md)
 # ---------------------------------------------------------------------------
 echo "=== Stage 6: version lockstep ==="
+# Every marketplace entry must agree with its plugin.json; the `apogee` entry must also match the
+# CHANGELOG's top header (the CHANGELOG tracks the core plugin, not apogee-media).
 plugin_version="$(jq -r '.version' "${PLUGIN_JSON}" 2>/dev/null)"
-marketplace_version="$(jq -r '.plugins[0].version' "${MARKETPLACE_JSON}" 2>/dev/null)"
+marketplace_version="$(jq -r '.plugins[] | select(.name == "apogee") | .version' "${MARKETPLACE_JSON}" 2>/dev/null)"
 changelog_version="$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' "${CHANGELOG}" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
 
 if [ -z "${plugin_version}" ] || [ "${plugin_version}" = "null" ]; then
     echo "FAIL version: could not read .version from ${PLUGIN_JSON}"
     fail=1
 elif [ -z "${marketplace_version}" ] || [ "${marketplace_version}" = "null" ]; then
-    echo "FAIL version: could not read .plugins[0].version from ${MARKETPLACE_JSON}"
+    echo "FAIL version: could not read the apogee entry's version from ${MARKETPLACE_JSON}"
     fail=1
 elif [ -z "${changelog_version}" ]; then
     echo "FAIL version: could not find a '## [x.y.z]' header in ${CHANGELOG}"
@@ -181,8 +183,19 @@ elif [ "${plugin_version}" != "${changelog_version}" ]; then
     echo "FAIL version: plugin.json (${plugin_version}) != CHANGELOG.md top entry (${changelog_version})"
     fail=1
 else
-    echo "ok  all three at ${plugin_version}"
+    echo "ok  apogee: plugin.json, marketplace.json and CHANGELOG at ${plugin_version}"
 fi
+while IFS=$'\t' read -r name source entry_version; do
+    [ "${name}" = "apogee" ] && continue
+    pj="${REPO_ROOT}/${source#./}/.claude-plugin/plugin.json"
+    pv="$(jq -r '.version' "${pj}" 2>/dev/null)"
+    if [ "${pv}" != "${entry_version}" ]; then
+        echo "FAIL version: ${name}: plugin.json (${pv}) != marketplace.json (${entry_version})"
+        fail=1
+    else
+        echo "ok  ${name}: plugin.json and marketplace.json at ${pv}"
+    fi
+done < <(jq -r '.plugins[] | [.name, .source, .version] | @tsv' "${MARKETPLACE_JSON}" 2>/dev/null)
 echo "Stage 6 done."
 
 # ---------------------------------------------------------------------------
@@ -198,7 +211,7 @@ stage7_out="$(python3 - "${REPO_ROOT}" "${LANG_ALLOWLIST}" <<'PYEOF'
 import os, re, sys
 
 root, allowlist_path = sys.argv[1], sys.argv[2]
-scan = ["plugins/apogee", "scripts", "setup.sh", "sync.sh", "install.sh", "CLAUDE.md"]
+scan = ["plugins", "scripts", "setup.sh", "sync.sh", "install.sh", "CLAUDE.md"]
 cyrillic = re.compile("[а-яА-ЯёЁ]")
 
 allow = set()
@@ -253,12 +266,14 @@ echo "Stage 7 done."
 # ---------------------------------------------------------------------------
 echo "=== Stage 8: claude plugin validate --strict ==="
 if command -v claude >/dev/null 2>&1; then
-    if claude plugin validate --strict "${PLUGIN_ROOT}" >/dev/null 2>&1; then
-        echo "ok  claude plugin validate --strict"
-    else
-        echo "FAIL claude plugin validate --strict ${PLUGIN_ROOT} (run it directly for details)"
-        fail=1
-    fi
+    for plugin_dir in "${REPO_ROOT}"/plugins/*/; do
+        if claude plugin validate --strict "${plugin_dir}" >/dev/null 2>&1; then
+            echo "ok  claude plugin validate --strict ${plugin_dir#"${REPO_ROOT}"/}"
+        else
+            echo "FAIL claude plugin validate --strict ${plugin_dir#"${REPO_ROOT}"/} (run it directly for details)"
+            fail=1
+        fi
+    done
 else
     echo "skip  claude CLI not installed"
 fi

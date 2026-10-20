@@ -24,7 +24,7 @@ operator runs in a terminal.
 A release keeps a small set of things in lockstep: wherever the version is declared (if
 anywhere), the git annotated tag, and the `CHANGELOG.md` `## [x.y.z]` header. Where the version is
 declared varies by project — Apogee's own release, for instance, keeps
-`plugins/apogee/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` in lockstep;
+`plugins/apogee/.claude-plugin/plugin.json` and the `apogee` entry of `.claude-plugin/marketplace.json` in lockstep;
 plenty of projects (Go modules, a submodule tracked only by CHANGELOG + a README badge) don't
 declare a version anywhere at all and rely on the tag alone. This command detects which case
 applies instead of assuming one.
@@ -184,7 +184,8 @@ git flow hotfix start <version>       # hotfix mode, off main
 Write `<version>` into whatever Pre-flight 5 detected/the user confirmed:
 
 - Apogee-plugin lockstep pair → both `plugin.json` (`.version`) and `marketplace.json`
-  (`.plugins[0].version`).
+  (`.plugins[] | select(.name == "apogee") | .version`; the `apogee-media` entry has its own
+  version and is bumped only when its skills changed, by hand).
 - A standalone candidate (or several, if the user chose to bump multiple ambiguous matches) →
   each one, using its own format (`jq` for JSON, targeted regex replace for `pyproject.toml`/
   `Cargo.toml` to avoid reformatting the rest of the file, plain overwrite for `VERSION`/

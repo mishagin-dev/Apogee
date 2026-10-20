@@ -15,8 +15,9 @@ repackaged as a **plugin + local marketplace**. Install the machinery once; enab
 plugins/apogee/                   # THE PLUGIN (machinery — installed once, linked per project)
   ├── hooks/                      # 2 safety gates (secrets, release finish) + context injectors
   ├── skills/                     # update-docs, review-work, second-opinion, public-docs, readme, symfony,
-  │                               #   ai-clean-room, image-*, br, git-commit, git-flow
+  │                               #   ai-clean-room, br, git-commit, git-flow
   └── skills/                     #   plus the entry points: /apogee:init, prime, plan-feature, merge, release, run-plan
+plugins/apogee-media/             # optional second plugin: image-gen, image-edit, bg-remove
 scaffold/                         # project CONTENT (copied per project, excluded locally in the host)
   ├── CLAUDE.md  GEMINI.md        # convention files (Claude + agy)
   └── docs/apogee/                # working-memory docs (spec, project-structure, progress, ...)
@@ -62,6 +63,7 @@ Then register the marketplace once in an interactive Claude session — from Git
 ```
 /plugin marketplace add mishagin-dev/Apogee
 /plugin install apogee@apogee
+/plugin install apogee-media@apogee   # image skills, optional
 /reload-plugins
 ```
 

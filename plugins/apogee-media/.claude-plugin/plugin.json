@@ -1,0 +1,10 @@
+{
+  "name": "apogee-media",
+  "version": "1.0.0",
+  "description": "Image skills that travel with Apogee but are not part of the work loop: image-gen (character art and variations via agy/Gemini), image-edit (crop, resize, mirror, trim), bg-remove (rembg). Needs deno, rembg and a Python 3 venv; the apogee plugin itself needs none of them.",
+  "author": {
+    "name": "mishagin.dev",
+    "email": "mishagin.a.a@gmail.com"
+  },
+  "license": "MIT"
+}
