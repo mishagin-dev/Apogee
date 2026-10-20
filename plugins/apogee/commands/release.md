@@ -5,11 +5,13 @@ argument-hint: "[<version>|major|minor|patch] [hotfix]"
 
 # Release Command
 
-Own a project's release lifecycle end to end: detect where its version lives, bump it (in
+Own a project's release lifecycle up to the finish: detect where its version lives, bump it (in
 lockstep across every place found), refresh the CHANGELOG, gate on the project's test/validate
-command, commit the release prep, then run `git flow release|hotfix finish` itself (the
-`enforce-git-flow-skill` hook asks for confirmation since it touches the production branch).
-Pushing stays a separate, explicit user action — this command never runs it.
+command, commit the release prep, then **stop and hand the finish to the operator**. By decision
+([ADR 0007](../../../docs/decisions/0007-production-branch-wall.md)) an agent never merges into
+the production branch, never creates or pushes a tag: the `enforce-git-flow-skill` hook refuses
+`git flow release|hotfix finish` outright. This command ends by printing the two commands the
+operator runs in a terminal.
 
 **Context from user:** $ARGUMENTS
 
@@ -29,11 +31,11 @@ Same rule as `/merge`: if you're tempted to silently paper over a problem (a fai
 ambiguous version bump or version source, a dirty tree), STOP and surface it. A release is
 semi-destructive once tagged — an easy mistake to avoid, an annoying one to unwind.
 
-Only `git push` runs **on a separate, explicit user request** (manual after review, per this
-project's own `CLAUDE.md`). `release finish`/`hotfix finish` runs directly once the user has asked
-for this release — the `enforce-git-flow-skill` hook already ASKs for confirmation since it
-touches the production branch, which is the actual safety gate; this command doesn't add a second
-wait on top of it.
+The finish and the push are **not** this command's to run. `git flow release|hotfix finish`
+merges into `main` and tags; `git push origin main develop --tags` publishes it. Both are reserved
+for the operator (ADR 0007), and the hook denies them to an agent, so don't attempt them, don't
+ask for permission to run them, and don't look for a workaround (no manual `git merge`, no `git
+tag`): prepare everything, print the commands, stop.
 
 ---
 
@@ -265,7 +267,7 @@ version source exists), skip that commit rather than erroring on an empty diff.
 
 ---
 
-## Step 7: Finish
+## Step 7: Hand over the finish
 
 Report to the user first, reflecting what actually happened in this run (not a fixed template):
 
@@ -277,42 +279,35 @@ Report to the user first, reflecting what actually happened in this run (not a f
 - Which CI-gate command was run (tier 1/2/3 from Step 5) and that it passed.
 - The README badge nudge, if Pre-flight 5e found one.
 
-Then run the finish directly, via the **`apogee:git-flow` skill** (or `git flow ... finish`
-directly if the skill isn't available):
+Then print the exact commands for the operator and stop. The tree is on the release/hotfix branch
+with the prep committed; nothing else is pending.
+
 ```
-git flow release finish -m "<version>" <version>
-git flow hotfix finish -m "<version>" <version>
+git flow release finish -m "<version>" <version>     # or: git flow hotfix finish -m "<version>" <version>
+git push origin main develop --tags
 ```
 
-**Tag-editor gotcha:** `-m "<message>"` is required. `GIT_EDITOR=true` (or any editor that
-writes nothing) produces an empty tag message and a fatal error — always pass `-m` with real
-content.
+**Tag-editor gotcha, for the operator:** `-m "<message>"` is required. `GIT_EDITOR=true` (or any
+editor that writes nothing) produces an empty tag message and a fatal error.
 
-The `enforce-git-flow-skill` hook ASKs for confirmation before this runs, since it touches the
-production branch — that's the actual gate, not a separate "wait for the user" step in this
-command. Once confirmed, `finish` merges to `main`, creates the annotated tag, and back-merges to
-`develop` automatically.
+Do not run either command, even if asked in the same breath: the hook denies both to an agent
+([ADR 0007](../../../docs/decisions/0007-production-branch-wall.md)), and the point of the wall is
+that no phrasing unlocks it.
 
----
+## Step 8: After the operator has finished
 
-## Step 8: Post-finish reminders
+If the operator comes back in this session after running the finish and the push, the remaining
+steps are:
 
-Once the user confirms `finish` succeeded (merge to `main` + annotated tag + back-merge to
-`develop`), remind them of the remaining manual steps — none run automatically:
-
-1. **Push all three refs together:**
-   ```bash
-   git push origin main develop --tags
-   ```
-2. **Publish the release on GitHub/GitLab.** Follow the `apogee:git-flow` skill's "Publishing the
+1. **Publish the release on GitHub/GitLab.** Follow the `apogee:git-flow` skill's "Publishing the
    release (gh/glab)" procedure: it defers to CI if one already auto-publishes on tag push,
    otherwise creates the Release itself via `gh`/`glab` (detected from `remote.origin.url`) with
    notes drafted from the CHANGELOG entry just written.
-3. **Only when Pre-flight 5a matched (releasing Apogee itself):** propagate to running Claude Code
+2. **Only when Pre-flight 5a matched (releasing Apogee itself):** propagate to running Claude Code
    sessions:
    ```
    /plugin marketplace update apogee
    /reload-plugins
    ```
-   Local marketplaces don't auto-update — this step is what actually ships the bump to users of
-   the Apogee plugin. Skip this bullet entirely for any other project.
+   Marketplaces don't auto-update — this step is what actually ships the bump to users of the
+   Apogee plugin. Skip this bullet entirely for any other project.

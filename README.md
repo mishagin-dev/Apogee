@@ -86,12 +86,15 @@ Bump `plugins/apogee/.claude-plugin/plugin.json` `version`, then in any session:
 Every hook no-ops unless its trigger is present (`.beads/` or git-flow config), so enabling the plugin globally is safe — the machinery only engages in real
 projects.
 
-Only **two** hooks can refuse an action, both guarding something that cannot be undone: sending a
-credential to an external MCP server, and finishing a release. Everything else injects context. The
-workflow rules still exist — they live in `CLAUDE.md` and the skills, where an agent reads them and
-a human can override them. See [ADR 0005](docs/decisions/0005-enforcement-safety-only.md) for the
-audit that got us here. There are no escape-hatch environment variables; there is nothing left to
-escape.
+Only **two** hooks can refuse an action. One guards against sending a credential to an external
+service (MCP servers, web fetches, the `agy` CLI). The other is the production-branch wall
+([ADR 0007](docs/decisions/0007-production-branch-wall.md)): an agent may push `develop` and work
+branches freely, but nothing it does reaches `main` or creates a tag — no push to `main`, no
+`--tags`, no `git flow release finish`; releases are prepared by `/apogee:release` and finished by
+the operator in a terminal. Everything else injects context. The workflow rules still exist — they
+live in `CLAUDE.md` and the skills, where an agent reads them and a human can override them. See
+[ADR 0005](docs/decisions/0005-enforcement-safety-only.md) for the audit that got us here. There
+are no escape-hatch environment variables; there is nothing left to escape.
 
 ## Documentation
 

@@ -1,5 +1,5 @@
 ---
-description: "Autonomously drive a br-recorded plan epic by epic in a beads + git-flow project; never pushes."
+description: "Autonomously drive a br-recorded plan epic by epic in a beads + git-flow project; pushes develop, never main or tags."
 argument-hint: "[max-epics: <N>] [notes]"
 ---
 
@@ -9,7 +9,8 @@ Drive a beads-recorded plan to completion autonomously: pick the next ready epic
 git-flow branch, implement and close every step, run the review→docs pipeline and the project's
 test gate, finish the branch into develop, then move to the next epic — repeating with **no
 per-micro-decision confirmation** (no "should I start this branch?", no "should I merge?"). The one
-hard, non-negotiable exception: this command **never runs `git push`**. A conservative circuit
+hard, non-negotiable exception: this command **never touches `main` or tags** -- it pushes
+`develop` and work branches (ADR 0007), and the hook refuses anything beyond that. A conservative circuit
 breaker (default: 3 epics per invocation) stops the loop periodically so you can check in; re-invoke
 `/apogee:run-plan` to continue.
 
@@ -52,8 +53,8 @@ stripped Apogee's enforcement layer down to two safety gates, on the grounds tha
 mistake made in front of a human does not need a wall. That reasoning does not extend here: an
 unattended loop has no human to notice tracker drift, so the open-epic-steps DENY was kept —
 narrowed to *only* the commands this command tags, and fail-closed. Every other rule the loop
-follows (commit through the skill, one epic per branch, never `git push`) is prose you must actually
-follow; nothing will stop you.
+follows (commit through the skill, one epic per branch) is prose you must actually follow; the
+production-branch wall (push to `main`, tags, release finish) is the other thing that will stop you.
 
 **Design record:** the reasoning behind the stateless command tag, the fail-closed backstop, the
 no-exception clean-tree rule and the circuit-breaker default is recorded in
@@ -148,15 +149,21 @@ Repeat until termination (see below). Each iteration:
 
 5. **Finish the branch.** Invoke `/apogee:merge`; when it reaches the Git Flow finish step, the
    underlying command must be tagged: `APOGEE_RUN_PLAN=1 git flow feature|bugfix finish <slug>`.
-   Rule 1 (`enforce-git-flow-skill.py`'s release/hotfix ASK) never fires for feature/bugfix finish —
+   Rule 1 (`enforce-git-flow-skill.py`'s release/hotfix DENY) never fires for feature/bugfix finish —
    confirmed by its regex, which only matches `(release|hotfix)`. The open-children DENY does apply
    here, fail-closed for this tagged command: if it can't positively confirm every step of this epic
    is closed, it refuses, and the loop halts with that reason surfaced.
 
-6. **Close the epic**: `br epic close-eligible` (closes epics whose children are all closed —
+6. **Publish develop.** If the repo has a remote (`git remote` non-empty): `git push origin develop`.
+   In a superproject, push each submodule's work branch *before* the superproject (the git-flow
+   skill's submodule rule), so no pushed commit references a submodule commit the remote lacks.
+   Never `main`, never tags; the hook denies both, and that is by design, not a bug to route around.
+   Log it: `br comments add <epicId> --message "run-plan: pushed develop"`.
+
+7. **Close the epic**: `br epic close-eligible` (closes epics whose children are all closed —
    no custom logic needed).
 
-7. **Increment the epic counter.** If it reaches `max_epics_per_invocation` (and the cap isn't 0),
+8. **Increment the epic counter.** If it reaches `max_epics_per_invocation` (and the cap isn't 0),
    stop here (circuit-breaker termination) rather than continuing to the next epic.
 
 ---
@@ -170,17 +177,17 @@ Repeat until termination (see below). Each iteration:
   softenable confirmation.
 - **A genuine hard-stop fires**, exactly as in interactive use: a merge conflict, worktree+gitflow
   being unsupported, ANY dirty file at merge time (no exceptions — see Philosophy), a
-  test-gate failure, or a release/hotfix epic (route to `/apogee:release`, which keeps its own
-  ASK gate — out of scope for this command).
+  test-gate failure, or a release/hotfix epic (route to `/apogee:release`; the finish itself is
+  the operator's — out of scope for this command).
 - **The user interrupts the session.**
 
 On every exit path, print a structured summary before returning control:
 - Epics processed, branches opened/merged, steps closed, commits made.
 - Any halt reason, verbatim, if the loop stopped on something other than success or the circuit
   breaker.
-- **Always**, regardless of how the loop ended: how many commits are now sitting unpushed on
-  `develop`, with an explicit "run `git push` when you're ready" line. This command never pushes,
-  in any termination path.
+- **Always**, regardless of how the loop ended: whether `develop` is pushed (and if not, why --
+  no remote, or a halt before step 6), and the reminder that releasing (`/apogee:release`, then
+  the finish and push of `main` by the operator) is a separate, manual act.
 
 ---
 

@@ -162,12 +162,14 @@ Do NOT `git checkout main` or `git merge` — nothing blocks you since ADR 0005,
 
 2. Branch on the current branch's gitflow prefix:
    - `feature/<slug>` or `bugfix/<slug>` → **invoke the `apogee:git-flow` skill** to finish it (`git flow feature finish <slug>` / `bugfix finish`). (`git-flow` is bundled with this plugin as `apogee:git-flow`; if it isn't available, run that `git flow … finish` command directly.) The skill handles the merge to develop and branch deletion — so **Step 5 cleanup is a no-op in this path**. **Invoked from `/apogee:run-plan`'s loop:** prefix the actual `git flow feature|bugfix finish <slug>` command with `APOGEE_RUN_PLAN=1` (e.g. `APOGEE_RUN_PLAN=1 git flow feature finish <slug>`) — this is what lets the enforcement hook apply the stricter fail-closed check on open child steps instead of its ordinary fail-open behavior; never add this prefix outside of actually running that loop.
-   - `release/<slug>` or `hotfix/<slug>` → the release/hotfix lifecycle is owned by the **`/apogee:release`** command (version bump if a manifest is found, CHANGELOG, the project's own test gate, finish handoff). STOP and tell the user to run it.
+   - `release/<slug>` or `hotfix/<slug>` → the release/hotfix lifecycle is owned by the **`/apogee:release`** command (version bump if a manifest is found, CHANGELOG, the project's own test gate), and the finish itself belongs to the operator in a terminal (ADR 0007). STOP and tell the user to run `/apogee:release`.
    - Any other prefix (not a gitflow-managed branch) → STOP and ask the user how to proceed; do not guess.
 
 3. **Worktree + Git Flow is unsupported by AVH git-flow** (can't `git flow … finish` from a linked worktree). If Pre-flight detected worktree mode here, STOP and tell the user to finish from the main checkout (`<main-repo-path>`), then return to remove the worktree.
 
-4. After the `apogee:git-flow` skill reports success, skip to Step 6 (cleanup already done by the skill).
+4. After the `apogee:git-flow` skill reports success, push `develop` if the repo has a remote
+   (`git push origin develop`; in a superproject push each submodule's branch first). Never
+   `main`, never tags (ADR 0007). Then skip to Step 6 (cleanup already done by the skill).
 
 ### Standard mode
 

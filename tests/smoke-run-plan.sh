@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# smoke-run-plan.sh — Integration test for the two rules enforce-git-flow-skill.py still has:
-# Rule 1 (ASK before `git flow release|hotfix finish`) and Rule 2b (the /apogee:run-plan safety
+# smoke-run-plan.sh — Integration test for enforce-git-flow-skill.py's rules:
+# Rule 1 (DENY `git flow release|hotfix finish`), Rule 3 (the production-branch wall) and Rule 2b (the /apogee:run-plan safety
 # backstop: DENY finishing a feature/bugfix branch whose linked br epic has open children, ONLY for
 # APOGEE_RUN_PLAN=1-tagged commands, fail-closed). An untagged finish is not checked at all --
 # ADR 0005 narrowed the rule to the unattended case, where no human is present to notice drift.
@@ -126,25 +126,26 @@ check "untagged finish, no beads workspace -> allow (no check at all)" "$got" "a
 got="$(hook_decision "$sb2" "APOGEE_RUN_PLAN=1 git flow feature finish orphan")"
 check "tagged finish, br query fails (no workspace) -> fail CLOSED (deny)" "$got" "deny"
 
-# ── Sandbox 3: Rule 1 -- the release/hotfix ASK, and what it must NOT touch. This is the gate the
-# user actually meets, and it had no integration coverage before ADR 0005 trimmed the hook. ──
+# ── Sandbox 3: Rule 1 (DENY release/hotfix finish) and Rule 3 (the production-branch wall), and
+# what neither must touch. These are the gates the user actually meets. ──
 (
     cd "$sb3"
     git init -q -b main
     git config user.email smoke@example.com
     git config user.name "Smoke Test"
+    git config commit.gpgsign false
+    git config tag.gpgsign false
     git commit -q --allow-empty -m "initial commit"
+    git tag 0.9.0
     git flow init -d >/dev/null
     git flow feature start first >/dev/null
 )
 
-is_ask() { [ "$1" != "allow" ] && [ "$1" != "deny" ] && echo yes || echo no; }
-
 got="$(hook_decision "$sb3" "git flow release finish 1.0.0")"
-check "release finish -> ask" "$(is_ask "$got")" "yes"
+check "release finish -> deny (operator runs it in a terminal, ADR 0007)" "$got" "deny"
 
 got="$(hook_decision "$sb3" "git flow hotfix finish 1.0.1")"
-check "hotfix finish -> ask" "$(is_ask "$got")" "yes"
+check "hotfix finish -> deny" "$got" "deny"
 
 got="$(hook_decision "$sb3" "git flow release start 1.0.0")"
 check "release start -> allow (only finish touches production)" "$got" "allow"
@@ -153,10 +154,57 @@ got="$(hook_decision "$sb3" "git flow feature start second")"
 check "feature start while another branch is open -> allow (Rule 2 removed by ADR 0005)" "$got" "allow"
 
 got="$(hook_decision "$sb3" "git commit -m wip")"
-check "commit on a non-gitflow branch -> allow (Rule 3 removed by ADR 0005)" "$got" "allow"
+check "commit on a work branch -> allow" "$got" "allow"
 
 got="$(hook_decision "$sb3" "agy -p 'then run git flow release finish 1.0.0'")"
 check "release finish inside a quoted prompt -> allow (strip_payloads)" "$got" "allow"
+
+got="$(hook_decision "$sb3" "git push -u origin feature/first")"
+check "push the work branch -> allow" "$got" "allow"
+
+got="$(hook_decision "$sb3" "git push origin develop")"
+check "push develop -> allow" "$got" "allow"
+
+got="$(hook_decision "$sb3" "git push origin main")"
+check "push main -> deny" "$got" "deny"
+
+got="$(hook_decision "$sb3" "git push origin HEAD:main")"
+check "push HEAD:main -> deny" "$got" "deny"
+
+got="$(hook_decision "$sb3" "git push origin --tags")"
+check "push --tags -> deny" "$got" "deny"
+
+got="$(hook_decision "$sb3" "git push origin 0.9.0")"
+check "push an existing tag by name -> deny" "$got" "deny"
+
+got="$(hook_decision "$sb3" "git checkout main && git merge develop")"
+check "checkout main && merge -> deny" "$got" "deny"
+
+got="$(hook_decision "$sb3" "git tag 1.0.0")"
+check "tag creation -> deny" "$got" "deny"
+
+# ── Sandbox 4: a plain repo with a main branch and NO git-flow config (a submodule, typically)
+# still gets the wall; everything else stays inert there. ──
+sb4="$(mktemp -d)"
+trap 'rm -rf "$sb1" "$sb2" "$sb3" "$sb4"' EXIT
+(
+    cd "$sb4"
+    git init -q -b main
+    git config user.email smoke@example.com
+    git config user.name "Smoke Test"
+    git config commit.gpgsign false
+    git commit -q --allow-empty -m "initial commit"
+    git checkout -q -b feature/sub-work
+)
+
+got="$(hook_decision "$sb4" "git push origin main")"
+check "no git-flow config, push main -> deny (wall is repo-wide)" "$got" "deny"
+
+got="$(hook_decision "$sb4" "git push -u origin feature/sub-work")"
+check "no git-flow config, push work branch -> allow" "$got" "allow"
+
+got="$(hook_decision "$sb4" "git flow feature finish sub-work")"
+check "no git-flow config, git-flow rules stay inert -> allow" "$got" "allow"
 
 echo
 if [ "$ok" = "1" ]; then

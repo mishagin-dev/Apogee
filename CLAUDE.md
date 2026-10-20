@@ -40,8 +40,9 @@ Read `docs/ARCHITECTURE.md` first.
   by ADR 0005 once its consumers went. If exactly one hook needs a helper, inline it; only bring a
   shared dir back when a *third* consumer actually appears.
 - **The blocking surface is deliberately two hooks** (ADR 0005): `core/security-scan.sh` (DENY —
-  secrets to external MCP servers) and `git/enforce-git-flow-skill.py` (ASK on `release|hotfix
-  finish`; DENY on an `APOGEE_RUN_PLAN=1`-tagged finish with open epic steps). Everything else is
+  secrets to external MCP servers) and `git/enforce-git-flow-skill.py` (DENY on `release|hotfix
+  finish`, on any push/merge/tag touching `main` or tags, and on an `APOGEE_RUN_PLAN=1`-tagged
+  finish with open epic steps). Everything else is
   context — nudges and injected directives. Before adding a gate, answer both questions ADR 0005
   used: *is the outcome irreversible*, and *is a human present to catch it*. If either is "no", the
   rule belongs in a SKILL.md or `scaffold/CLAUDE.md`, not in a hook.
@@ -66,10 +67,9 @@ Read `docs/ARCHITECTURE.md` first.
   merge conflicts), or **in parallel** (separate branches/worktrees) when their file sets are
   disjoint. State the split and the chosen order before starting. When a branch's work is complete,
   finish it through `/apogee:merge` (docs/clean-tree guardrails, then delegates to the git-flow
-  finish) — not hand-rolled merges. `release`/`hotfix` finish runs via `/apogee:release` once the
-  user has asked for a release (the `enforce-git-flow-skill` hook ASKs for confirmation since it
-  touches the production branch — that's the safety gate, not a separate wait). Only `git push`
-  stays a distinct, explicit, manual step.
+  finish) — not hand-rolled merges. `/apogee:release` prepares a release and stops; the `release`/`hotfix`
+  finish and the push of `main` + tags are the operator's, in a terminal (ADR 0007). Pushing
+  `develop` and work branches is allowed.
 
 ## Decisions
 

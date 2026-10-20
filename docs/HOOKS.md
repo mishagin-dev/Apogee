@@ -14,7 +14,7 @@ rules, they just aren't walls.
 | Event / matcher | Script (`hooks/…`) | Decision | Self-gate |
 |---|---|---|---|
 | `PreToolUse` / `mcp__.*`, `WebFetch`, `WebSearch`, `Bash` | `core/security-scan.sh` | **DENY** when the outbound payload contains a high-confidence credential | always for MCP and web tools; on `Bash` only for `agy` invocations |
-| `PreToolUse` / `Bash` | `git/enforce-git-flow-skill.py` | **ASK** on `git flow release\|hotfix finish`; **DENY** an `APOGEE_RUN_PLAN=1`-tagged `feature\|bugfix finish` while the linked br epic has open steps | git-flow config |
+| `PreToolUse` / `Bash` | `git/enforce-git-flow-skill.py` | **DENY** the production-branch wall (push/merge/tag touching `main` or tags, any force push); **DENY** `git flow release\|hotfix finish`; **DENY** an `APOGEE_RUN_PLAN=1`-tagged `feature\|bugfix finish` while the linked br epic has open steps | any repo with a `main`/`master` for the wall; git-flow config for the two git-flow rules |
 
 **`security-scan.sh`** walks the entire `tool_input` (`jq -r '..|strings'`), one string value per
 line, capped at 256 KB. Patterns live in `config/sensitive-patterns.json` and are high-confidence
@@ -27,12 +27,20 @@ and the `agy` CLI (the second-opinion skill pipes code through a heredoc, which 
 command string and therefore scanned). Other Bash commands are skipped. `--test` covers the pattern
 cases and the `agy` detection.
 
-**`enforce-git-flow-skill.py`** Rule 2b is the one deliberate **fail-closed** path in the toolkit: if
+**`enforce-git-flow-skill.py`** Rule 3 (ADR 0007) is the wall that makes autonomous pushing safe:
+`develop` and work branches pass without a question; anything whose destination is the
+production branch or a tag is refused, in any spelling the push parser understands (`main`,
+`HEAD:main`, `feature/x:main`, `:main`, `--delete main`, a bare `git push` on `main`, `--tags`,
+`refs/tags/…`, an existing tag by name, `--all`, `--mirror`, force), plus `git merge` on `main`
+and `git tag <name>`. It applies in any repo with a `main`/`master`, git-flow or not. Rule 1
+denies `git flow release|hotfix finish` for the same reason: the operator runs it.
+
+Rule 2b is the one deliberate **fail-closed** path in the toolkit: if
 `br` cannot be queried, a tagged autonomous finish is refused rather than allowed. It applies *only*
 to commands tagged `APOGEE_RUN_PLAN=1` by `/apogee:run-plan`. An interactive finish gets no check at
 all — a human is present, and the failure it guards (tracker drift) is one `br update` to fix. An
 unattended loop has no such backstop, which is exactly the test ADR 0005 uses for what earns a gate:
-*is the outcome irreversible, and is a human present to catch it.* `--test` covers both rules;
+*is the outcome irreversible, and is a human present to catch it.* `--test` covers all three rules;
 `tests/smoke-run-plan.sh` drives the real script against real `br` + `git flow` sandboxes.
 
 ## Context hooks

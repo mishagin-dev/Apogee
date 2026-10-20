@@ -2,9 +2,8 @@
 """
 UserPromptSubmit hook — remind about unfinished feature/bugfix branches.
 
-Companion to enforce-git-flow-skill.py's Rule 2 (ASK before starting a new feature/bugfix while
-another is open): that rule only fires at the moment `git flow feature|bugfix start` actually
-runs. This hook covers the earlier moment -- a new user message arrives while an open branch
+The one reminder about branch hygiene left after ADR 0005 removed the one-branch-at-a-time
+gate. It fires at the moment -- a new user message arrives while an open branch
 already exists (e.g. work was left mid-flight in a prior session) -- so the agent surfaces it to
 the user before deciding what to do next, rather than silently starting fresh work on top.
 

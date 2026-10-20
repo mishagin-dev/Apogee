@@ -122,8 +122,8 @@ def open_work_branches(cwd, prefixes):
     by some means other than `git flow ... finish` (that would have deleted it) -- a stale
     candidate for cleanup, distinct from genuinely unfinished work.
 
-    Used both to ASK before starting a new one (enforce-git-flow-skill.py) and to nudge the
-    agent to mention them when a new user prompt arrives (unfinished-branch-nudge.py).
+    Used to nudge the agent to mention them when a new user prompt arrives
+    (unfinished-branch-nudge.py).
     """
     out = run(["git", "-C", cwd, "branch", "--format=%(refname:short)"], cwd)
     base = develop_branch(cwd)

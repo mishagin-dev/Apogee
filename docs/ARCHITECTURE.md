@@ -5,7 +5,8 @@ Apogee is a personal Claude Code toolkit: a fork of the
 a **plugin + local marketplace**. Its job is to keep Claude Code coherent across sessions (durable
 context + repeatable work loop) and to keep a disciplined workflow available via lifecycle hooks.
 Since [ADR 0005](decisions/0005-enforcement-safety-only.md) those hooks mostly *inform* rather than
-*block*: exactly two can refuse an action, and both defend outcomes that cannot be undone.
+*block*: exactly two can refuse an action, and both defend outcomes that cannot be undone — a
+secret leaving the machine, and anything reaching the production branch or a tag (ADR 0007).
 
 ## Three layers (the core model)
 

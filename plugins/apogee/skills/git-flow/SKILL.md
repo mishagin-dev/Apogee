@@ -77,7 +77,13 @@ tags (release/hotfix), back-merges, and deletes the branch**.
   `--nobackmerge` (skip back-merge into develop).
 - **Dry-run by reading, not running.** `--showcommands` prints each underlying
   `git` call so you can confirm the branch pair before it merges.
-- **No remote here** — never pass `-p`/`--push`, `publish`, or `track`.
+- **Push policy (ADR 0007).** `develop` and `feature/`/`bugfix/` branches are yours to push,
+  publish, track and delete on the remote without asking. The production branch and tags are
+  not: no `git push origin main`, no `--tags`, no `git tag`, no `git merge` while on `main`.
+  The hook refuses all of it; don't look for another spelling. No remote → skip `publish`,
+  `track` and `-p/--push`.
+- **Submodules push first.** In a superproject, push a submodule's work branch *before* the
+  superproject's, so the superproject never points at a submodule commit the remote lacks.
 - **Commits only inside gitflow branches.** Never commit directly on `main` or
   `develop`; always start a feature/bugfix/hotfix/release first. Nothing blocks
   you here — the hook that used to DENY this was removed by ADR 0005 because it
@@ -88,11 +94,9 @@ tags (release/hotfix), back-merges, and deletes the branch**.
 - **Never hand-roll what git-flow owns.** No `git checkout -b feature/...`, no
   `git merge` of a gitflow branch, no manual merge into the production branch —
   use `git flow <type> start|finish` so the tag and back-merge happen correctly.
-- **`release finish` / `hotfix finish` — run once the user has asked for it.** These touch the
-  production branch, so never start one unprompted. Once a release/hotfix/finish has actually been
-  requested, run the command directly rather than stopping for a second, separate confirmation —
-  the hook already ASKs before it executes (it touches the production branch), and that ASK is the
-  real safety gate, not a redundant wait layered on top of it in your own prose.
+- **`release finish` / `hotfix finish` are the operator's.** They merge into the production
+  branch and create the tag; by decision (ADR 0007) an agent never runs them, and the hook denies
+  them. `/apogee:release` prepares the branch and prints the two commands for the operator.
 
 ## beads link (CCDK / beads_rust projects)
 
@@ -118,21 +122,23 @@ but `/apogee:run-plan` relies on it to know which epic a branch is finishing:
 - **Before `finish`,** the epic's steps should all be closed in br — the branch
   is the unit that merges, so leaving steps open breaks the 1:1 link.
 
-## Enforcement hook (two rules)
+## Enforcement hook (three rules)
 
 A PreToolUse hook (`plugins/apogee/hooks/git/enforce-git-flow-skill.py`) is wired via `hooks.json`.
-In gitflow-enabled repos it checks exactly two things; in repos without gitflow config it is
-completely inert.
 
-1. **ASK** — `git flow release finish` / `git flow hotfix finish`: surfaces a confirmation prompt,
-   because this merges into the production branch and creates a tag.
+1. **DENY** — `git flow release finish` / `git flow hotfix finish`: merges into the production
+   branch and creates a tag; the operator runs it in a terminal (ADR 0007).
 2. **DENY** — a `git flow feature|bugfix finish` **tagged `APOGEE_RUN_PLAN=1`** while the br epic
    linked to that branch still has open steps. This applies only to `/apogee:run-plan`'s autonomous
    loop, where no human is watching; it fails **closed** (a `br` query error refuses the finish).
    An interactive finish is not checked at all.
+3. **DENY** — the production-branch wall, in **any** repo that has a `main`/`master` (git-flow
+   config or not): a push whose destination is the production branch in any spelling, a push of
+   tags, `--all`/`--mirror`/force, a merge while the production branch is checked out, `git tag
+   <name>`. Pushing `develop` and work branches passes without a question.
 
-Everything else this hook used to deny — commits off gitflow branches, manual merges, manual branch
-creation, one-branch-at-a-time — is now the Guardrails list above. [ADR 0005](../../../../docs/decisions/0005-enforcement-safety-only.md)
+Everything else this hook used to deny — commits off gitflow branches, manual branch creation,
+one-branch-at-a-time — is now the Guardrails list above. [ADR 0005](../../../../docs/decisions/0005-enforcement-safety-only.md)
 has the evidence: those rules were already written here, and duplicating them as hooks bought
 false positives rather than caught mistakes.
 

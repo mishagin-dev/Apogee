@@ -1,29 +1,30 @@
 #!/usr/bin/env python3
 """
-PreToolUse hook — the two git-flow safety checks that survive ADR 0005.
+PreToolUse hook — the production-branch wall plus the two git-flow checks that survive ADR 0005.
 
-Active only when the current repo has gitflow config (`git config gitflow.branch.*`).
-In all other repos the hook is completely inert — fail-open.
+Rules, in evaluation order:
 
-Rules enforced:
-
-1. ASK — git flow release|hotfix finish
-   Merges into the production branch and creates a tag. Locally this is a three-branch reflog
-   unwind; once pushed it is rewritten shared history. It is an ASK, not a DENY: it surfaces a
-   decision the user has to make anyway, at the one moment the tree changes awkwardly.
+3. DENY — anything that publishes or rewrites the production branch or a tag (ADR 0007).
+   `git push` whose destination resolves to the production branch (`main`, `HEAD:main`, `:main`,
+   `--delete main`, a bare `git push` while `main` is checked out), any push of tags (`--tags`,
+   `refs/tags/...`, a refspec naming an existing tag), `--all`/`--mirror`, any force push; `git
+   merge` while the production branch is checked out (also `git checkout main && git merge ...`
+   in one command); `git tag <name>` creation. Applies in ANY git repo that has a production
+   branch (`gitflow.branch.master`, else `main`/`master`), not only git-flow ones: pushing shared
+   history cannot be undone, and a submodule without git-flow config is still a repo with a main.
+   Everything else -- pushing `develop`, pushing or deleting work branches -- is allowed without
+   a question. The wall is what makes that autonomy safe.
 
 2b. DENY — `APOGEE_RUN_PLAN=1 git flow feature|bugfix finish` while the linked br epic still has
-   open (non-closed) children.
-   Scoped deliberately to /apogee:run-plan's autonomous loop. An interactive finish gets NO check
-   at all — a human is present, and the failure (tracker drift) is one `br update` to fix. An
-   unattended loop has no such backstop: a model drifting over a long run will eventually believe
-   an epic is complete, close it, merge, and proceed, compounding across epics. That is the one
-   place in this toolkit where a hard circuit breaker still earns its keep, so here the check is
-   fail-CLOSED: if `br` cannot be queried, the finish is refused rather than allowed.
+   open (non-closed) children. Scoped to /apogee:run-plan's autonomous loop; fail-CLOSED (a `br`
+   query error refuses the finish). An interactive finish gets no check. See ADR 0006.
 
-Everything else this file used to enforce — commits off gitflow branches, manual merges, manual
-branch creation, one-branch-at-a-time — is now prose in `skills/git-flow/SKILL.md` and
-`scaffold/CLAUDE.md`. See ADR 0005 for the evidence behind that change.
+1. DENY — `git flow release|hotfix finish`. It merges into the production branch and tags; by
+   decision (ADR 0007) that step belongs to the operator in a terminal. `/apogee:release` prepares
+   the branch and prints the two commands.
+
+Active only in git repos; fail-open on any parse/IO error. Everything else this file used to
+enforce is prose in `skills/git-flow/SKILL.md` and `scaffold/CLAUDE.md` (ADR 0005).
 """
 
 import json
@@ -33,8 +34,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 from gitflow_common import (  # noqa: E402
-    ask,
     deny,
+    run as _run,
     strip_payloads,
     br_find_by_external_ref,
     br_open_children,
@@ -61,10 +62,140 @@ _FLOW_FEATURE_BUGFIX_FINISH_RE = re.compile(
 # git flow ...` wrapping is still recognized.
 _RUN_PLAN_TAG_RE = re.compile(r"(?:^|&&|\|\||;|&)\s*APOGEE_RUN_PLAN=1(?:\s|$)")
 
+# `git [global opts] <subcommand> <rest>` for the subcommands the wall inspects. Global options
+# (`-C dir`, `-c k=v`, `--no-pager`, ...) are skipped so `git -C sub push` is still a push; the
+# subcommand must be a whole word so `git log --grep push` is not.
+_GIT_SUB_RE = (
+    r"(?<![\w/.-])git(?![\w-])(?:\s+(?:-C\s+\S+|-c\s+\S+|--[\w-]+(?:=\S+)?))*\s+{sub}(?=\s|$)"
+    r"(?P<rest>[^|;&\n]*)"
+)
+_PUSH_RE = re.compile(_GIT_SUB_RE.format(sub="push"))
+_MERGE_RE = re.compile(_GIT_SUB_RE.format(sub="merge"))
+_TAG_RE = re.compile(_GIT_SUB_RE.format(sub="tag"))
+_CHECKOUT_RE = re.compile(_GIT_SUB_RE.format(sub=r"(?:checkout|switch)"))
+
+_PUSH_DENY_FLAGS = {"--all", "--mirror", "--tags", "--follow-tags", "-f", "--force",
+                    "--force-if-includes"}
+_PUSH_DRY_FLAGS = {"-n", "--dry-run"}
+# Flags that take a value in the next token, so that token is not a refspec.
+_PUSH_VALUE_FLAGS = {"-o", "--push-option", "--receive-pack", "--exec", "--repo"}
+_TAG_LIST_FLAGS = {"-l", "--list", "-n", "-d", "--delete", "-v", "--verify", "--contains",
+                   "--no-contains", "--points-at", "--merged", "--no-merged", "--column",
+                   "--no-column", "--sort", "--format", "-i", "--ignore-case"}
+
 
 def _run_plan_tagged(command: str) -> bool:
     """True if `command` carries the /apogee:run-plan autonomous tag."""
     return bool(_RUN_PLAN_TAG_RE.search(command))
+
+
+def production_branch(cwd: str):
+    """The branch the wall protects: `gitflow.branch.master`, else an existing `main`/`master`.
+    None when `cwd` is not a git repo or has no such branch (a brand-new repo has nothing to
+    protect yet)."""
+    configured = _run(["git", "-C", cwd, "config", "gitflow.branch.master"], cwd)
+    if configured:
+        return configured
+    for name in ("main", "master"):
+        if _run(["git", "-C", cwd, "show-ref", "--verify", f"refs/heads/{name}"], cwd):
+            return name
+    return None
+
+
+def _current_branch(cwd: str) -> str:
+    return _run(["git", "-C", cwd, "branch", "--show-current"], cwd)
+
+
+def _is_tag(cwd: str, name: str) -> bool:
+    return bool(name) and bool(_run(["git", "-C", cwd, "tag", "--list", name], cwd))
+
+
+def _refspec_targets_wall(spec: str, cwd: str, prod: str):
+    """Reason string if one refspec publishes/deletes the production branch or a tag, else None."""
+    spec = spec.lstrip("+")
+    if spec.startswith("refs/tags/"):
+        return f"pushes tag {spec}"
+    src, _, dst = spec.partition(":")
+    dst = dst or src
+    if dst in ("HEAD", "@"):
+        dst = _current_branch(cwd)
+    if dst.startswith("refs/tags/"):
+        return f"pushes tag {dst}"
+    dst_name = dst[len("refs/heads/"):] if dst.startswith("refs/heads/") else dst
+    if dst_name == prod:
+        return f"targets '{prod}'" if src else f"deletes '{prod}' on the remote"
+    if _is_tag(cwd, dst_name):
+        return f"pushes tag {dst_name}"
+    return None
+
+
+def _push_decision(rest: str, cwd: str, prod: str):
+    """Reason string if this `git push <rest>` must be refused, else None."""
+    tokens = rest.split()
+    if any(t in _PUSH_DRY_FLAGS for t in tokens):
+        return None
+    positional = []
+    skip_next = False
+    for t in tokens:
+        if skip_next:
+            skip_next = False
+            continue
+        if t.startswith("--force-with-lease"):
+            return "force-pushes"
+        if t in _PUSH_DENY_FLAGS:
+            return f"uses {t}"
+        if t in _PUSH_VALUE_FLAGS:
+            skip_next = True
+            continue
+        if t.startswith("-"):
+            continue
+        positional.append(t)
+    refspecs = positional[1:]  # positional[0] is the remote
+    if not refspecs:
+        if _current_branch(cwd) == prod:
+            return f"pushes the checked-out '{prod}'"
+        return None
+    for spec in refspecs:
+        reason = _refspec_targets_wall(spec, cwd, prod)
+        if reason:
+            return reason
+    return None
+
+
+def _wall_decision(command: str, cwd: str, prod: str):
+    """Rule 3: a deny reason if `command` publishes or rewrites the production branch or a tag."""
+    for m in _PUSH_RE.finditer(command):
+        reason = _push_decision(m.group("rest"), cwd, prod)
+        if reason:
+            return (
+                f"This push {reason}. Publishing '{prod}' or tags is reserved for the operator "
+                f"(ADR 0007): push `develop` and work branches freely; for a release, "
+                f"/apogee:release prepares the branch and prints the finish and push commands to "
+                f"run in a terminal."
+            )
+    if _MERGE_RE.search(command):
+        on_prod = _current_branch(cwd) == prod
+        switches_to_prod = any(
+            prod in m.group("rest").split() for m in _CHECKOUT_RE.finditer(command)
+        )
+        if on_prod or switches_to_prod:
+            return (
+                f"Merging into '{prod}' is reserved for the operator (ADR 0007). Finish work "
+                f"branches into develop with `git flow feature|bugfix finish`; releases are "
+                f"prepared by /apogee:release and finished by the operator in a terminal."
+            )
+    for m in _TAG_RE.finditer(command):
+        tokens = m.group("rest").split()
+        if not tokens or any(t in _TAG_LIST_FLAGS or t.startswith("--list") or t.startswith("--sort")
+                             or t.startswith("--format") or t.startswith("--contains")
+                             or t.startswith("--points-at") for t in tokens):
+            continue
+        if any(not t.startswith("-") for t in tokens):
+            return (
+                "Creating tags is reserved for the operator (ADR 0007): a tag is a release "
+                "marker, and `git flow release finish` run by the operator creates it."
+            )
+    return None
 
 
 def _finish_slug(rest: str, cwd: str, type_name: str, prefixes: dict):
@@ -77,8 +208,7 @@ def _finish_slug(rest: str, cwd: str, type_name: str, prefixes: dict):
     for tok in rest.split():
         if not tok.startswith("-"):
             return tok
-    from gitflow_common import run as _run
-    branch = _run(["git", "-C", cwd, "branch", "--show-current"], cwd)
+    branch = _current_branch(cwd)
     prefix = prefixes.get(type_name, f"{type_name}/")
     if branch and branch.startswith(prefix):
         return branch[len(prefix):]
@@ -146,6 +276,14 @@ def main():
     # config.
     cwd = _effective_repo(command, cwd)
 
+    # ── Rule 3: the production-branch wall, in any repo that has a production branch ──
+    prod = production_branch(cwd)
+    if prod:
+        reason = _wall_decision(command, cwd, prod)
+        if reason:
+            deny(reason)
+            sys.exit(0)
+
     if not _is_gitflow_repo(cwd):
         sys.exit(0)
 
@@ -159,11 +297,13 @@ def main():
             sys.exit(0)
         # Allowed -- fall through; don't assume this is the only git-flow op in the command.
 
-    # ── Rule 1: ASK before release/hotfix finish (touches production branch) ──
+    # ── Rule 1: DENY release/hotfix finish (merges into the production branch, creates a tag) ──
     if _FLOW_FINISH_RE.search(command):
-        ask(
-            "This command merges into the production branch and creates a release tag. "
-            "It must only run on explicit user request — please confirm."
+        deny(
+            "Finishing a release or hotfix merges into the production branch and creates a tag; "
+            "by decision (ADR 0007) the operator runs that in a terminal. /apogee:release prepares "
+            "the branch (version, CHANGELOG, validate gate, commits) and prints the finish and push "
+            "commands; stop there."
         )
 
     sys.exit(0)
@@ -183,8 +323,14 @@ def _run_self_test() -> None:
             ok = False
         print(f"  {mark}  {label}: {got!r} (want {want!r})")
 
-    # Rule 1's regex, post-strip_payloads. This is the rule with the widest blast radius and it had
-    # no direct coverage before ADR 0005 trimmed this file.
+    def git(repo, *args):
+        # Signing is forced off: a global `tag.gpgsign`/`commit.gpgsign` would otherwise make the
+        # sandbox tag prompt for a key (or fail with "no tag message").
+        subprocess.run(["git", "-C", repo, "-c", "user.email=t@t.com", "-c", "user.name=t",
+                        "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false", *args],
+                       check=True, capture_output=True)
+
+    # Rule 1's regex, post-strip_payloads.
     print("_FLOW_FINISH_RE (Rule 1) tests:")
     finish_cases = [
         ("release finish",                  "git flow release finish 1.2.3",                     True),
@@ -216,10 +362,8 @@ def _run_self_test() -> None:
     print("\n_finish_slug tests:")
     prefixes = {"feature": "feature/", "bugfix": "bugfix/"}
     with tempfile.TemporaryDirectory() as tmp:
-        subprocess.run(["git", "-C", tmp, "init", "-q", "-b", "feature/on-branch"],
-                       check=True, capture_output=True)
-        subprocess.run(["git", "-C", tmp, "-c", "user.email=t@t.com", "-c", "user.name=t",
-                        "commit", "-q", "--allow-empty", "-m", "x"], check=True, capture_output=True)
+        git(tmp, "init", "-q", "-b", "feature/on-branch")
+        git(tmp, "commit", "-q", "--allow-empty", "-m", "x")
         for label, rest, type_, want in [
             ("explicit slug",                    "demo",          "feature", "demo"),
             ("flag then slug",                   " -k demo",      "feature", "demo"),
@@ -284,6 +428,69 @@ def _run_self_test() -> None:
             ("nonexistent -C -> cwd",   "git -C nope flow release finish",    tmp),
         ]:
             check(label, _effective_repo(cmd, tmp), want)
+
+    # Rule 3: the production-branch wall, against a real repo with main, develop, a work branch
+    # and a tag. Decisions are computed without running any push.
+    print("\n_wall_decision (Rule 3) tests:")
+    with tempfile.TemporaryDirectory() as tmp:
+        git(tmp, "init", "-q", "-b", "main")
+        git(tmp, "commit", "-q", "--allow-empty", "-m", "init")
+        git(tmp, "tag", "1.0.0")
+        git(tmp, "branch", "develop")
+        git(tmp, "branch", "feature/x")
+        git(tmp, "checkout", "-q", "develop")
+        check("prod detected without gitflow config", production_branch(tmp), "main")
+        git(tmp, "config", "gitflow.branch.master", "main")
+        check("prod from gitflow config", production_branch(tmp), "main")
+        prod = "main"
+        wall = lambda cmd: _wall_decision(strip_payloads(cmd), tmp, prod) is not None  # noqa: E731
+        for label, cmd, want in [
+            ("push develop",                     "git push origin develop",                 False),
+            ("push -u work branch",              "git push -u origin feature/x",            False),
+            ("push develop:develop",             "git push origin develop:develop",         False),
+            ("bare push on develop",             "git push",                                False),
+            ("push HEAD on develop",             "git push origin HEAD",                    False),
+            ("delete remote work branch",        "git push origin --delete feature/x",      False),
+            ("dry run to main is harmless",      "git push --dry-run origin main",          False),
+            ("push main",                        "git push origin main",                    True),
+            ("push HEAD:main",                   "git push origin HEAD:main",               True),
+            ("push work branch onto main",       "git push origin feature/x:main",          True),
+            ("push refs/heads/main",             "git push origin refs/heads/main",         True),
+            ("delete remote main (:main)",       "git push origin :main",                   True),
+            ("delete remote main (--delete)",    "git push origin --delete main",           True),
+            ("push --tags",                      "git push origin --tags",                  True),
+            ("push --follow-tags",               "git push --follow-tags origin develop",   True),
+            ("push an existing tag by name",     "git push origin 1.0.0",                   True),
+            ("push refs/tags/",                  "git push origin refs/tags/1.0.0",         True),
+            ("push --all",                       "git push --all origin",                   True),
+            ("push --mirror",                    "git push --mirror origin",                True),
+            ("force push work branch",           "git push --force origin feature/x",       True),
+            ("force-with-lease",                 "git push --force-with-lease origin dev",  True),
+            ("push with -C to this repo",        f"git -C {tmp} push origin main",          True),
+            ("push option value not a refspec",  "git push -o ci.skip origin develop",      False),
+            ("tagged autonomous push develop",   "APOGEE_RUN_PLAN=1 git push origin develop", False),
+            ("merge on develop",                 "git merge feature/x",                     False),
+            ("checkout main && merge",           "git checkout main && git merge develop",  True),
+            ("switch main; merge",               "git switch main; git merge develop",      True),
+            ("tag creation",                     "git tag 1.2.0",                           True),
+            ("annotated tag creation",           "git tag -a 1.2.0 -m x",                   True),
+            ("tag list",                         "git tag -l",                              False),
+            ("bare tag (lists)",                 "git tag",                                 False),
+            ("tag delete (local)",               "git tag -d 1.0.0",                        False),
+            ("log --grep push is not a push",    "git log --grep push",                     False),
+            ("push inside quoted prompt",        "agy -p 'then git push origin main'",      False),
+            ("unrelated git",                    "git status",                              False),
+        ]:
+            check(label, wall(cmd), want)
+        git(tmp, "checkout", "-q", "main")
+        check("bare push while on main", wall("git push"), True)
+        check("push -u origin HEAD while on main", wall("git push -u origin HEAD"), True)
+        check("merge while on main", wall("git merge develop"), True)
+        git(tmp, "checkout", "-q", "develop")
+        # A repo with no production branch at all has nothing to protect.
+        with tempfile.TemporaryDirectory() as fresh:
+            git(fresh, "init", "-q", "-b", "trunk")
+            check("no main/master -> no wall", production_branch(fresh), None)
 
     print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
     raise SystemExit(0 if ok else 1)
