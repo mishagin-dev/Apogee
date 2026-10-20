@@ -110,8 +110,9 @@ but `/apogee:run-plan` relies on it to know which epic a branch is finishing:
   br update <epicId> --external-ref <branch> --actor "${BR_ACTOR:-assistant}"
   ```
 
-  (`br` never runs git; setting `external_ref` is a plain metadata write. Run
-  `br sync --flush-only` and commit `.beads/` via the git-commit skill as usual.)
+  (`br` never runs git; setting `external_ref` is a plain metadata write. `.beads/` is
+  local-only in Apogee projects, kept out of git via `.git/info/exclude`; `br sync
+  --flush-only` keeps the JSONL current for backups, nothing is committed.)
 - **All steps of the epic** (its `parent-child` children) are implemented and
   committed on that one branch, then merged together at `git flow feature finish`.
 - **Before `finish`,** the epic's steps should all be closed in br — the branch

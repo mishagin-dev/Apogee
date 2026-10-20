@@ -56,6 +56,7 @@ MARKETPLACE_NAME="apogee"
 PLUGIN_NAME="apogee"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCAFFOLD_DIR="$REPO_DIR/scaffold"
+EXCLUDE_LIST="$REPO_DIR/plugins/apogee/hooks/core/config/exclude-list.txt"
 
 # ---- args ----
 TARGET="$PWD"
@@ -120,12 +121,14 @@ if [[ $DO_SCAFFOLD -eq 1 ]]; then
       echo "  • docs/apogee/ai-context/$base created."
     fi
   done
-  # docs/apogee/ is Apogee's working memory, and CLAUDE.md/GEMINI.md are personal AI-tooling
-  # context (not a project deliverable) -- keep all three out of the host project's git. See the
-  # COPY note in the file header for why .git/info/exclude, not .gitignore.
-  git_exclude "$TARGET" "docs/apogee/" "Apogee toolkit working memory (local-only)"
-  git_exclude "$TARGET" "CLAUDE.md" "Apogee AI-tooling context (local-only)"
-  git_exclude "$TARGET" "GEMINI.md" "Apogee AI-tooling context (local-only)"
+  # AI tooling is local-only by decision: the repository holds code and project documentation
+  # only. The list (docs/apogee/, CLAUDE.md, GEMINI.md, .claude/, .beads/, ...) lives in the
+  # plugin so the session-start hook can re-assert it later for the root and every first-level
+  # submodule. See the COPY note in the file header for why .git/info/exclude, not .gitignore.
+  while IFS= read -r pattern; do
+    [[ -z "$pattern" || "$pattern" == \#* ]] && continue
+    git_exclude "$TARGET" "$pattern" "Apogee: AI tooling is local-only by decision"
+  done < "$EXCLUDE_LIST"
   echo
 fi
 
@@ -199,9 +202,6 @@ if [[ $DO_SETTINGS -eq 1 ]]; then
   fi
   mv "$tmp" "$LOCAL"
   echo "  • settings.local.json merged ($LOCAL)"
-
-  # keep the personal file out of the host project's git (mirror docs/apogee/)
-  git_exclude "$TARGET" ".claude/settings.local.json" "Apogee personal settings (local-only)"
   echo
 fi
 

@@ -72,12 +72,16 @@ What it does:
 - **COPY (content):** `CLAUDE.md` + `GEMINI.md` at the project root (never clobbered if present);
   `docs/apogee/ai-context/*.md` and the empty `docs/apogee/{business,design-brand,legal,open-issues}/`
   dirs; `assets/.gitkeep`. Existing files are preserved.
-- **EXCLUDE:** appends `docs/apogee/`, `CLAUDE.md`, and `GEMINI.md` to the project's
-  `.git/info/exclude` — all three are personal AI-tooling context (worked with locally, an IDE with
-  "respect gitignore" off still shows them), not a project deliverable, so none of them touch the
-  host's committed `.gitignore` or its git history. Skipped with a notice if the target is not a git
-  repo. Submodules aren't covered here (they're independent git repos) — `/apogee:init` adds a
-  submodule's own `CLAUDE.md` to *that submodule's* `.git/info/exclude` when it creates it.
+- **EXCLUDE:** appends the plugin's AI-tooling exclude list
+  (`plugins/apogee/hooks/core/config/exclude-list.txt`: `docs/apogee/`, `CLAUDE.md`, `GEMINI.md`,
+  `AGENTS.md`, `.claude/`, `.beads/`) to the project's `.git/info/exclude`. All of it is personal
+  working state (worked with locally, an IDE with "respect gitignore" off still shows it), not a
+  project deliverable, so none of it touches the host's committed `.gitignore` or its git history.
+  The decision is deliberate: the repository holds code and project documentation only, and the
+  tracker's JSONL is backed up with the rest of the local context rather than committed. Skipped
+  with a notice if the target is not a git repo. The plugin's SessionStart hook re-asserts the same
+  list on every session start, for the repo root and each first-level submodule, so paths created
+  later (plans, memory, a submodule `CLAUDE.md`) never surface in `git status`.
 - **TRACKER INIT (auto):** if `TARGET` has no `.beads/` yet, runs `br init`; if it has no
   `gitflow.*` config yet and the AVH `git-flow` binary is installed, runs `git flow init -d`
   (default branch/prefix conventions, non-interactive — works even on a brand-new zero-commit

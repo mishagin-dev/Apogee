@@ -70,14 +70,11 @@ truth: each fact in exactly one doc; document only what can't be inferred from t
 Keep it short — a flat working file, not the full root template. Never overwrite an existing
 `CLAUDE.md` in a submodule.
 
-A submodule is its own git repo — the root `CLAUDE.md`/`GEMINI.md` exclusion `setup.sh` set up at
-the parent doesn't cover it. Right after creating (or confirming) a submodule's `CLAUDE.md`, add it
-to *that submodule's own* `.git/info/exclude` (local-only, same reasoning as the parent's):
-
-```bash
-EXCLUDE="$(cd "<path>" && git rev-parse --git-path info/exclude)"
-grep -qxF "CLAUDE.md" "$EXCLUDE" 2>/dev/null || printf '\n# Apogee AI-tooling context (local-only)\nCLAUDE.md\n' >> "$EXCLUDE"
-```
+A submodule is its own git repo, so the parent's `.git/info/exclude` does not cover it. Nothing to
+do by hand: the plugin's SessionStart hook re-asserts the AI-tooling exclude list (`CLAUDE.md`,
+`GEMINI.md`, `docs/apogee/`, `.claude/`, `.beads/`) for the parent and every first-level
+submodule at the start of each session, so a submodule `CLAUDE.md` created here stays out of git
+from the next session on. Do not verify it, do not stage it, do not add it to `.gitignore`.
 
 **Finish.** Load the freshly written core docs (as `/apogee:prime` would) so the session continues
 primed, then summarize what was created vs skipped (and any submodules left untouched).

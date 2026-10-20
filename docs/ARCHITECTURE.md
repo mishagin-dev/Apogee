@@ -12,7 +12,7 @@ Since [ADR 0005](decisions/0005-enforcement-safety-only.md) those hooks mostly *
 | Layer | What | Where it lives | Delivery |
 |---|---|---|---|
 | **Machinery** | hooks + commands + workflow skills | `plugins/apogee/` | installed once, **enabled** per project (`enabledPlugins`) — never copied |
-| **Content** | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project; `docs/apogee/` excluded via the host's `.git/info/exclude` |
+| **Content** | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project; kept out of git via the host's `.git/info/exclude` together with `.claude/` and `.beads/` (the plugin's `exclude-list.txt`, re-asserted every session start) — the repository holds code and project documentation only |
 | **Preferences** | `language`, `defaultMode`, `effortLevel`, `env` | `~/.claude/settings.json` | stays global (can't be delivered per project) |
 | **Per-project settings** | baseline `permissions.allow`, `plansDirectory`, `autoMemoryDirectory` | `TARGET/.claude/settings.local.json` | **written** (non-clobbering merge) by `setup.sh`; personal, git-excluded ([ADR 0002 Amendment](decisions/0002-plugin-not-global-hooks.md)) |
 

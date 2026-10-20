@@ -145,6 +145,7 @@ echo "=== Stage 5: self-tests ==="
 HOOK_SELFTESTS=(
     "python3 ${REPO_ROOT}/plugins/apogee/hooks/git/enforce-git-flow-skill.py"
     "bash ${REPO_ROOT}/plugins/apogee/hooks/core/security-scan.sh"
+    "python3 ${REPO_ROOT}/plugins/apogee/hooks/core/apogee-session-start.py"
 )
 for entry in "${HOOK_SELFTESTS[@]}"; do
     if ${entry} --test > /dev/null 2>&1; then
@@ -227,10 +228,12 @@ for path in candidates():
     rel = os.path.relpath(path, root)
     for n, line in enumerate(lines, 1):
         if cyrillic.search(line):
-            key = f"{rel}:{n}:{line.rstrip(chr(10))}"
+            # Allowlist entries are `path:exact line text` -- no line number, so an unrelated
+            # edit above the line doesn't invalidate the entry.
+            key = f"{rel}:{line.rstrip(chr(10))}"
             if key in allow:
                 continue
-            print(f"FAIL lang {key}")
+            print(f"FAIL lang {rel}:{n}:{line.rstrip(chr(10))}")
             hits += 1
 sys.exit(1 if hits else 0)
 PYEOF

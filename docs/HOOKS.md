@@ -41,7 +41,7 @@ unattended loop has no such backstop, which is exactly the test ADR 0005 uses fo
 |---|---|---|---|
 | `PostToolUse` / `ExitPlanMode` | `br/br-capture-gate.py` | Record the approved plan in `br` (epic + steps); in git-flow repos, hand execution to `/apogee:run-plan`. Silent when `tool_response` says the plan was not accepted | `.beads/` |
 | `UserPromptSubmit` | `git/unfinished-branch-nudge.py` | Reminder (≤3/session) that a `feature/`/`bugfix/` branch is still open — or already merged into develop and just needs `git flow … finish` to delete it | git-flow config + an open branch |
-| `SessionStart` | `core/apogee-session-start.py` | Directive to run `/apogee:prime` in a managed project | `.beads/` + `docs/apogee/` |
+| `SessionStart` | `core/apogee-session-start.py` | Re-asserts the AI-tooling exclude list (`config/exclude-list.txt`) in `.git/info/exclude` for the repo root and each first-level submodule, silently; then, on `startup`/`clear`, a directive to run `/apogee:prime` in a managed project | `docs/apogee/` for the excludes; `.beads/` + `docs/apogee/` for the directive |
 | `SessionStart`, `PreCompact` | `br/br-prime.sh` | `br robot-docs guide --no-db`, so beads context survives compaction | `.beads/` |
 | `SessionEnd` | `core/cleanup-session.sh` | Removes the per-session nudge counter | — |
 
