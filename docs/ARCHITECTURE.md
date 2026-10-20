@@ -32,7 +32,7 @@ Apogee/
 │   │   ├── br/    # br-capture-gate (plan -> epic), br-prime (agent guide)
 │   │   ├── git/   # enforce-git-flow-skill (the only Bash gate) + unfinished-branch-nudge, lib/
 │   │   └── core/  # security-scan (+ config/sensitive-patterns.json), cleanup, apogee-session-start
-│   ├── skills/    # update-docs, review-work, second-opinion, public-docs, readme, symfony,
+│   ├── skills/    # update-docs, review-work, second-opinion, public-docs, readme, symfony-cli-workflow,
 │   │              #   ai-clean-room, br, git-commit, git-flow
 │   │              #   + the entry points init, prime, plan-feature, release, merge, run-plan → /apogee:<name>
 │   │              #   (skills, not commands/: Claude Code merged the two formats; user-only ones set

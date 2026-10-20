@@ -3,7 +3,9 @@
 #
 # Run from the project root. Reports, in order: the CLI is installed, this is a
 # Symfony project, requirements pass, which env vars the CLI injects from running
-# Docker services, and whether the app answers over HTTP.
+# Docker services (and whether DATABASE_URL differs from .env), and whether the
+# app answers over HTTP. Starts the web server only if none is running, and stops
+# only a server it started itself.
 #
 # Exit 0 = the project is drivable. Any FAIL means stop and fix before working.
 set -uo pipefail
@@ -18,14 +20,14 @@ echo "== toolchain =="
 if command -v symfony >/dev/null 2>&1; then
   pass "$(symfony version --no-ansi 2>/dev/null | head -1)"
 else
-  fail "symfony CLI not installed — https://symfony.com/download"; exit 1
+  fail "symfony CLI not installed — see references/troubleshooting.md §1"; exit 1
 fi
 
 echo "== project =="
 if [ -f bin/console ] && [ -f composer.json ]; then
   pass "Symfony project root ($(pwd))"
 else
-  fail "no bin/console + composer.json here — cd to the project ROOT first"; exit 1
+  fail "no bin/console + composer.json here — cd to the project ROOT first (scripts/project-info.sh finds it)"; exit 1
 fi
 
 symfony check:requirements >/dev/null 2>&1 \
@@ -33,10 +35,10 @@ symfony check:requirements >/dev/null 2>&1 \
   || fail "check:requirements — run 'symfony check:requirements' for detail"
 
 echo "== injected env (from running Docker services) =="
-INJECTED=$(symfony var:export --multiline 2>/dev/null | grep -cE '^export (DATABASE|MAILER|REDIS|RABBITMQ)_' || true)
+INJECTED=$(symfony var:export --multiline 2>/dev/null | grep -cE '^export (DATABASE|MAILER|REDIS|RABBITMQ|MESSENGER|MONGODB)_' || true)
 if [ "${INJECTED:-0}" -gt 0 ]; then
   pass "$INJECTED service var(s) injected — bare 'php bin/console' would NOT see these"
-  symfony var:export --multiline 2>/dev/null | grep -E '^export (DATABASE|MAILER)_URL=' | sed 's/^/       /'
+  symfony var:export --multiline 2>/dev/null | grep -E '^export (DATABASE_URL|MAILER_DSN|MAILER_URL)=' | sed 's/^/       /'
   # Prove the divergence on THIS project rather than asserting it: the port Docker
   # published is random per 'up', while .env still carries the recipe placeholder.
   LIVE=$(symfony var:export --multiline 2>/dev/null | sed -n 's/^export DATABASE_URL=//p')
@@ -60,17 +62,17 @@ case "$SERVER_STATUS" in
     if symfony server:start -d >/dev/null 2>&1; then
       STARTED_SERVER=1
     else
-      fail "server:start failed — run 'symfony server:start' in the foreground for the reason"
+      fail "server:start failed — run 'symfony server:start' in the foreground, or read the log file under ~/Library/Application Support/symfony-cli/log/ (server:log streams forever)"
     fi ;;
   *) info "server already running" ;;
 esac
-URL=$(symfony var:export 2>/dev/null | tr ' ' '\n' | sed -n 's/^SYMFONY_DEFAULT_ROUTE_URL=//p' | tr -d '"')
+URL=$(symfony var:export SYMFONY_DEFAULT_ROUTE_URL 2>/dev/null | tr -d '"' | tr -d '\n')
 URL=${URL:-http://127.0.0.1:8000/}
 CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$URL" 2>/dev/null)
 CODE=${CODE:-000}
 case "$CODE" in
   000) fail "no HTTP response from $URL" ;;
-  5*)  fail "$URL -> $CODE (app error; run 'symfony server:log')" ;;
+  5*)  fail "$URL -> $CODE (app error; see the log file under ~/Library/Application Support/symfony-cli/log/ — server:log streams forever)" ;;
   *)   pass "$URL -> $CODE" ;;
 esac
 [ "$STARTED_SERVER" = 1 ] && { symfony server:stop >/dev/null 2>&1; info "stopped the server this script started"; }
