@@ -18,14 +18,13 @@ Read `docs/ARCHITECTURE.md` first.
   because it's written here, not because a hook enforces it. A release (`git flow release`, tags
   `<version>`) spans `main` + `develop` + the tag — all three must be pushed together
   (`git push origin main develop --tags`), by you as usual.
-- **Dogfooding is live, and this machine's install is GitHub-sourced.** The `apogee` plugin is
-  enabled globally from a **GitHub** marketplace (`mishagin-dev/Apogee`) — a deliberate deviation
-  from `install.sh`'s default, which registers the local `~/.apogee` clone (`docs/INSTALL.md` is
-  correct about that path; this machine just isn't on it). Consequence: editing this working tree
-  does NOT change running sessions. Machinery changes only take effect after `git push`, then
-  `/plugin marketplace update apogee` + `/reload-plugins`. Verify hook changes with
-  `scripts/validate.sh` and the sandbox smoke scripts, not by expecting live behavior to shift.
-  The ADR 0002 migration is complete — the legacy global ccdk hook block is gone from
+- **Dogfooding is live; the plugin is installed from the GitHub marketplace.** `apogee@apogee`
+  is enabled globally from `mishagin-dev/Apogee`, so it is live in this repo too. Consequence:
+  editing this working tree does NOT change running sessions. Machinery changes only take effect
+  after `git push`, then `/plugin marketplace update apogee` + `/reload-plugins`. To exercise a
+  change before it ships, run `claude --plugin-dir plugins/apogee` in a sandbox project. Verify
+  hook changes with `scripts/validate.sh` and `tests/`, not by expecting live behavior to shift.
+  The ADR 0002 migration is complete: the legacy global ccdk hook block is gone from
   `~/.claude/settings.json`. Don't reintroduce a global hook block or per-throwaway-project caution.
 - **Language split.** Dialogue with the user in their language; code, comments, commit messages, docs,
   branch names, and anything sent to external tools (`agy`) — in **English**.
@@ -46,7 +45,7 @@ Read `docs/ARCHITECTURE.md` first.
   context — nudges and injected directives. Before adding a gate, answer both questions ADR 0005
   used: *is the outcome irreversible*, and *is a human present to catch it*. If either is "no", the
   rule belongs in a SKILL.md or `scaffold/CLAUDE.md`, not in a hook.
-- Every hook must self-gate (no-op without `.beads/` / `.idea/`+IDE / git-flow) and fail open. The
+- Every hook must self-gate (no-op without `.beads/` / git-flow) and fail open. The
   one exception is Rule 2b, which fails *closed* precisely because it only runs unattended.
 - After editing hooks, run `bash scripts/validate.sh` (py/sh/json syntax, `${CLAUDE_PLUGIN_ROOT}`
   hook-path resolution, the two `--test` self-tests, version lockstep, and the language-policy
@@ -78,6 +77,8 @@ Settled decisions live in `docs/decisions/` (ADRs). Don't relitigate them; cite 
 
 ## Don't
 
-- Don't commit unless asked; never push. Commits go through the `git-commit` skill.
+- In this repo, commit only when asked (the scaffold's pre-authorization for feature branches
+  is for host projects, not the toolkit itself); never push. Commits go through the `git-commit`
+  skill.
 - Don't edit the user's global `~/.claude/` without explicit approval (it's machine-wide).
 - Don't reintroduce per-project hook copying — machinery is the plugin, enabled not copied.

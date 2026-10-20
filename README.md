@@ -14,8 +14,9 @@ repackaged as a **plugin + local marketplace**. Install the machinery once; enab
 .claude-plugin/marketplace.json   # local marketplace exposing the `apogee` plugin
 plugins/apogee/                   # THE PLUGIN (machinery — installed once, linked per project)
   ├── hooks/                      # 2 safety gates (secrets, release finish) + context injectors
-  ├── skills/                     # workflow skills: update-docs, review-work, second-opinion, deploy, image-*
-  └── commands/                   # /apogee:prime, /apogee:plan-feature, /apogee:merge
+  ├── skills/                     # update-docs, review-work, second-opinion, doc, readme, symfony,
+  │                               #   ai-clean-room, image-*, br, git-commit, git-flow
+  └── commands/                   # /apogee:init, prime, plan-feature, merge, release, run-plan
 scaffold/                         # project CONTENT (copied per project, excluded locally in the host)
   ├── CLAUDE.md  GEMINI.md        # convention files (Claude + agy)
   └── docs/apogee/                # working-memory docs (spec, project-structure, progress, ...)
@@ -82,8 +83,7 @@ Bump `plugins/apogee/.claude-plugin/plugin.json` `version`, then in any session:
 
 ## Hooks self-gate, and barely block
 
-Every hook no-ops unless its trigger is present (`.beads/`, `.idea/` + a running JetBrains IDE, or
-git-flow config), so enabling the plugin globally is safe — the machinery only engages in real
+Every hook no-ops unless its trigger is present (`.beads/` or git-flow config), so enabling the plugin globally is safe — the machinery only engages in real
 projects.
 
 Only **two** hooks can refuse an action, both guarding something that cannot be undone: sending a
@@ -102,9 +102,11 @@ escape.
 
 ## Status
 
-Built and statically validated (manifests, hook scripts, scaffold). **Pending:** live plugin
-validation in a real session (`/plugin marketplace add` → `install` → `/reload-plugins`), then stripping
-the legacy global `hooks` block from `~/.claude/settings.json` (do this LAST).
+In daily use. `scripts/validate.sh` (syntax, hook paths, self-tests, version lockstep, language
+policy, `claude plugin validate --strict`) runs in CI; `tests/smoke-run-plan.sh` exercises the
+release/autonomy backstop against real `br` + `git flow` sandboxes. The `br`-side hooks and
+`/apogee:run-plan` have not yet been validated end to end on a live project; see
+`docs/apogee/ai-context/progress.md` for the plan.
 
 ## License
 
