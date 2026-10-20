@@ -26,7 +26,8 @@ Read `docs/ARCHITECTURE.md` first.
   hook changes with `scripts/validate.sh` and `tests/`, not by expecting live behavior to shift.
   The ADR 0002 migration is complete: the legacy global ccdk hook block is gone from
   `~/.claude/settings.json`. Don't reintroduce a global hook block or per-throwaway-project caution.
-- **Language split.** Dialogue with the user in Russian, including the captions on tool calls; code,
+- **Language split.** Dialogue with the user in the language Claude Code is configured with (the
+  `language` setting), including the captions on tool calls; code,
   comments, commit messages, docs, branch names, and anything sent to external tools (`agy`) — in
   **English**. An English-heavy context is never a reason to answer in English.
 - **Machinery vs content vs preferences** — respect the boundary (ADR 0002): hooks/skills go in
