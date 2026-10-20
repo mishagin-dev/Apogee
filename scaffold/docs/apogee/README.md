@@ -14,9 +14,10 @@ worth knowing about: what it is, when to read it.
 - `spec.md`, `project-structure.md`, `progress.md`, `deployment-infrastructure.md`: loaded by
   `/apogee:prime`; maintained by `/apogee:update-docs`.
 
-## Optional directories
+## Working-memory directories
 
-Create on demand; add a line to the Index when you do. Names are conventions, not requirements.
+Created empty by `setup.sh` so the layout is visible from day one. Put a file in one, add a line to
+the Index below; a file without an index line is invisible to the next session.
 
 | Directory | Purpose |
 |---|---|

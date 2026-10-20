@@ -299,13 +299,18 @@ Then print the exact commands for the operator and stop. The tree is on the rele
 with the prep committed; nothing else is pending.
 
 ```
-git flow release finish -m "<version>" <version>     # or: git flow hotfix finish -m "<version>" <version>
+GIT_MERGE_AUTOEDIT=no git flow release finish -m "<version>" <version>     # or: ... hotfix finish ...
 git push origin main develop --tags
 gh release create <version> --notes-file "<notes path>" --verify-tag     # or: glab release create <version> -F "<notes path>"
 ```
 
 `-m` is required: without it `finish` opens an editor, and an editor that writes nothing
-(`GIT_EDITOR=true`) produces an empty tag message and a fatal error. The third command publishes
+(`GIT_EDITOR=true`) produces an empty tag message and a fatal error. `GIT_MERGE_AUTOEDIT=no`
+keeps the two merge commits (into `main`, back into `develop`) from opening an editor too; a
+GUI editor (`core.editor = zed --wait`) that closes without saving aborts the merge commit and
+leaves `main` mid-merge, which the next `finish` refuses with "Index contains uncommited
+changes". Recovery for that state: `git commit --no-edit --cleanup=strip` (the `--cleanup`
+drops the template's `#` lines from the message), then re-run the finish. The third command publishes
 the release with the notes file as its description; pick `gh` or `glab` from `remote.origin.url`
 (the git-flow skill's "Publishing the release" procedure). If the project's CI already publishes a
 release on tag push, print `gh release edit <version> --notes-file "<notes path>"` instead, so
