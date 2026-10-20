@@ -1,4 +1,5 @@
 ---
+name: merge
 description: "Finalize a branch: verify docs and a clean tree, then finish it (git-flow finish, or merge to main in plain repos)."
 argument-hint: "[Verified: <note>] [summary: <override>]"
 ---

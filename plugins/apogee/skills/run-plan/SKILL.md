@@ -1,4 +1,5 @@
 ---
+name: run-plan
 description: "Autonomously drive a br-recorded plan epic by epic in a beads + git-flow project; pushes develop, never main or tags."
 argument-hint: "[max-epics: <N>] [notes]"
 ---
@@ -48,7 +49,7 @@ still stop the loop exactly as they would in interactive use. Softening only app
 confirmation *prompts* that exist purely to ask "are you sure" on things the plan already answered —
 not to correctness checks.
 
-**This loop is now the only place with a hard backstop.** [ADR 0005](../../../docs/decisions/0005-enforcement-safety-only.md)
+**This loop is now the only place with a hard backstop.** [ADR 0005](../../../../docs/decisions/0005-enforcement-safety-only.md)
 stripped Apogee's enforcement layer down to two safety gates, on the grounds that a recoverable
 mistake made in front of a human does not need a wall. That reasoning does not extend here: an
 unattended loop has no human to notice tracker drift, so the open-epic-steps DENY was kept —
@@ -58,7 +59,7 @@ production-branch wall (push to `main`, tags, release finish) is the other thing
 
 **Design record:** the reasoning behind the stateless command tag, the fail-closed backstop, the
 no-exception clean-tree rule and the circuit-breaker default is recorded in
-[ADR 0006](../../../docs/decisions/0006-run-plan-autonomy-design.md), together with the two
+[ADR 0006](../../../../docs/decisions/0006-run-plan-autonomy-design.md), together with the two
 high-severity gaps the first implementation had. Don't relitigate any of it without a comparable
 review; the regression coverage lives in `enforce-git-flow-skill.py --test` and
 `tests/smoke-run-plan.sh`.

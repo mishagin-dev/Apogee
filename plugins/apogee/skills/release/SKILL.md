@@ -1,6 +1,8 @@
 ---
-description: "Cut a release: decide the version, bump it in lockstep, refresh the CHANGELOG, run the validate gate, finish the git-flow release."
+name: release
+description: "Prepare a release: decide the version, bump it in lockstep, refresh the CHANGELOG, run the validate gate, commit the prep, then hand the git-flow finish and the push to the operator."
 argument-hint: "[<version>|major|minor|patch] [hotfix]"
+disable-model-invocation: true
 ---
 
 # Release Command
@@ -8,7 +10,7 @@ argument-hint: "[<version>|major|minor|patch] [hotfix]"
 Own a project's release lifecycle up to the finish: detect where its version lives, bump it (in
 lockstep across every place found), refresh the CHANGELOG, gate on the project's test/validate
 command, commit the release prep, then **stop and hand the finish to the operator**. By decision
-([ADR 0007](../../../docs/decisions/0007-production-branch-wall.md)) an agent never merges into
+([ADR 0007](../../../../docs/decisions/0007-production-branch-wall.md)) an agent never merges into
 the production branch, never creates or pushes a tag: the `enforce-git-flow-skill` hook refuses
 `git flow release|hotfix finish` outright. This command ends by printing the two commands the
 operator runs in a terminal.
@@ -291,7 +293,7 @@ git push origin main develop --tags
 editor that writes nothing) produces an empty tag message and a fatal error.
 
 Do not run either command, even if asked in the same breath: the hook denies both to an agent
-([ADR 0007](../../../docs/decisions/0007-production-branch-wall.md)), and the point of the wall is
+([ADR 0007](../../../../docs/decisions/0007-production-branch-wall.md)), and the point of the wall is
 that no phrasing unlocks it.
 
 ## Step 8: After the operator has finished

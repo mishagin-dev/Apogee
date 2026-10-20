@@ -28,7 +28,7 @@ Read `docs/ARCHITECTURE.md` first.
   `~/.claude/settings.json`. Don't reintroduce a global hook block or per-throwaway-project caution.
 - **Language split.** Dialogue with the user in their language; code, comments, commit messages, docs,
   branch names, and anything sent to external tools (`agy`) — in **English**.
-- **Machinery vs content vs preferences** — respect the boundary (ADR 0002): hooks/commands/skills go in
+- **Machinery vs content vs preferences** — respect the boundary (ADR 0002): hooks/skills go in
   `plugins/apogee/`; project templates in `scaffold/`; personal prefs stay in `~/.claude/settings.json`.
 
 ## Working on hooks

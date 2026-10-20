@@ -1,7 +1,9 @@
 ---
+name: init
 description: "Bootstrap a project's Apogee context: research the codebase, fill docs/apogee/ai-context and the root CLAUDE.md, seed a CLAUDE.md per first-level submodule. Run once per project, in Plan Mode."
 argument-hint: "[notes]"
 effort: high
+disable-model-invocation: true
 ---
 
 # Init Command

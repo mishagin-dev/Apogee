@@ -1,4 +1,5 @@
 ---
+name: prime
 description: "Load core project context (docs/apogee/ai-context); --deploy also loads deployment-infrastructure.md."
 argument-hint: "[--deploy] [task]"
 ---

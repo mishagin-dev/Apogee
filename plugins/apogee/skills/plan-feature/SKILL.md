@@ -1,4 +1,5 @@
 ---
+name: plan-feature
 description: "Plan a feature in Plan Mode with parallel research and an independent second opinion before exiting."
 argument-hint: "[feature description]"
 effort: high

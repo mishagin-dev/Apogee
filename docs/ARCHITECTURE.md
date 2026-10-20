@@ -34,7 +34,9 @@ Apogee/
 │   │   └── core/  # security-scan (+ config/sensitive-patterns.json), cleanup, apogee-session-start
 │   ├── skills/    # update-docs, review-work, second-opinion, image-gen, image-edit, bg-remove,
 │   │              #   public-docs, readme, symfony, ai-clean-room, br, git-commit, git-flow
-│   └── commands/  # init, prime, plan-feature, release, merge, run-plan  → /apogee:<name>
+│   │              #   + the entry points init, prime, plan-feature, release, merge, run-plan → /apogee:<name>
+│   │              #   (skills, not commands/: Claude Code merged the two formats; user-only ones set
+│   │              #   disable-model-invocation)
 ├── scaffold/                         # project CONTENT (copied per project)
 │   ├── CLAUDE.md  GEMINI.md          # convention files (Claude + agy)
 │   └── docs/apogee/ai-context/       # {spec,project-structure,progress,deployment-infrastructure}.md
