@@ -64,12 +64,12 @@ Read `docs/ARCHITECTURE.md` first.
 - Tracker is `br` (beads_rust), not `bd` — ADR 0001. Don't reintroduce `bd` invocations.
 - Attribution to upstream (`peterkrueck/Claude-Code-Development-Kit`) stays; the system name is Apogee.
 - **Decompose complex work.** A complex task or a batch of bugs is split into separate git-flow
-  features (one logical change == one `feature/`/`bugfix/` branch via the `git-flow` skill), not
+  features (one logical change == one `feature/`/`bugfix/` branch opened with `/apogee:start`), not
   crammed into one branch. Run them **sequentially** when they touch overlapping files (to avoid
   merge conflicts), or **in parallel** (separate branches/worktrees) when their file sets are
   disjoint. State the split and the chosen order before starting. When a branch's work is complete,
-  finish it through `/apogee:merge` (docs/clean-tree guardrails, then delegates to the git-flow
-  finish) — not hand-rolled merges. `/apogee:release` prepares a release and stops; the `release`/`hotfix`
+  close it with `/apogee:finish` (review, docs, clean tree, git-flow finish, push `develop`) — not
+  hand-rolled merges. `/apogee:release` prepares a release and stops; the `release`/`hotfix`
   finish and the push of `main` + tags are the operator's, in a terminal (ADR 0007). Pushing
   `develop` and work branches is allowed.
 

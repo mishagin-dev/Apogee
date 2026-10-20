@@ -59,14 +59,12 @@ def main() -> None:
         names = ", ".join(f"{t}/{s}" for t, s in merged)
         parts.append(
             f"Branch(es) candidate for cleanup (fully merged into develop already, likely via a "
-            f"manual merge rather than `git flow ... finish`): {names}. Just run `git flow {merged[0][0]} "
-            f"finish {merged[0][1]}` (or the equivalent for each) to delete them -- no new work needed."
+            f"manual merge rather than `git flow ... finish`): {names}. Close them with /apogee:finish (it sees there is nothing left to merge and just deletes the branch)."
         )
     if unfinished:
         names = ", ".join(f"{t}/{s}" for t, s in unfinished)
         parts.append(
-            f"Unfinished branch(es) still open: {names}. Finish it first via /apogee:merge (or "
-            f"the git-flow skill)."
+            f"Unfinished branch(es) still open: {names}. Close it first with /apogee:finish."
         )
     directive = (
         " ".join(parts)

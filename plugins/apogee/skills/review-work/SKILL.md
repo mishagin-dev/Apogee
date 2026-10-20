@@ -1,6 +1,6 @@
 ---
 name: review-work
-description: Review uncommitted code changes before they merge. Delegates bug and security hunting to Claude Code's built-in /code-review, then runs an Apogee rules audit (CLAUDE.md compliance, test coverage, language, no AI-tooling files staged) and an intent verdict against what was actually asked (the br epic/step, progress.md, or the request). Use after completing substantial implementation work, before /apogee:merge, and inside /apogee:run-plan.
+description: Review uncommitted code changes before they merge. Delegates bug and security hunting to Claude Code's built-in /code-review, then runs an Apogee rules audit (CLAUDE.md compliance, test coverage, language, no AI-tooling files staged) and an intent verdict against what was actually asked (the br epic/step, progress.md, or the request). Use after completing substantial implementation work, before /apogee:finish, and inside /apogee:run-plan.
 user-invocable: true
 ---
 

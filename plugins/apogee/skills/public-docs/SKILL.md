@@ -1,6 +1,6 @@
 ---
 name: public-docs
-description: Write and maintain the human-facing documentation of a project under docs/ — feature and API references, the architecture overview, guides — where every doc declares the source paths it covers in frontmatter so it can be refreshed when they change. Modes: discover, gen <feature>, update, validate. Use when the user asks to document a feature or the project for people, and run `update` from /apogee:merge and /apogee:run-plan right after update-docs. Not for docs/apogee (that is update-docs, the agent's own context).
+description: Write and maintain the human-facing documentation of a project under docs/ — feature and API references, the architecture overview, guides — where every doc declares the source paths it covers in frontmatter so it can be refreshed when they change. Modes: discover, gen <feature>, update, validate. Use when the user asks to document a feature or the project for people, and run `update` from /apogee:finish and /apogee:run-plan right after update-docs. Not for docs/apogee (that is update-docs, the agent's own context).
 user-invocable: true
 ---
 

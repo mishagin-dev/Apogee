@@ -8,7 +8,7 @@
 ## 1. Critical Rules
 
 - **Use Sub-Agents** for tasks spanning 3+ files or requiring parallel investigation.
-- **Decompose complex work**: split a complex task or a batch of bugs into separate, focused units of work (in git-flow projects, one `feature/`/`bugfix/` branch each) instead of one big change. Run them sequentially when they touch overlapping files, or in parallel when their file sets are disjoint. State the split and the chosen order before starting. Open each branch with `/apogee:start` (base, naming, br link and publish handled there). When a `feature/`/`bugfix/` branch's work is complete, finish it through `/apogee:merge` (it runs the docs/clean-tree guardrails, then delegates to the git-flow finish) — not hand-rolled merges; `release`/`hotfix` finish only on explicit request.
+- **Decompose complex work**: split a complex task or a batch of bugs into separate, focused units of work (in git-flow projects, one `feature/`/`bugfix/` branch each) instead of one big change. Run them sequentially when they touch overlapping files, or in parallel when their file sets are disjoint. State the split and the chosen order before starting. **Every unit of work goes through `/apogee:start` and `/apogee:finish`**: `feature` and `bugfix` (branch off `develop`), `hotfix` (branch off `main`, finish prepared for the operator), `research` (a note in `docs/apogee/research/`, no branch). Never run raw `git flow … start|finish` or hand-rolled merges; releases are cut with `/apogee:release`.
 - **Always ask before**: breaking changes, major architecture decisions, deleting files.
 - **Stop-and-Replan Rule**: If an approach fails or you discover unexpected complexity, stop and reassess rather than pushing through.
 - **Use available skills proactively**: `/apogee:review-work` for code review, `/apogee:update-docs` after significant changes, then `/apogee:public-docs update` if the project has human-facing docs declaring `sources:`.
@@ -74,8 +74,9 @@ Example:
 | Task | Use This |
 |------|----------|
 | Project onboarding / fill docs | `/apogee:init` (run once on a new project) |
-| Start a work branch | `/apogee:start [feature\|bugfix] <slug>` |
-| Finish a work branch | `/apogee:merge` |
+| Open a unit of work | `/apogee:start [feature\|bugfix\|hotfix\|research] <slug>` |
+| Close it | `/apogee:finish` |
+| Cut a release | `/apogee:release [major\|minor\|patch]` |
 | Library docs lookup | Context7 plugin (check FIRST) |
 | IDE inspections / rename / run configs (JetBrains) | `mcp__idea__*` via `ToolSearch` (when the IDE is open) |
 | Code review | `/apogee:review-work` skill |

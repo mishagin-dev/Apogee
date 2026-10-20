@@ -39,6 +39,10 @@ For concerns not directly in front of you — a third-party API/SDK, a platform 
 For architecture decisions, state the tradeoff, not just the chosen option. For UI flows, plan how you'll verify the change end-to-end (manual browser test, simulator run, integration test — whatever applies). After implementing the code, but before final verification, run `/apogee:review-work` to catch bugs upfront.
 
 Before exiting plan mode, invoke `/apogee:second-opinion` on the draft. You are the authority — the second model's role is to flag blind spots or alternatives worth considering, not to overwrite your judgment. Note what you took vs rejected, then exit plan mode with the synthesized plan.
+After the plan is approved: in a beads + git-flow project the plan-approval hook records it in
+`br` and hands off to `/apogee:run-plan`; otherwise open the work with `/apogee:start` (and
+close it with `/apogee:finish`).
+
 ---
 
 **Feature to plan:** $ARGUMENTS
