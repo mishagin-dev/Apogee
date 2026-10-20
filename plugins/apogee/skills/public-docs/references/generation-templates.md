@@ -7,7 +7,7 @@ Human-readable templates. Keep them lean — fill only the sections a reader nee
 ```markdown
 ---
 title: "[Feature Name]"
-sources: [path/to/main.ext]
+sources: [path/to/module/, path/to/entry.ext]   # mandatory: what `update` watches
 last_updated: YYYY-MM-DD
 ---
 
@@ -41,15 +41,16 @@ For each public symbol that needs detail:
 - [Link to neighbouring docs]
 ```
 
-## Code-Map (architecture overview)
+## Architecture overview (`docs/architecture.md`)
 
 ```markdown
 ---
-title: "Code Map"
+title: "Architecture"
+sources: [src/]
 last_updated: YYYY-MM-DD
 ---
 
-# Code Map: [Project]
+# Architecture: [Project]
 
 ## Overview
 
@@ -78,34 +79,6 @@ src/
 ## External Dependencies
 
 [Notable third-party libraries/services and why they're used.]
-```
-
-## Stub (for a discovered-but-undocumented feature)
-
-```markdown
----
-title: "[Feature Name]"
-status: STUB
-created: YYYY-MM-DD
-sources: [detected source files]
----
-
-# [Feature Name]
-
-> AUTO-GENERATED STUB — replace with real content.
-
-## Overview
-
-[Brief description of this feature.]
-
-## Sources
-
-- `path/to/source.ext`
-
-## API
-
-| Symbol | Signature | Description |
-|--------|-----------|-------------|
 ```
 
 ## Section Markers

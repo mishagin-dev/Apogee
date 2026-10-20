@@ -110,8 +110,15 @@ if [[ $DO_SCAFFOLD -eq 1 ]]; then
       echo "  • $conv created."
     fi
   done
-  # docs/apogee/ai-context/* — preserve existing files, add missing ones.
+  # docs/apogee/README.md (the index /apogee:prime reads) + ai-context/* — preserve existing
+  # files, add missing ones.
   mkdir -p "$TARGET/docs/apogee/ai-context"
+  if [[ -f "$TARGET/docs/apogee/README.md" ]]; then
+    echo "  • docs/apogee/README.md exists — skipped."
+  else
+    cp "$SCAFFOLD_DIR/docs/apogee/README.md" "$TARGET/docs/apogee/README.md"
+    echo "  • docs/apogee/README.md created."
+  fi
   for f in "$SCAFFOLD_DIR"/docs/apogee/ai-context/*.md; do
     base="$(basename "$f")"
     if [[ -f "$TARGET/docs/apogee/ai-context/$base" ]]; then

@@ -1,165 +1,109 @@
 ---
 name: review-work
-description: Review uncommitted code changes using parallel Claude sub-agents with specialized roles (Bug Hunter, Rules Auditor). Spawns multiple focused reviewers for large diffs (50+ lines), single reviewer for smaller changes. Checks for bugs, security issues, CLAUDE.md compliance, and test coverage gaps. Use after completing substantial implementation work, or when the Stop hook requests it. Also invocable manually with /review-work.
+description: Review uncommitted code changes before they merge. Delegates bug and security hunting to Claude Code's built-in /code-review, then runs an Apogee rules audit (CLAUDE.md compliance, test coverage, language, no AI-tooling files staged) and an intent verdict against what was actually asked (the br epic/step, progress.md, or the request). Use after completing substantial implementation work, before /apogee:merge, and inside /apogee:run-plan.
 user-invocable: true
 ---
 
-# Review Work — Automated Code Review
+# Review Work
 
-Review uncommitted code changes using **Claude sub-agents** as independent reviewers. For large diffs, spawns **parallel specialist agents** with different roles for deeper, faster coverage.
+Three passes, each with a different question:
 
-## Process
+1. **Is it correct?** Bugs and security: delegated to the built-in `code-review` skill.
+2. **Does it follow this project's rules?** A read-only Rules Auditor agent against `CLAUDE.md`.
+3. **Is it what was asked?** An intent verdict against the recorded plan.
 
-### Step 1: Capture the Diff
+You are the judge of all three. Reviewers have fresh eyes and no conversation context; you have the
+context and the authority to reject.
 
-Run these commands and save the output:
+## Step 1: Capture the scope
 
 ```bash
 git diff --stat HEAD
-```
-
-```bash
 git diff HEAD
 ```
 
-If the project has a test command configured and relevant source files changed, run the tests:
+Nothing changed → say so and stop. If the project's `CLAUDE.md` documents a test command (its
+Testing section, HTML comments stripped) and source files changed, run the targeted tests now;
+failures are the first finding, ahead of everything below.
 
-```bash
-# Use whatever test command is appropriate for this project
-# Examples: npm test, deno task test:unit, pytest, cargo test
-```
+## Step 2: Bugs and security via `/code-review`
 
-If tests fail, include the failure output in the review prompt — test failures are high-priority findings.
+Invoke the built-in skill through the Skill tool: `skill: "code-review"`, with an effort level
+sized to the diff (`low` under 50 changed lines, `medium` under 400, `high` above). It reviews the
+working-tree diff by default and reports verified findings; take those as the bug/security list.
 
-### Step 2: Determine Scale
+If the Skill tool reports that `code-review` is not available in this client, fall back to the
+Bug Hunter procedure in [references/legacy-parallel-reviewers.md](references/legacy-parallel-reviewers.md)
+and say so in the report.
 
-Count the total lines changed from `git diff --stat HEAD` (the summary line).
+## Step 3: Rules audit
 
-- **Under 50 lines changed → Single reviewer** (Step 3A)
-- **50+ lines changed → Parallel specialist reviewers** (Step 3B)
-
-### Step 3A: Single Reviewer (< 50 lines)
-
-Use the **Agent tool** with `subagent_type: "Explore"` to spawn one read-only reviewer.
-
-**The sub-agent prompt must include:**
-
-1. The full `git diff` output from Step 1
-2. The test results (if tests were run)
-3. The full review checklist (all categories from both specialists below, combined)
-4. The required output format
-5. Instruction to read `CLAUDE.md` for project rules
-
-Use the combined checklist:
+Spawn **one** read-only agent (`subagent_type: "Explore"`), named Rules Auditor, with the full diff,
+the test output, and this brief:
 
 ```
-You are a code reviewer. Read CLAUDE.md for project rules, then review this diff.
+You are a Rules Auditor. Read CLAUDE.md for this project's rules and settled decisions, then check
+ONLY the diff against these categories. Do not look for general bugs; another pass does that.
 
-Check ONLY for real issues. Do not nitpick style, naming, or formatting unless it causes a bug. If no issues found in a category, say "No issues found." Do not invent issues to seem thorough.
+COMPLIANCE — violations of rules and decisions written in CLAUDE.md (architecture decisions,
+conventions, constraints). Cite the rule.
+TESTS — do the changes touch shared modules or critical paths? If so, do corresponding tests exist,
+and are assertions structural rather than exact-string?
+LANGUAGE — identifiers, comments and docs in English; no narrating comments.
+AI TOOLING — nothing under .claude/, docs/apogee/, .beads/, or CLAUDE.md/GEMINI.md/AGENTS.md is
+staged or referenced as a deliverable (these are local-only by decision).
 
-**BUGS** — Logic errors, null/nil/undefined handling, off-by-one, missing error handling, race conditions, unreachable code, wrong return types, state machine violations, async/await mistakes
+Any claim about a third-party library or API must be checked against its current documentation via
+Context7 (resolve-library-id, then query-docs) before you report it. Tag each such finding
+[verified] or [unverified]; unverified claims are discarded by the judge.
 
-**SECURITY** — Secrets or PII logged or exposed, missing input validation at system boundaries, system internals leaked in error messages, hardcoded secrets, injection vulnerabilities
-
-**COMPLIANCE** — Violations of rules defined in CLAUDE.md. Check the project's specific rules and architecture decisions.
-
-**TESTS** — Do these changes touch shared modules or critical paths? If so, do corresponding tests exist?
-
-For each finding:
-- [high|medium|low] `file:line` — Description. **Reason:** Why this is a problem.
+For each finding: - [high|medium|low] `file:line` — what. **Rule:** which rule. [verified|unverified|n/a]
+If a category has nothing, write "No issues found." Do not invent issues to seem thorough.
 ```
 
-Note who reviewed: "Reviewed by: Claude (single reviewer)".
+## Step 4: Intent verdict
 
-### Step 3B: Parallel Specialist Reviewers (50+ lines)
+Compare what the diff does with what was asked:
 
-Spawn **two** Agent tool calls in a **single message** (parallel execution), both with `subagent_type: "Explore"`.
+- In a beads project: `br show <stepId> --json` (and the parent epic) for the step being
+  implemented.
+- Otherwise: the Current Work section of `docs/apogee/ai-context/progress.md`, or the user's request
+  in this session.
 
-Each agent gets the same diff and test output, but a **different role and focused checklist**.
+State one of: **MATCHES**, **PARTIAL** (name what is missing), **DRIFTED** (name what was done
+instead and whether it was asked for). Drift is a finding in its own right, even with zero bugs,
+because it is the failure no reviewer of the diff alone can see.
 
----
+## Step 5: Judge and act
 
-**Agent 1 — "Bug Hunter"** (correctness + security)
-
-```
-You are a **Bug Hunter** reviewing code changes. Your ONLY job is finding logic errors and security vulnerabilities. Ignore style, naming, and compliance rules — another reviewer handles those.
-
-[Include: full git diff output, test results if any]
-
-Read CLAUDE.md for project context, then review the diff against ONLY these categories:
-
-**BUGS** — Logic errors, null/nil/undefined handling, off-by-one, missing error handling, race conditions, unreachable code, wrong return types, state machine violations, async/await mistakes, incorrect boolean logic
-
-**SECURITY** — Secrets or PII logged or exposed, missing input validation at system boundaries, system internals leaked in error messages, hardcoded secrets, injection vulnerabilities, unsafe deserialization, credential exposure
-
-## Output Format
-For each finding:
-- [high|medium|low] `file:line` — Description. **Reason:** Why this is a problem.
-
-If no issues found in a category, write "No issues found."
-Do not invent issues to seem thorough. Only report what you can point to in the diff.
-```
-
----
-
-**Agent 2 — "Rules Auditor"** (project rules + test coverage)
-
-```
-You are a **Rules Auditor** reviewing code changes. Your ONLY job is checking compliance with this project's specific rules and test coverage. Ignore general code quality and security — another reviewer handles those.
-
-[Include: full git diff output, test results if any]
-
-Read CLAUDE.md for project rules and architecture decisions, then review the diff against ONLY these categories:
-
-**COMPLIANCE** — Violations of rules defined in CLAUDE.md. Check architecture decisions, coding conventions, and any project-specific constraints documented there.
-
-**TESTS** — Do these changes touch shared modules or critical paths? If so, do corresponding tests exist? Are test assertions structural (not exact string matches)?
-
-## Output Format
-For each finding:
-- [high|medium|low] `file:line` — Description. **Reason:** Why this is a problem.
-
-If no issues found in a category, write "No issues found."
-Do not invent issues to seem thorough. Only report what you can point to in the diff.
-```
-
----
-
-Note who reviewed: "Reviewed by: Claude (Bug Hunter + Rules Auditor, parallel)".
-
-### Step 4: Evaluate Findings (The Judge)
-
-Combine findings from all reviewers and **critically evaluate each one**. The reviewers have fresh eyes but lack your conversation context — they don't know WHY you made certain choices.
-
-For each finding:
+Combine `/code-review`'s findings, the Rules Auditor's, and the intent verdict. For each finding:
 
 | Verdict | When | Action |
-|---------|------|--------|
-| **Valid (high/medium)** | The reasoning is sound and you agree it's a real issue | Fix it now |
-| **Valid (low)** | Real issue but minor | Note it to the user, don't fix unless asked |
-| **False positive** | Reviewer misunderstood context, or the "issue" is intentional | Reject with a one-line explanation |
+|---|---|---|
+| Valid (high/medium) | The reasoning is sound and you agree | Fix it now |
+| Valid (low) | Real but minor | Note it to the user; fix only if asked |
+| False positive | The reviewer lacked context, or the behaviour is intentional | Reject with one line |
+| Unverified | A library/API claim tagged `[unverified]` | Discard |
 
-**Present a summary to the user:**
+Present:
 
 ```
 ## Code Review Results
 
-Reviewed by: Claude (Bug Hunter + Rules Auditor, parallel) — or: Claude (single reviewer)
-Reviewed X files, Y lines changed.
+Reviewed X files, Y lines changed. Intent: MATCHES | PARTIAL (…) | DRIFTED (…)
 
-| # | Verdict | Category | File | Issue | Action |
-|---|---------|----------|------|-------|--------|
-| 1 | Fixed | BUG | file.ts:42 | Null check missing | Fixed |
-| 2 | Rejected | COMPLIANCE | config.ts:10 | Not a real violation | False positive |
-| 3 | Noted | TESTS | util.ts | No unit tests | Deferred |
+| # | Source | Verdict | Category | File | Issue | Action |
+|---|--------|---------|----------|------|-------|--------|
+| 1 | code-review | Fixed | BUG | file.ts:42 | Null check missing | Fixed |
+| 2 | rules | Rejected | COMPLIANCE | config.ts:10 | Not a violation | False positive |
 ```
 
-If all findings are false positives or no issues found, say so briefly and move on.
+No findings at all → one line, move on.
 
-## Important Rules
+## Rules
 
-1. **Never skip the review.** Don't self-review and claim "looks fine."
-2. **Never blindly accept all findings.** Reviewers can hallucinate file paths, misread logic, or flag intentional choices.
-3. **Include test output.** If unit tests were run and failed, that's the #1 finding — everything else is secondary.
-4. **Parallel when warranted.** Only spawn multiple agents for 50+ line changes. Small diffs get one focused reviewer.
-5. **Agents are read-only.** Use `subagent_type: "Explore"` — reviewers must never edit code. You (the judge) make fixes.
+1. **Never skip the review**, and never replace it with "looks fine" from your own reading.
+2. **Never accept findings blindly.** Reviewers hallucinate paths and misread intent.
+3. **Reviewers are read-only.** You make the fixes, on the work branch, committed via `git-commit`.
+4. **Test output is the first finding** when tests fail.
+5. **Context7 for API claims.** An unverified claim about a library is not a finding.

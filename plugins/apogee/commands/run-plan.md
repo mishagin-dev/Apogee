@@ -142,6 +142,8 @@ Repeat until termination (see below). Each iteration:
    that keeps an unattended run honest:
    - Invoke the `apogee:review-work` skill.
    - Invoke the `apogee:update-docs` skill; commit any doc changes via `git-commit`.
+   - Invoke `apogee:public-docs update`; it refreshes the human-facing docs whose `sources:` overlap
+     the epic's changed files (a one-line no-op when the project has none) and commits them.
    - **If a test command was resolved in Pre-flight 3**, run it now. A failure halts here — the
      branch stays open, uncommitted work (if any) stays as-is, and this is surfaced to the user as a
      hard stop. **Closing br steps is not evidence the code actually works** — this check exists

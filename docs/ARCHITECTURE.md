@@ -33,7 +33,7 @@ Apogee/
 │   │   ├── git/   # enforce-git-flow-skill (the only Bash gate) + unfinished-branch-nudge, lib/
 │   │   └── core/  # security-scan (+ config/sensitive-patterns.json), cleanup, apogee-session-start
 │   ├── skills/    # update-docs, review-work, second-opinion, image-gen, image-edit, bg-remove,
-│   │              #   doc, readme, symfony, ai-clean-room, br, git-commit, git-flow
+│   │              #   public-docs, readme, symfony, ai-clean-room, br, git-commit, git-flow
 │   └── commands/  # init, prime, plan-feature, release, merge, run-plan  → /apogee:<name>
 ├── scaffold/                         # project CONTENT (copied per project)
 │   ├── CLAUDE.md  GEMINI.md          # convention files (Claude + agy)

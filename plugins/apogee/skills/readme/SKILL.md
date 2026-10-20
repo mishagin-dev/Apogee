@@ -351,6 +351,6 @@ When rewriting or validating, flag these:
 
 ## See Also
 
-- `/apogee:doc` — professional human-facing project documentation (different scope — guides/API docs, not the README)
+- `/apogee:public-docs` — professional human-facing project documentation (different scope — guides/API docs, not the README)
 - `/apogee:review-work` — the multi-agent review used in Step 5
 - `/apogee:second-opinion` — independent `agy` review, fallback for Step 5

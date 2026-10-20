@@ -7,7 +7,7 @@ argument-hint: "[--deploy] [task]"
 
 Load core context for the project.
 
-**Usage:** `/prime [--deploy] [task]`
+**Usage:** `/apogee:prime [--deploy] [task]`
 
 ## Routing
 
@@ -15,9 +15,9 @@ Parse `$ARGUMENTS` as whitespace-separated tokens:
 1. **Flag:** if any token equals `--deploy` (case-insensitive), set `deploy_mode = true` and remove it from the token list.
 2. **Task:** remaining tokens are the user's task (if any).
 
-`--deploy` may appear anywhere in the arguments (e.g. both `/prime --deploy` and `/prime fix login bug --deploy` are valid).
+`--deploy` may appear anywhere in the arguments (e.g. both `/apogee:prime --deploy` and `/apogee:prime fix login bug --deploy` are valid).
 
-**Why the flag exists:** `deployment-infrastructure.md` is operational reference (accounts, secrets, hosting, CI/CD) — stable and often large. Loading it on every routine `/prime` wastes context. Read it only when actively touching deploy/infra/CI work.
+**Why the flag exists:** `deployment-infrastructure.md` is operational reference (accounts, secrets, hosting, CI/CD) — stable and often large. Loading it on every routine `/apogee:prime` wastes context. Read it only when actively touching deploy/infra/CI work.
 
 **Why `progress.md` is conditional too:** it's "what's been happening" — recent changes, known issues/blockers, next-step framing. That's exactly what you need to decide *what* to work on next — and irrelevant noise once a task is already specified. A given task needs orientation (what this project is, how it's structured), not a status report.
 
@@ -25,6 +25,9 @@ Parse `$ARGUMENTS` as whitespace-separated tokens:
 
 ## Files to load (parallel — single message, multiple Read calls)
 
+0. `docs/apogee/README.md` — the index of the working memory (which optional directories and
+   files exist: domain notes, design system, research, prompts). Small; always load it. If it is
+   still the scaffold stub, that only means nothing beyond `ai-context/` exists yet.
 1. `docs/apogee/ai-context/spec.md`
 2. `docs/apogee/ai-context/project-structure.md`
 3. *(only if no task was given in `$ARGUMENTS`)* `docs/apogee/ai-context/progress.md`
@@ -39,5 +42,7 @@ After reading, briefly confirm:
 - Current status and recent progress, immediate priorities or blockers — *only if `progress.md`
   was actually loaded (i.e. no task was given); don't claim to know this when it wasn't read*
 - Whether `--deploy` was active (or note it was skipped if the user might want infra context)
+- Anything from the `docs/apogee/README.md` index that is relevant to the task (a domain note, the
+  design system), so the user knows it was seen
 
 Then process the user's request: $ARGUMENTS

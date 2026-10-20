@@ -11,7 +11,7 @@
 - **Decompose complex work**: split a complex task or a batch of bugs into separate, focused units of work (in git-flow projects, one `feature/`/`bugfix/` branch each) instead of one big change. Run them sequentially when they touch overlapping files, or in parallel when their file sets are disjoint. State the split and the chosen order before starting. When a `feature/`/`bugfix/` branch's work is complete, finish it through `/apogee:merge` (it runs the docs/clean-tree guardrails, then delegates to the git-flow finish) — not hand-rolled merges; `release`/`hotfix` finish only on explicit request.
 - **Always ask before**: breaking changes, major architecture decisions, deleting files.
 - **Stop-and-Replan Rule**: If an approach fails or you discover unexpected complexity, stop and reassess rather than pushing through.
-- **Use available skills proactively**: `/apogee:review-work` for code review, `/apogee:update-docs` after significant changes.
+- **Use available skills proactively**: `/apogee:review-work` for code review, `/apogee:update-docs` after significant changes, then `/apogee:public-docs update` if the project has human-facing docs declaring `sources:`.
 - **Context7 first**: When working with external libraries, check Context7 for current documentation before relying on training data.
 - **JetBrains IDE tools** (only when `mcp__idea__*` tools are listed): load one with `ToolSearch("select:mcp__idea__<tool>")` before calling it, and reach for them only where the shell has no equivalent — inspections (`get_file_problems`, `get_inspections`), rename across references, call graphs, run configurations. For text and symbol search a bounded grep is cheaper; keep using it. Ignore entirely when no JetBrains IDE is open.
 - **Language split**: user-facing dialogue in your working language; everything else — code, identifiers, comments, commit messages, docs, branch names, and anything sent to external tools (agy / CLIs) — in **English**. The `apogee:git-commit` skill is the canonical example (commit messages always English).
@@ -79,6 +79,7 @@ Example:
 | Code review | `/apogee:review-work` skill |
 | Second opinion | Ask for "second opinion" / "ask agy" (runs the `agy` CLI) |
 | Documentation update | `/apogee:update-docs` skill |
+| Human-facing docs under `docs/` | `/apogee:public-docs` (gen / update / validate) |
 
 ## 6. Coding Standards
 

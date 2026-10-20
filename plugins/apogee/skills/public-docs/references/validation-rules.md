@@ -12,6 +12,7 @@ no longer does is worse than no doc.
 | Internal links resolve | Every relative `.md` link points to an existing file/anchor | CRITICAL |
 | Required sections present | A reference doc has Overview + Usage (or an explicit reason it doesn't) | MEDIUM |
 | No stale claims | "as of <date>" / "Status: X" lines are recent and still true | MEDIUM |
+| `sources:` paths exist | Every path in a doc's `sources:` list still exists in the repo | MEDIUM |
 | No hardcoded local paths | No `/Users/...`, `/home/...` absolute paths in committed docs | LOW |
 
 ## Signpost rules
@@ -32,7 +33,7 @@ CRITICAL: Broken references (2)
 CRITICAL: Broken links (1)
    docs/index.md -> missing.md (not found)
 MEDIUM: Stale claims (1)
-   docs/code-map.md -> "as of 2024-01" (8 months old)
+   docs/architecture.md -> "as of 2024-01" (8 months old)
 ```
 
 ## Anti-patterns

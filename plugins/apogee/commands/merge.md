@@ -96,6 +96,7 @@ From the top-level dirs touched (Pre-flight step 4 command), map to docs that mi
 | Top-level dir touched | Docs to consider |
 |---|---|
 | Any code dir | `docs/apogee/ai-context/*.md`, root `CLAUDE.md` |
+| Any code dir, when `docs/**/*.md` declare `sources:` | those public docs, via `apogee:public-docs update` |
 | `assets/` (if present) | `assets/CLAUDE.md` |
 | Other top-level dirs | their local `CLAUDE.md` if one exists |
 
@@ -124,6 +125,12 @@ For monorepos with per-product subdirs (e.g., `ProductA/`, `ProductB/`), map eac
      - **(c)** Cancel entirely.
 
      **Wait for user choice. Do NOT auto-invoke `/apogee:update-docs`.** Merge is semi-destructive; this is a deliberate exception to the usual "skip redundant confirmation" preference.
+
+4. **Public docs.** If any `*.md` under the docs location declares `sources:` overlapping the
+   branch's changed files and was not itself touched on the branch, run `apogee:public-docs
+   update` (it refreshes only the affected docs and commits them). This is cheap and reversible,
+   so it runs in both modes without asking; a project with no `sources:` docs gets a one-line
+   no-op.
 
 ---
 

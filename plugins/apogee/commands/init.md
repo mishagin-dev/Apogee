@@ -76,6 +76,10 @@ do by hand: the plugin's SessionStart hook re-asserts the AI-tooling exclude lis
 submodule at the start of each session, so a submodule `CLAUDE.md` created here stays out of git
 from the next session on. Do not verify it, do not stage it, do not add it to `.gitignore`.
 
+**Index.** `docs/apogee/README.md` is the index `/apogee:prime` reads. Drop its scaffold sentinel
+and list whatever already exists under `docs/apogee/` beyond `ai-context/` (one line each); leave
+the optional-directories table as guidance.
+
 **Finish.** Load the freshly written core docs (as `/apogee:prime` would) so the session continues
 primed, then summarize what was created vs skipped (and any submodules left untouched).
 ---
