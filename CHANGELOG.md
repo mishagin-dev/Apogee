@@ -4,6 +4,43 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.1] - 2026-10-21
+
+The first live run of the 4.0 work loop, in a sandbox project, found three defects; this release
+fixes them and keeps the sandbox for the next runs.
+
+### Fixed
+
+- **Branches merged unreviewed.** `review-work` read only `git diff HEAD`, which is empty at
+  `/apogee:finish` because every step is already committed. It now reviews the whole branch
+  (`develop...HEAD`, or `main...HEAD` on a hotfix), passing that explicit range to `/code-review`
+  (whose default target skips commits already pushed, and `/apogee:start` publishes the branch) and
+  waiting for its background findings. It runs as one loop: tests of the change, review, fixes
+  committed on the branch, tests again, at most two repair rounds. The rules audit gains a
+  SIMPLICITY category. `/apogee:finish` calls it with the branch base and only re-tests if code was
+  committed afterwards.
+- **The full suite ran on every finish.** 4.0.0 turned the 3.x rule "full suite only before a
+  release or when asked" into "before a finish or a release". The agent now runs the tests that
+  cover its own change, at `finish` and in `run-plan`; the full suite runs in the release
+  preparation and in CI. The scaffold Testing section asks for the targeted command first.
+- **`git-commit` left a message file outside the project.** Its `f=$(mktemp) … git commit -F "$f"`
+  pattern starts with an assignment, matches no permission rule, and in a headless run made the
+  agent write the message next to the project. The skill now validates and commits from a quoted
+  heredoc (`git commit -F -`), and addresses its scripts through `CLAUDE_PLUGIN_ROOT`.
+
+### Changed
+
+- `/apogee:readme` checks a README with its own independent fact-and-quality agent instead of
+  `review-work`, which reviews code. `RULES.md` and `plan-feature` no longer ask for a separate
+  review: it is part of `/apogee:finish`.
+
+### Added
+
+- `tests/sandbox/make-project.sh` builds a throwaway Apogee project (bare remote, `main` +
+  `develop`, git-flow, `br`, a small unittest module, the scaffold) with the marketplace copy of the
+  plugin disabled, for live runs with `claude --plugin-dir plugins/apogee`. It never touches the
+  plugin registry.
+
 ## [4.0.0] - 2026-10-21
 
 A major release with two breaking changes. Every unit of work now opens with `/apogee:start` and
