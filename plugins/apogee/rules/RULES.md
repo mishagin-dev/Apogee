@@ -57,6 +57,23 @@ project's `CLAUDE.md` overrides anything here; it holds the project's own facts 
 | Second opinion | `/apogee:second-opinion` (`agy`) |
 | Agent context / human docs | `/apogee:update-docs` / `/apogee:public-docs` |
 
+## Shell output
+
+Every line a command prints lands in the context. Ask for what you need, not for everything.
+
+- **Filter first, then bound.** Narrow with the tool's own options (`--oneline`, `--stat`,
+  `--name-only`, `-n N`) or `grep -n <pattern>`; `wc -l` before dumping something of unknown size.
+  A blind `| head` returns an arbitrary slice.
+- **Keep the end of builds, tests and logs.** Errors come last: `| tail -n 100`, not `| head`.
+  Logs: `journalctl -u <svc> -n 100 --no-pager`, `docker logs --tail 100 <container>`,
+  `kubectl logs --tail=100 <pod>`.
+- **A pipe must not hide a failure.** In `cmd | tail`, the exit status is `tail`'s. When the result
+  matters (tests, builds, migrations), run with `set -o pipefail`, or write the full output to a
+  temp file, check the exit code, then read the part you need.
+- **Large files**: Read with `offset`/`limit`, or `grep -n` to find the lines first; not `cat`.
+- **Non-interactive by default**: `--no-pager` (or `PAGER=cat`) where a tool may page; `-q` /
+  `--quiet` only where it drops progress noise, not errors.
+
 ## Code
 
 - Follow the project's existing style, naming and idioms.
