@@ -47,7 +47,7 @@ Skip for `research`.
      branch; commit them there (`apogee:git-commit`) or stash them deliberately first.
    - On another work branch with a clean tree: proceed.
 3. **Open work.** `git branch --list 'feature/*' 'bugfix/*' 'hotfix/*'`. Any open → list them in the
-   report. Parallel feature/bugfix branches are fine when their file sets are disjoint. A second
+   report. Parallel feature/bugfix branches are fine when their file sets are disjoint (RULES.md "Decompose"). A second
    open **hotfix** → STOP: git-flow allows one at a time; finish the open one first.
 4. **Fresh base.** If a remote exists: `git fetch origin`, then fast-forward the base branch
    (`develop` for feature/bugfix, the production branch for hotfix) when it is checked out and
@@ -77,7 +77,7 @@ this branch; the version bump and CHANGELOG are `/apogee:finish`'s job, not the 
 ## Open: research
 
 No branch, no git: the output lands in `docs/apogee/research/`, which is local-only (a
-ceremony-free deliverable, CLAUDE.md §1). Create
+ceremony-free deliverable, RULES.md "Files"). Create
 
 ```
 docs/apogee/research/<YYYY-MM-DD>-<slug>.md

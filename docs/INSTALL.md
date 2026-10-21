@@ -61,7 +61,8 @@ What it does:
 
 - **GIT INIT (auto):** if `TARGET` isn't a git repo yet, runs `git init` first — the
   `.git/info/exclude` writes below need a repo to write into. Skip with `--no-git-init`.
-- **COPY (content):** `CLAUDE.md` + `GEMINI.md` at the project root (never clobbered if present);
+- **COPY (content):** a project-only `CLAUDE.md` (Apogee's general rules come from the plugin, ADR
+  0009) + `GEMINI.md` at the project root (never clobbered if present);
   `docs/apogee/README.md` (the index `/apogee:prime` reads), `docs/apogee/ai-context/*.md`, and the
   empty working-memory directories `docs/apogee/{domain,design,diagrams,research,prompts,reports}/`
   so the layout is visible from day one. Existing files are preserved.

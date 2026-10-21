@@ -30,6 +30,9 @@ Read `docs/ARCHITECTURE.md` first.
   `language` setting), including the captions on tool calls; code,
   comments, commit messages, docs, branch names, and anything sent to external tools (`agy`) — in
   **English**. An English-heavy context is never a reason to answer in English.
+- **Toolkit rules live in the plugin** (ADR 0009): `plugins/apogee/rules/RULES.md` (work loop,
+  git, files, tools, code) and `SOUL.md` (tone, honesty, restraint), injected at session start.
+  `scaffold/CLAUDE.md` is a project-only template; never put a general rule there.
 - **Machinery vs content vs preferences** — respect the boundary (ADR 0002): hooks/skills go in
   `plugins/apogee/`; project templates in `scaffold/`; personal prefs stay in `~/.claude/settings.json`.
 
@@ -47,7 +50,7 @@ Read `docs/ARCHITECTURE.md` first.
   finish with open epic steps). Everything else is
   context — nudges and injected directives. Before adding a gate, answer both questions ADR 0005
   used: *is the outcome irreversible*, and *is a human present to catch it*. If either is "no", the
-  rule belongs in a SKILL.md or `scaffold/CLAUDE.md`, not in a hook.
+  rule belongs in a SKILL.md or `plugins/apogee/rules/RULES.md`, not in a hook.
 - Every hook must self-gate (no-op without `.beads/` / git-flow) and fail open. The
   one exception is Rule 2b, which fails *closed* precisely because it only runs unattended.
 - After editing hooks, run `bash scripts/validate.sh` (py/sh/json syntax, `${CLAUDE_PLUGIN_ROOT}`

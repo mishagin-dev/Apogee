@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 """
-SessionStart hook — keep AI tooling out of git, and auto-prime Apogee-managed projects.
+SessionStart hook — inject Apogee's rules, keep AI tooling out of git, auto-prime managed projects.
 
-Two jobs, both silent on success:
+Three jobs:
+
+0. **Rules injection.** Apogee's general rules (`rules/RULES.md`) and tone (`rules/SOUL.md`) live
+   in the plugin, not in the project's `CLAUDE.md`, so they update with the plugin and a project's
+   `CLAUDE.md` is never rewritten on update (ADR 0009). They are injected as additionalContext on
+   every session start, including `resume`, `clear` and `compact`, so a compacted session keeps
+   them. Gated on a `docs/apogee/` directory in cwd or an ancestor (a project set up with Apogee,
+   or one of its submodules); elsewhere the plugin stays silent.
 
 1. **Exclude maintenance.** The toolkit's decision is that a repository holds code and project
    documentation only: `CLAUDE.md`, `GEMINI.md`, `docs/apogee/`, `.claude/`, `.beads/` are
@@ -37,6 +44,12 @@ PRIME_DIRECTIVE = (
 ACTIVE_SOURCES = {"startup", "clear"}
 
 EXCLUDE_LIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "exclude-list.txt")
+RULES_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "rules"))
+RULES_FILES = ("SOUL.md", "RULES.md")
+RULES_PREAMBLE = (
+    "Apogee toolkit rules, delivered by the apogee plugin at session start. The project's own "
+    "CLAUDE.md overrides them wherever the two disagree."
+)
 EXCLUDE_COMMENT = "# Apogee: AI tooling is local-only by decision (see exclude-list.txt in the plugin)"
 
 
@@ -103,6 +116,30 @@ def maintain_excludes(cwd):
         ensure_excluded(sub, patterns)
 
 
+def has_apogee_docs(start: str) -> bool:
+    """True if `start` or an ancestor holds `docs/apogee/` (a project set up with Apogee)."""
+    dir_ = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(dir_, "docs", "apogee")):
+            return True
+        parent = os.path.dirname(dir_)
+        if parent == dir_:
+            return False
+        dir_ = parent
+
+
+def load_rules() -> str:
+    """SOUL.md + RULES.md from the plugin, preamble first; '' if neither can be read."""
+    parts = []
+    for name in RULES_FILES:
+        try:
+            with open(os.path.join(RULES_DIR, name), encoding="utf-8") as f:
+                parts.append(f.read().strip())
+        except OSError:
+            continue
+    return (RULES_PREAMBLE + "\n\n" + "\n\n".join(parts)) if parts else ""
+
+
 def find_apogee_root(start: str) -> bool:
     """True if `start` or any ancestor is a Apogee project root."""
     dir_ = os.path.abspath(start)
@@ -127,15 +164,20 @@ def main() -> None:
 
     maintain_excludes(cwd)
 
-    if data.get("source", "") not in ACTIVE_SOURCES:
-        return
-    if not find_apogee_root(cwd):
+    context = []
+    if has_apogee_docs(cwd):
+        rules = load_rules()
+        if rules:
+            context.append(rules)
+    if data.get("source", "") in ACTIVE_SOURCES and find_apogee_root(cwd):
+        context.append(PRIME_DIRECTIVE)
+    if not context:
         return
 
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
-            "additionalContext": PRIME_DIRECTIVE,
+            "additionalContext": "\n\n".join(context),
         }
     }))
 
@@ -183,6 +225,16 @@ def _run_self_test() -> None:
         open(os.path.join(tmp, "src.py"), "w").close()
         r = subprocess.run(["git", "-C", tmp, "check-ignore", "-q", "src.py"], capture_output=True)
         check("git still sees src.py", r.returncode, 1)
+
+    rules = load_rules()
+    check("rules load (SOUL + RULES)", all(h in rules for h in ("how to be", "the rules")), True)
+    check("rules carry the override preamble", rules.startswith(RULES_PREAMBLE), True)
+    with tempfile.TemporaryDirectory() as tmp:
+        check("no docs/apogee -> no rules", has_apogee_docs(tmp), False)
+        sub = os.path.join(tmp, "app", "submodule")
+        os.makedirs(os.path.join(tmp, "docs", "apogee"))
+        os.makedirs(sub)
+        check("docs/apogee in an ancestor -> rules", has_apogee_docs(sub), True)
 
     print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
     raise SystemExit(0 if ok else 1)

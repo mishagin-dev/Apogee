@@ -6,7 +6,7 @@ column is satisfied) and **fail open** (any parse/IO error exits 0, never blocki
 
 **Only two hooks can block anything** — see [ADR 0005](decisions/0005-enforcement-safety-only.md) for
 why the other eleven gates were removed. The rest inject context: directives, reminders, priming.
-Rules that used to be enforced now live in `scaffold/CLAUDE.md` §1 and the skills; they are still
+Rules that used to be enforced now live in `plugins/apogee/rules/RULES.md` and the skills; they are still
 rules, they just aren't walls.
 
 ## Blocking hooks (2)
@@ -49,14 +49,14 @@ unattended loop has no such backstop, which is exactly the test ADR 0005 uses fo
 |---|---|---|---|
 | `PostToolUse` / `ExitPlanMode` | `br/br-capture-gate.py` | Record the approved plan in `br` (epic + steps); in git-flow repos, hand execution to `/apogee:run-plan`. Silent when `tool_response` says the plan was not accepted | `.beads/` |
 | `UserPromptSubmit` | `git/unfinished-branch-nudge.py` | Reminder (≤3/session) that a `feature/`/`bugfix/` branch is still open — or already merged into develop and just needs `/apogee:finish` to delete it | git-flow config + an open branch |
-| `SessionStart` | `core/apogee-session-start.py` | Re-asserts the AI-tooling exclude list (`config/exclude-list.txt`) in `.git/info/exclude` for the repo root and each first-level submodule, silently; then, on `startup`/`clear`, a directive to run `/apogee:prime` in a managed project | `docs/apogee/` for the excludes; `.beads/` + `docs/apogee/` for the directive |
+| `SessionStart` | `core/apogee-session-start.py` | Injects `rules/SOUL.md` + `rules/RULES.md` (every source: startup, resume, clear, compact, fork; ADR 0009); re-asserts the AI-tooling exclude list (`config/exclude-list.txt`) in `.git/info/exclude` for the repo root and each first-level submodule, silently; then, on `startup`/`clear`, a directive to run `/apogee:prime` in a managed project | `docs/apogee/` (here or in an ancestor) for the rules and excludes; `.beads/` + `docs/apogee/` for the directive |
 | `SessionStart`, `PreCompact` | `br/br-prime.sh` | `br robot-docs guide --no-db`, so beads context survives compaction | `.beads/` |
 | `SessionEnd` | `core/cleanup-session.sh` | Removes the per-session nudge counter | — |
 
 Retired context hooks: `idea/idea-nudge.py` (the JetBrains MCP server and JetBrains' own plugin
 describe their tools themselves; the one rule that mattered — load a schema with `ToolSearch`
-first, use the tools only where the shell has no equivalent — is a line in `scaffold/CLAUDE.md`
-§1) and `core/notify.sh` (Claude Code's own `inputNeededNotifEnabled` setting plays the cue).
+first, use the tools only where the shell has no equivalent — is a line in `rules/RULES.md`
+"Tools") and `core/notify.sh` (Claude Code's own `inputNeededNotifEnabled` setting plays the cue).
 
 ## Triggers (summary)
 

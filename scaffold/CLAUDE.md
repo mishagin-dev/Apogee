@@ -1,42 +1,18 @@
 # [Project Name]
 
-<!-- Customize this file for your project. This is the primary instruction set
-     that Claude Code reads at the start of every session. Keep it focused on
-     rules, decisions, and constraints — not documentation that belongs in
-     docs/apogee/. -->
+<!-- This file holds THIS project's facts, decisions and exceptions, and nothing else.
+     Apogee's general rules (work loop, git, files, tools, code standards) and its tone come from
+     the plugin itself (rules/RULES.md and rules/SOUL.md), injected at every session start, and
+     update with the plugin. Anything written here overrides them for this project.
+     Written by /apogee:init, kept current by /apogee:update-docs; Apogee never rewrites it on
+     update. -->
 
-## 1. Critical Rules
+## 1. Project
 
-- **Use Sub-Agents** for tasks spanning 3+ files or requiring parallel investigation.
-- **Decompose complex work**: split a complex task or a batch of bugs into separate, focused units of work (in git-flow projects, one `feature/`/`bugfix/` branch each) instead of one big change. Run them sequentially when they touch overlapping files, or in parallel when their file sets are disjoint. State the split and the chosen order before starting. **Every unit of work goes through `/apogee:start` and `/apogee:finish`**: `feature` and `bugfix` (branch off `develop`), `hotfix` (branch off `main`, finish prepared for the operator), `research` (a note in `docs/apogee/research/`, no branch). Never run raw `git flow … start|finish` or hand-rolled merges; releases are cut with `/apogee:release`.
-- **Always ask before**: breaking changes, major architecture decisions, deleting files.
-- **Stop-and-Replan Rule**: If an approach fails or you discover unexpected complexity, stop and reassess rather than pushing through.
-- **Use available skills proactively**: `/apogee:review-work` for code review, `/apogee:update-docs` after significant changes, then `/apogee:public-docs update` if the project has human-facing docs declaring `sources:`.
-- **Context7 first**: When working with external libraries, check Context7 for current documentation before relying on training data.
-- **JetBrains IDE tools** (only when `mcp__idea__*` tools are listed): load one with `ToolSearch("select:mcp__idea__<tool>")` before calling it, and reach for them only where the shell has no equivalent — inspections (`get_file_problems`, `get_inspections`), rename across references, call graphs, run configurations. For text and symbol search a bounded grep is cheaper; keep using it. Ignore entirely when no JetBrains IDE is open.
-- **Language split, two sides of one line.** *Talking to the user*: the language Claude Code is configured with (the `language` setting in `~/.claude/settings.json`; the user's own language if unset) — the reply itself, the one-line captions on tool calls and background tasks, questions, summaries. That is the operator's language, not the "working language" of the code, and an English-heavy context (tool output, docs, commit messages) is never a reason to drift. *Everything that lands on disk or goes to another tool*: English — code, identifiers, comments, commit messages, branch names, docs, `br` issues, and anything sent to `agy` or other CLIs. The `apogee:git-commit` skill is the canonical example (commit messages always English).
-- **Git, commits**: committing finished work on a `feature/`/`bugfix/` branch through the `apogee:git-commit` skill is **pre-authorized in this project — do not ask**. Never `git commit -m` ad hoc; stage only the files the change is about; never force-add ignored files. Never commit on `main`/`develop`. Run the branch lifecycle through the `apogee:git-flow` skill.
-- **Git, the wall (ADR 0007)**: `develop` and `feature/`/`bugfix/` branches are yours to push, publish and delete on the remote without asking; after `git flow feature|bugfix finish`, push `develop`. In a superproject, push a submodule's branch before the superproject's. The production branch and tags are not yours: no push to `main`, no `--tags`, no `git tag`, no merge into `main`, no `git flow release|hotfix finish`. A hook refuses all of these; there is no phrasing or workaround that unlocks them, and that is the design. Releases: `/apogee:release` prepares, the operator finishes in a terminal.
-- **AI tooling is local-only, by decision, not by accident.** The repository holds code and project documentation only. `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `docs/apogee/`, `.claude/` (settings, plans, memory, project skills) and `.beads/` are personal working state, kept out of git through `.git/info/exclude`, which Apogee maintains for this repo and each submodule. Never check whether these paths are tracked, never stage them, never propose adding them to `.gitignore`, never list them in a commit scope or a merge summary. If one of them ever shows up in `git status`, that is an Apogee setup defect: say so in one line and carry on; do not commit it.
-- **Track work in `br`** (beads projects only — those with a `.beads/` dir): before editing code, the work should exist as an issue. Claim the step you're starting (`br update <id> --claim --actor "${BR_ACTOR:-assistant}"`), close it when it's done, and link one epic to one `feature/`/`bugfix/` branch via the epic's `external_ref`. `br` is the project's memory across sessions — a session that ends with code no issue reflects has lost that work to the next session. Nothing blocks you if you skip this; it degrades silently, which is exactly why it's written here.
-- **Git-ignored deliverables are ceremony-free**: a report, research note, or other output written to a **git-ignored path** (a folder in `.gitignore`, e.g. `reports/`, scratch, build outputs) is a deliverable-on-disk — it needs **no** br step, **no** git-flow branch, and **no** commit. Just write the file and stop; don't force it into the workflow or try to commit it.
-- **Work honestly**: study existing code and reuse utilities before writing new ones; surface problems and trade-offs openly — never hide failures.
+<!-- One paragraph: what this is, who uses it, what must never break. Details belong in
+     docs/apogee/ai-context/spec.md, not here. -->
 
-## 2. Communication Style
-
-- Tone: professional, direct — courteous, not clinical. No emotional theatrics, no sycophancy.
-- Acknowledge basic social exchanges (thanks, greetings) with a brief, genuine reply — courtesy
-  isn't filler.
-- No unearned praise on the user's ideas or questions, no apologies or self-deprecation, no
-  conversational padding ("of course!", "great question!", "hope this helps") inside
-  task-focused responses.
-- No explaining the obvious.
-- Response shape: fact → analysis → solution — no preamble, no unrequested closing summary.
-- Error/bug reports: cause → location → fix. No commentary on fault or emotional state.
-- Interpret the user's questions literally — don't assume context that isn't stated.
-- Don't propose alternative architectures unless asked.
-
-## 3. Operator Model
+## 2. Operator Model
 
 <!-- Describe how you and Claude collaborate. Optional but valuable for
      solo / AI-agent-driven workflows.
@@ -49,10 +25,10 @@ Example:
 - **Evaluate by maintenance burden, not build effort.** "Too much code for
   a solo dev" is not a valid critique — pick libraries and architectures on
   technical merit.
-- **Boundaries:** always ask before git commits, breaking changes, deleting
-  files, and architecture decisions worth ≥1 day of rework to undo. -->
+- **Boundaries:** always ask before breaking changes, deleting files, and
+  architecture decisions worth ≥1 day of rework to undo. -->
 
-## 4. Key Architecture Decisions
+## 3. Key Architecture Decisions
 
 <!-- Document settled decisions here so Claude doesn't relitigate them.
      Include brief rationale for each. -->
@@ -67,55 +43,20 @@ Example:
 - **State management**: Server-side only. Why: single source of truth, no sync bugs.
 -->
 
-## 5. Tool Usage Rules
+## 4. Project Rules
 
-<!-- Map tasks to the correct tools for your project. -->
+<!-- Rules specific to this project, including deliberate exceptions to Apogee's RULES.md or
+     SOUL.md (they win over the plugin's rules on conflict). Leave empty if there are none.
 
-| Task | Use This |
-|------|----------|
-| Project onboarding / fill docs | `/apogee:init` (run once on a new project) |
-| Open a unit of work | `/apogee:start [feature\|bugfix\|hotfix\|research] <slug>` |
-| Close it | `/apogee:finish` |
-| Cut a release | `/apogee:release [major\|minor\|patch]` |
-| Library docs lookup | Context7 plugin (check FIRST) |
-| IDE inspections / rename / run configs (JetBrains) | `mcp__idea__*` via `ToolSearch` (when the IDE is open) |
-| Code review | `/apogee:review-work` skill |
-| Second opinion | Ask for "second opinion" / "ask agy" (runs the `agy` CLI) |
-| Documentation update | `/apogee:update-docs` skill |
-| Human-facing docs under `docs/` | `/apogee:public-docs` (gen / update / validate) |
-
-## 6. Coding Standards
-
-<!-- Keep only standards that are non-obvious or project-specific.
-     Don't document standard language conventions — Claude already knows those. -->
-
-- Follow the project's existing style, naming, and idioms; don't introduce new conventions without need.
-- Comments only where the code cannot speak for itself (constraints, non-obvious decisions) — no narrating comments.
-- Comment register: neutral, technical, factual — the tone a senior engineer leaves in review, not a sticky note. No slang, ALL-CAPS shouting, exclamation marks, or comments addressed at the reader. State the constraint once, plainly, and move on. Comments are English only, same as identifiers and commit messages (§1).
-- No dead code, commented-out blocks, or unused imports in the result.
-- KISS: pick the simplest solution that satisfies the requirement now; flat structure over nested unless nesting improves readability.
-- YAGNI: no speculative functionality, config, or flags without a current requirement; extensibility is added only once a real need is confirmed.
-- No overengineering: no design patterns or extra abstraction layers (interfaces, DI, wrappers) unless they remove duplication/complexity that exists now; no premature optimization — working and clear first, optimize only against a measured problem; no generic solution built for a single use case.
-- Quality priority, highest to lowest: readability, directness (minimal indirection/magic), minimalism, consistency with existing project conventions. Prefer whichever option can be explained in one sentence.
-- Add type hints/annotations to new function and method signatures; don't leave new public APIs untyped.
-- Handle errors deliberately: catch only the specific exceptions/error cases you expect, and either recover, propagate, or log with context — never a silent bare `except`/`catch` that swallows the error.
-- Decompose a function once it takes on more than one responsibility or grows too long/deeply nested to read in one pass; extract named helpers over adding another branch.
-- Don't duplicate a constant, parsing rule, or validation set in two places — two independent sources of the same set is a bug waiting to diverge; share one definition.
-- Bash scripts: start with `set -euo pipefail` unless a script has a deliberate, commented reason to run without it (e.g. a health-check script that must keep going after a stage fails).
-
-<!--
 Example:
-- TypeScript files: kebab-case (e.g., `rate-limiter.ts`)
-- Swift files: PascalCase (e.g., `SettingsView.swift`)
-- Error responses: `{ success: false, error_code: 'CODE', message: '...' }`
-- All time logic in PostgreSQL, never client-side
+- Commit only when asked in this repo (overrides the pre-authorized commits).
+- Never touch `legacy/`; it is frozen until the migration ADR lands.
+- Swift files: PascalCase.
 -->
 
-## 7. Testing
+## 5. Testing
 
 <!-- Document your test commands and when to run them. -->
-
-- Run only targeted tests for what you changed during development; run the full suite only before a release or when explicitly asked.
 
 <!--
 Example:
@@ -134,7 +75,7 @@ npm run test:e2e      # E2E tests (~20s, hits network)
 | Before deployment | All suites |
 -->
 
-## 8. Privacy & Security
+## 6. Privacy & Security
 
 <!-- Document non-negotiable security rules for your project. -->
 
@@ -148,7 +89,7 @@ Example:
 - RLS enabled on all database tables
 -->
 
-## 9. Bilingual Documentation
+## 7. Bilingual Documentation
 
 <!-- Only fill this in if the project ships user-facing docs in more than one
      language. Applies to the project's own docs (README.md, docs/*.md) —

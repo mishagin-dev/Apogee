@@ -143,8 +143,9 @@ Flags pass through the one-liner with `bash -s --`, e.g. `… | bash -s -- --per
 
 In Claude Code: `/plugin marketplace update apogee`, then `/reload-plugins`. Hook matchers are
 read when a session starts, so start a new session (or reload) after updating. Existing
-`CLAUDE.md` and docs in your projects are never overwritten; re-running the installer in a project
-adds template files that are new since you installed.
+`CLAUDE.md` and docs in your projects are never overwritten, and they don't need to be: Apogee's
+rules arrive with the plugin. A project set up before 4.0 runs `/apogee:init --migrate` once to
+move its old toolkit sections out of `CLAUDE.md`.
 
 </details>
 
@@ -190,8 +191,11 @@ epics by default (`max-epics:` to change); run it again to continue.
 ## How it works
 
 Three layers with a hard boundary. The **plugin** (hooks and skills) is installed once and only
-enabled per project, so an update reaches every project at once. The **content** (`CLAUDE.md`,
-`docs/apogee/`) is copied into each project and owned by it, local-only. Your **preferences**
+enabled per project, so an update reaches every project at once; it also carries Apogee's rules
+(`RULES.md`) and tone (`SOUL.md`), injected at the start of every session. The **content**
+(`CLAUDE.md`, `docs/apogee/`) is copied into each project and owned by it, local-only: `CLAUDE.md`
+holds only the project's facts, decisions and exceptions, overrides the plugin's rules, and is
+never rewritten by an update. Your **preferences**
 (language, model, effort) stay in your global Claude Code settings.
 
 <details>
@@ -211,7 +215,8 @@ Two hooks can refuse an action, both guarding something that cannot be undone:
 
 Everything else injects context: the reminder to run `/apogee:prime`, keeping AI files out of
 git, recording an approved plan in `br`, a reminder about open branches. Rules that are not
-irreversible live in `CLAUDE.md` and the skills, where a human can override them.
+irreversible live in `RULES.md` and the skills, where a project's `CLAUDE.md` or a human can
+override them.
 Catalog: [docs/HOOKS.md](docs/HOOKS.md).
 
 </details>
