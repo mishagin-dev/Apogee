@@ -19,10 +19,11 @@
 > project. It makes no network calls of its own. It never commits its files to your repository:
 > everything it writes is kept out of git through `.git/info/exclude`. Agents it guides can push
 > `develop` and work branches, but a hook refuses anything that would reach `main` or create a tag.
-> Disable it with `/plugin disable apogee@apogee`; full removal is [three steps](#uninstall).
+> Disable it with `/plugin disable apogee@apogee`; full removal is [two steps](#uninstall).
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/mishagin-dev/Apogee/main/install.sh | bash
+```text
+/plugin marketplace add mishagin-dev/Apogee
+/plugin install apogee@apogee
 ```
 
 ---
@@ -41,10 +42,10 @@ of work through one entry and one exit on top of [git-flow](https://nvie.com/pos
 (work branches merge into `develop`; `main` only receives releases), with issues tracked in
 [`br`](https://github.com/Dicklesworthstone/beads_rust), a local issue tracker for agents.
 
-It is a fork of the [Claude Code Development Kit](https://github.com/peterkrueck/Claude-Code-Development-Kit),
-repackaged as a plugin instead of per-project file copies, with the git workflow and local-only
-AI context added on top. It is a personal toolkit with opinionated
-dependencies (git-flow AVH, the `br` tracker); read it as such.
+It started from the [Claude Code Development Kit](https://github.com/peterkrueck/Claude-Code-Development-Kit)
+and keeps a couple of its ideas (context docs loaded at session start, a review step before
+merging); the rest is its own. It is a personal toolkit with opinionated dependencies (git-flow
+AVH, the `br` tracker); read it as such.
 
 ---
 
@@ -90,31 +91,32 @@ Requirements: Claude Code, `git`, `jq`. Optional, each unlocks one part: [git-fl
 (the branch workflow), [`br`](https://github.com/Dicklesworthstone/beads_rust) (the issue tracker and `/apogee:run-plan`),
 `agy` (independent second opinion), `gh` (publishing releases).
 
-From the project you want to set up:
+**1. The plugin**, once per machine, from the GitHub marketplace in a Claude Code session:
+
+```text
+/plugin marketplace add mishagin-dev/Apogee
+/plugin install apogee@apogee
+/reload-plugins
+```
+
+**2. Each project**, from its directory:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mishagin-dev/Apogee/main/install.sh | bash
 ```
 
-It clones the toolkit into `~/.apogee`, registers that clone as the `apogee` plugin marketplace
-and sets up the current project. Restart Claude Code (or `/reload-plugins`). Only if the installer
-printed a NOTE that it could not reach the `claude` CLI, register it once in a session:
-
-```text
-/plugin marketplace add ~/.apogee
-/plugin install apogee@apogee
-/reload-plugins
-```
+It downloads the project templates to a temporary directory, copies them in, enables the plugin
+for the project, and removes the download. If step 1 was skipped and the `claude` CLI is on PATH,
+it registers the marketplace and installs the plugin itself.
 
 ### What it touches
 
 | Where | What | Reversible by |
 |---|---|---|
-| `~/.apogee/` | A clone of this repo, the source the plugin installs from | `rm -rf ~/.apogee` |
 | `~/.claude/settings.json` | `enabledPlugins["apogee@apogee"] = true`; with `--per-project`, `<project>/.claude/settings.json` instead | `/plugin disable apogee@apogee` |
 | Your project | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/` (index, four context docs, six empty working-memory dirs), `.claude/settings.local.json` (permission baseline, `plansDirectory`, `autoMemoryDirectory`) | delete them; none are tracked |
 | `.git/info/exclude` | Lines keeping the files above, plus `AGENTS.md`, `.claude/` and `.beads/`, out of git; never `.gitignore` | delete the lines |
-| Repo setup | `git init`, `br init` (`.beads/`), `git flow init -d` (a `develop` branch, `gitflow.*` config) if missing; `--no-git-init`, `--no-tracker-init` to skip | see Uninstall |
+| Repo setup | `git init -b main`, `br init` (`.beads/`), git-flow with `main` + `develop` (`gitflow.*` config) if missing; `--no-git-init`, `--no-tracker-init` to skip | see Uninstall |
 
 Hooks run locally on tool calls; none of them sends data anywhere. The permission baseline
 allows the plugin's own commands (`br`, `agy`, `git diff`, pushes of `develop` and work branches)
@@ -132,20 +134,17 @@ and denies destructive ones (`sudo`, `rm -rf`, `git push --force`, `git reset --
 ```
 
 Flags pass through the one-liner with `bash -s --`, e.g. `… | bash -s -- --per-project`.
-`APOGEE_HOME` overrides the clone location. Full reference: [docs/INSTALL.md](docs/INSTALL.md).
+`APOGEE_BRANCH` installs the templates from another branch. Full reference: [docs/INSTALL.md](docs/INSTALL.md).
 
 </details>
 
 <details>
 <summary><b>Update</b></summary>
 
-```bash
-git -C ~/.apogee pull
-```
-
-Then, in Claude Code: `/plugin marketplace update apogee` and `/reload-plugins`. Existing
-`CLAUDE.md` and docs in your projects are never overwritten; `sync.sh <project>` adds template
-files that are new since you installed.
+In Claude Code: `/plugin marketplace update apogee`, then `/reload-plugins`. Hook matchers are
+read when a session starts, so start a new session (or reload) after updating. Existing
+`CLAUDE.md` and docs in your projects are never overwritten; re-running the installer in a project
+adds template files that are new since you installed.
 
 </details>
 
@@ -156,7 +155,6 @@ files that are new since you installed.
    `.claude/settings.local.json` (or `.claude/` as a whole), `.beads/`, and the Apogee lines in
    `.git/info/exclude`. If setup initialised git-flow and you don't want it: `git config
    --remove-section gitflow.branch` and `--remove-section gitflow.prefix`, and delete `develop`.
-3. `rm -rf ~/.apogee`.
 
 ---
 

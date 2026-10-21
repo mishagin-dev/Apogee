@@ -4,52 +4,36 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/mishagin-dev/Apogee/main/install.sh | bash
 #
-# It clones (or updates) the Apogee repo into a stable home, then hands off to
-# setup.sh against the directory you ran it from:
-#   CLONE   — git clone the toolkit into ${APOGEE_HOME:-~/.apogee}. This clone is
-#             the local marketplace source; re-running the installer pulls latest.
-#   SET UP  — exec setup.sh <your-current-dir> [extra args]: scaffold the project
-#             content + enable the apogee plugin (globally by default).
+# The plugin itself comes from the GitHub marketplace (mishagin-dev/Apogee); updates arrive through
+# `/plugin marketplace update apogee`. This script only needs the repository for one thing: the
+# project templates (scaffold/) and setup.sh that copies them. It clones the repo into a temporary
+# directory, runs setup.sh against the directory you ran it from, and removes the clone.
 #
 # Pass setup.sh flags/target through the pipe with `bash -s --`:
 #   curl -fsSL …/install.sh | bash -s -- --per-project
 #   curl -fsSL …/install.sh | bash -s -- /path/to/project --no-scaffold
 #
-# Env overrides: APOGEE_HOME (clone dir), APOGEE_BRANCH (default: main).
+# Env overrides: APOGEE_BRANCH (default: main).
 #
 set -euo pipefail
 
 REPO="mishagin-dev/Apogee"
 BRANCH="${APOGEE_BRANCH:-main}"
-APOGEE_HOME="${APOGEE_HOME:-$HOME/.apogee}"
 INVOKED_PWD="$PWD"
 
-# ---- prereqs ----
 command -v git >/dev/null 2>&1 || { echo "git is required." >&2; exit 1; }
 command -v jq  >/dev/null 2>&1 || { echo "jq is required (setup.sh uses it)." >&2; exit 1; }
 
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
 echo "Apogee online installer"
-echo "  repo:         $REPO@$BRANCH"
-echo "  toolkit home: $APOGEE_HOME"
-echo "  project:      $INVOKED_PWD"
+echo "  repo:    $REPO@$BRANCH"
+echo "  project: $INVOKED_PWD"
 echo
 
-# ---- CLONE or UPDATE the toolkit (the local marketplace source) ----
-if [[ -d "$APOGEE_HOME/.git" ]]; then
-  echo "→ Updating existing toolkit clone…"
-  git -C "$APOGEE_HOME" fetch --depth 1 origin "$BRANCH"
-  if ! git -C "$APOGEE_HOME" diff --quiet || ! git -C "$APOGEE_HOME" diff --cached --quiet; then
-    echo "Uncommitted changes in $APOGEE_HOME — aborting update (commit/stash or remove the dir)." >&2
-    exit 1
-  fi
-  git -C "$APOGEE_HOME" reset --hard -q FETCH_HEAD
-else
-  echo "→ Cloning the toolkit…"
-  git clone --depth 1 --branch "$BRANCH" "https://github.com/$REPO.git" "$APOGEE_HOME"
-fi
-echo
+git clone --quiet --depth 1 --branch "$BRANCH" "https://github.com/$REPO.git" "$WORK/apogee"
 
-# ---- hand off to setup.sh against the invoking directory ----
-# Explicit target first so a bare run sets up $PWD (not the clone); any
-# user-supplied args (flags or an alternate target) still take effect after it.
-exec "$APOGEE_HOME/setup.sh" "$INVOKED_PWD" "$@"
+# Explicit target first so a bare run sets up $PWD; any user-supplied args (flags or an alternate
+# target) still take effect after it.
+"$WORK/apogee/setup.sh" "$INVOKED_PWD" "$@"
