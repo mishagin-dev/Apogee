@@ -25,15 +25,15 @@ driven by two scripts:
 - `scripts/check-message.sh` — validates a candidate message against every
   rule and exits non-zero with specific violations (the runnable harness).
 
-> Paths below are relative to this skill directory. Run them from the target
-> git repository (the scripts operate on the repo of the current directory).
+> Scripts are addressed through `${CLAUDE_PLUGIN_ROOT}`. Run them from the
+> target git repository (they operate on the repo of the current directory).
 
 ## Workflow (the agent path)
 
 1. **Gather context.** From inside the target repo:
 
    ```bash
-   bash scripts/gather-context.sh
+   bash "${CLAUDE_PLUGIN_ROOT}/skills/git-commit/scripts/gather-context.sh"
    ```
 
    It prints the scope in use (STAGED, or a fallback notice for ALL changes),
@@ -48,21 +48,32 @@ driven by two scripts:
 3. **Validate** before committing:
 
    ```bash
-   printf '%s' "$msg" | bash scripts/check-message.sh
+   bash "${CLAUDE_PLUGIN_ROOT}/skills/git-commit/scripts/check-message.sh" <<'EOF'
+   feat(scope): Summary line
+
+   Optional body, wrapped at 72.
+   EOF
    ```
 
    It prints `OK` (exit 0) when valid, or `FAIL: …` lines (exit 1) for each
    violation. Fix every failure and re-validate. `WARN` (subject 51–72 chars)
    does not block but prefer ≤ 50.
 
-4. **Create the commit** using a message file with `-F` (not `-m`, which
-   mangles the multi-line body):
+4. **Create the commit** with the message on stdin, `-F -` (not `-m`, which
+   mangles the multi-line body), using the exact text that passed validation:
 
    ```bash
-   f=$(mktemp); printf '%s\n' "$msg" > "$f"
-   git commit -F "$f"
-   rm -f "$f"
+   git commit -F - <<'EOF'
+   feat(scope): Summary line
+
+   Optional body, wrapped at 72.
+   EOF
    ```
+
+   No temporary file: the command starts with `git commit`, so a `Bash(git commit:*)`
+   permission rule covers it, nothing is left behind, and nothing is written outside the
+   project. (A `f=$(mktemp) …` one-liner starts with an assignment, matches no allow rule, and
+   in headless runs pushes the agent to write the message file somewhere it cannot clean up.)
 
 ## Rules
 
@@ -98,9 +109,10 @@ Falls back to session auth if provider is unavailable.
 
 ## Gotchas
 
-- **Use `git commit -F <file>`, not `-m`.** `-m` collapses the multi-line
-  body and breaks 72-column wrapping. The temp-file + `-F` path preserves the
-  message exactly (verified: `git log -1 --format=%B` returns it intact).
+- **Use `git commit -F -` with a quoted heredoc, not `-m`.** `-m` collapses the
+  multi-line body and breaks 72-column wrapping. `-F -` reads the message from
+  stdin exactly (verified: `git log -1 --format=%B` returns it intact). Quote the
+  heredoc marker (`<<'EOF'`) so `$` and backticks in the message stay literal.
 - **`gather-context.sh` won't see untracked files.** `git diff` ignores them,
   so the fallback covers only *modified tracked* files. New files must be
   `git add`-ed first; the script prints the exact `git add` lines for them.
@@ -120,7 +132,7 @@ Falls back to session auth if provider is unavailable.
 | `FAIL: subject must match …` | Add a valid `type` prefix from the allowed list. |
 | `FAIL: subject is N chars; hard cap is 72` | Shorten the subject; move detail to the body. |
 | `FAIL: message contains non-ASCII characters` | Replace the flagged characters (em-dash, Cyrillic, smart quotes) with ASCII. |
-| Body merged into one line after commit | You used `-m`; recommit with the `-F` temp-file pattern. |
+| Body merged into one line after commit | You used `-m`; amend with `git commit --amend -F - <<'EOF'`. |
 
 ## No hook backs this
 
@@ -129,6 +141,6 @@ There used to be a PreToolUse hook denying `git commit -m` / `-am` / bare
 removed it: a badly-formatted commit message is a `git commit --amend` away
 from fixed, and the rule was already stated three times in this file.
 
-So the `-F <file>` pattern in step 4 of the Workflow is now a convention you
+So the `-F -` pattern in step 4 of the Workflow is now a convention you
 follow, not one you are forced into. Follow it anyway — `-m` collapses the
 multi-line body, which is the actual reason for the rule.

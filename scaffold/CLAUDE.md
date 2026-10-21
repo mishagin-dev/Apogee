@@ -56,14 +56,15 @@ Example:
 
 ## 5. Testing
 
-<!-- Document your test commands and when to run them. -->
+<!-- How to run the tests. The agent runs the targeted form on its own work (every feature,
+     bugfix and hotfix, and before /apogee:finish); the full suite runs in /apogee:release and in
+     CI. List the targeted form first. -->
 
 <!--
 Example:
 ```bash
-npm test              # All tests
-npm run test:unit     # Unit tests only (~1s)
-npm run test:e2e      # E2E tests (~20s, hits network)
+npx vitest run <path>   # Targeted: tests for what you changed (finish)
+npm test                # Full suite (release gate, CI)
 ```
 
 **When to run which tests:**

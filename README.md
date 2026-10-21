@@ -70,7 +70,7 @@ the steps of one branch):
 > /apogee:finish
   Review: 0 high, 1 low (noted). Intent: MATCHES.
   Docs: spec.md updated; public docs: docs/export.md refreshed (sources: src/Export/).
-  Tests: symfony php bin/phpunit, 214 passed.
+  Tests of the change: tests/Export (12 passed). Full suite runs at release and in CI.
   Finished feature/invoice-csv-export into develop (6 commits), pushed develop, epic closed.
 ```
 
@@ -169,7 +169,7 @@ move its old toolkit sections out of `CLAUDE.md`.
 
 | Type | Opens | Finish does |
 |---|---|---|
-| `feature`, `bugfix` | A branch off a fresh `develop`, published, linked to a `br` epic | Review, docs, tests, merge into `develop`, push `develop` |
+| `feature`, `bugfix` | A branch off a fresh `develop`, published, linked to a `br` epic | Review, docs, tests of the change, merge into `develop`, push `develop` |
 | `hotfix` | A branch off `main` with the next patch version | Review, version bump, CHANGELOG, then hands you the finish commands |
 | `research` | A dated note in `docs/apogee/research/`, no branch | Checks the conclusion and sources, closes it, proposes the follow-up |
 
@@ -248,7 +248,7 @@ refreshes the ones whose sources changed.
 | `/apogee:start`, `/apogee:finish` | Open and close every unit of work (feature, bugfix, hotfix, research) |
 | `/apogee:release` | Prepare a release from `develop`; you run the finish |
 | `/apogee:run-plan` | Execute an approved `br` plan unattended, epic by epic |
-| `/apogee:review-work` | Built-in `/code-review` for bugs, plus a project-rules audit and an intent check |
+| `/apogee:review-work` | The review loop `finish` runs: tests of the change, `/code-review` for bugs, a rules audit and an intent check, fixes, tests again |
 | `/apogee:update-docs`, `/apogee:public-docs` | Agent context and human docs, respectively |
 | `/apogee:second-opinion` | An independent model via `agy` for contested decisions |
 | `/apogee:readme` | Write or validate a README like this one |

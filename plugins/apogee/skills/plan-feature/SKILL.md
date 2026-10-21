@@ -36,7 +36,7 @@ or known issues, and confirm it with the user before treating it as the feature 
 
 For concerns not directly in front of you — a third-party API/SDK, a platform capability, a library version question, or a cross-cutting code search — dispatch sub-agents in parallel. Treat training data as potentially stale, especially for fast-moving platforms, SDKs, and APIs. Context7 MCP first; WebSearch only if Context7 lacks coverage. For a genuinely deep external unknown that ad-hoc WebSearch can't settle — a new third-party integration, an unfamiliar protocol, a compliance/regulatory requirement — escalate to the `deep-research` skill **if it's available**. It's the top rung of the ladder, not a default: skip it for routine, code-adjacent lookups.
 
-For architecture decisions, state the tradeoff, not just the chosen option. For UI flows, plan how you'll verify the change end-to-end (manual browser test, simulator run, integration test — whatever applies). After implementing the code, but before final verification, run `/apogee:review-work` to catch bugs upfront.
+For architecture decisions, state the tradeoff, not just the chosen option. For UI flows, plan how you'll verify the change end-to-end (manual browser test, simulator run, integration test — whatever applies). The review and the tests of the change run inside `/apogee:finish`; don't plan a separate review step.
 
 Before exiting plan mode, invoke `/apogee:second-opinion` on the draft. You are the authority — the second model's role is to flag blind spots or alternatives worth considering, not to overwrite your judgment. Note what you took vs rejected, then exit plan mode with the synthesized plan.
 After the plan is approved: in a beads + git-flow project the plan-approval hook records it in

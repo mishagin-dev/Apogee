@@ -72,5 +72,5 @@ and `TOOL_LANG_OFF` were removed with the gates they disabled; nothing reads the
 ## Configuration
 
 None. `hooks/core/config/sensitive-patterns.json` is the scanner's pattern list; the former
-`pipeline.json` is gone — `/apogee:run-plan` takes its cap from `$ARGUMENTS` and its test gate from
-the project's `CLAUDE.md` Testing section.
+`pipeline.json` is gone — `/apogee:run-plan` takes its cap from `$ARGUMENTS`; tests per epic are the ones covering its
+changes, run the way the project's `CLAUDE.md` Testing section describes.
