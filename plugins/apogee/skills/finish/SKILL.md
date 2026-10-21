@@ -51,8 +51,11 @@ tree, a failing gate, open steps), STOP and surface it.
 5. **Tracker** (beads projects). The epic linked to this branch (`external_ref`) should have all
    steps closed. Open steps → close the ones actually done, ask about the rest; don't close
    unfinished work to get past this.
-6. **Test gate.** If the project's `CLAUDE.md` Testing section documents a full-suite command
-   (HTML comments stripped), run it. Failure → STOP on the branch.
+6. **Tests of the change.** Run the tests that cover what this branch changed, not the full suite
+   (that belongs to the release preparation and CI). Use the targeted form the project's
+   `CLAUDE.md` Testing section documents (HTML comments stripped); without one, run the test files
+   for the changed code with the project's test runner. Changed code with no tests at all → say so
+   in the report. A failure → STOP on the branch.
 7. **Finish.** Via the `apogee:git-flow` skill's command map:
    ```bash
    git flow <type> finish <slug>

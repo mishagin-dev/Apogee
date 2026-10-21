@@ -70,7 +70,7 @@ the steps of one branch):
 > /apogee:finish
   Review: 0 high, 1 low (noted). Intent: MATCHES.
   Docs: spec.md updated; public docs: docs/export.md refreshed (sources: src/Export/).
-  Tests: symfony php bin/phpunit, 214 passed.
+  Tests of the change: tests/Export (12 passed). Full suite runs at release and in CI.
   Finished feature/invoice-csv-export into develop (6 commits), pushed develop, epic closed.
 ```
 
@@ -169,7 +169,7 @@ move its old toolkit sections out of `CLAUDE.md`.
 
 | Type | Opens | Finish does |
 |---|---|---|
-| `feature`, `bugfix` | A branch off a fresh `develop`, published, linked to a `br` epic | Review, docs, tests, merge into `develop`, push `develop` |
+| `feature`, `bugfix` | A branch off a fresh `develop`, published, linked to a `br` epic | Review, docs, tests of the change, merge into `develop`, push `develop` |
 | `hotfix` | A branch off `main` with the next patch version | Review, version bump, CHANGELOG, then hands you the finish commands |
 | `research` | A dated note in `docs/apogee/research/`, no branch | Checks the conclusion and sources, closes it, proposes the follow-up |
 

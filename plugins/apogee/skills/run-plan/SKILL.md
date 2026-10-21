@@ -8,7 +8,7 @@ argument-hint: "[max-epics: <N>] [notes]"
 
 Drive a beads-recorded plan to completion autonomously: pick the next ready epic, open its
 git-flow branch, implement and close every step, run the review→docs pipeline and the project's
-test gate, finish the branch into develop, then move to the next epic — repeating with **no
+tests of the change, finish the branch into develop, then move to the next epic — repeating with **no
 per-micro-decision confirmation** (no "should I start this branch?", no "should I merge?"). The one
 hard, non-negotiable exception: this command **never touches `main` or tags** -- it pushes
 `develop` and work branches (ADR 0007), and the hook refuses anything beyond that. A conservative circuit
@@ -75,12 +75,12 @@ review; the regression coverage lives in `enforce-git-flow-skill.py --test` and
 2. **Dependency graph must be sane.** Run `br dep cycles --json`. Non-empty → abort before touching
    anything; a broken dependency graph makes `br ready` unreliable, and there is nothing safe to
    automate on top of it.
-3. **Resolve the circuit breaker and the test gate.** `max_epics` is the `max-epics:` value from
-   `$ARGUMENTS`, default 3 (`0` = unlimited). The test gate is the project's full-suite command
-   documented in the Testing section of its `CLAUDE.md` -- strip HTML comments before scanning,
-   exactly as the release preparation's CI gate does, because the scaffold ships that section as
-   commented-out boilerplate. No command documented → there is no test gate; state that in the
-   pre-flight summary rather than silently skipping it.
+3. **Resolve the circuit breaker and the test runner.** `max_epics` is the `max-epics:` value
+   from `$ARGUMENTS`, default 3 (`0` = unlimited). Tests per epic are the ones covering its changes
+   (`/apogee:finish` step 6), run with the targeted form documented in the Testing section of the
+   project's `CLAUDE.md` (HTML comments stripped). No way to run tests documented or detectable →
+   say so in the pre-flight summary rather than silently skipping them. The full suite is the
+   release's, not the loop's.
 4. Initialize an in-context epic counter at 0 (tracked across this session's turns — no file
    needed, the whole loop runs within one continuous session).
 
@@ -132,8 +132,8 @@ Repeat until termination (see below). Each iteration:
 
 4. **Close the epic with `/apogee:finish`.** It runs, in order, everything an unattended run needs
    to stay honest: `review-work`, `update-docs`, `public-docs update`, the clean-tree check, the
-   test gate from the project's `CLAUDE.md` (**closing br steps is not evidence the code works**;
-   a failure halts the loop on the branch), the git-flow finish, the push of `develop` (submodules
+   tests covering the epic's changes (**closing br steps is not evidence the code works**; a
+   failure halts the loop on the branch), the git-flow finish, the push of `develop` (submodules
    first), and `br epic close-eligible`. Two loop-specific rules on top:
    - The finish command it issues must carry the tag:
      `APOGEE_RUN_PLAN=1 git flow feature|bugfix finish <slug>`. That arms the open-children DENY,

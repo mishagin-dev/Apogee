@@ -92,5 +92,6 @@ Every line a command prints lands in the context. Ask for what you need, not for
 - One definition per constant, parsing rule or validation set; two sources of the same set will
   diverge.
 - Bash: `set -euo pipefail` unless a commented reason says otherwise.
-- Run only targeted tests while developing; the full suite before a finish or a release, or when
-  asked.
+- **Test your own work.** On a feature, bugfix or hotfix, run the tests that cover what you
+  changed, while developing and before `/apogee:finish`; add tests for new behaviour. The full
+  suite runs only in the release preparation, or when the user asks; CI runs it again.
