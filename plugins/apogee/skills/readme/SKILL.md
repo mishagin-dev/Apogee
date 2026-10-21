@@ -1,12 +1,12 @@
 ---
 name: readme
-description: 'Generate a gold-standard README for any project. Interviews you about the problem, generates a draft following battle-tested patterns, then validates it via the review-work skill. Use when asked to write, generate, improve, or rewrite a README. Triggers: "readme", "write readme", "generate readme", "improve readme", "rewrite readme".'
+description: 'Generate a gold-standard README for any project. Interviews you about the problem, generates a draft following battle-tested patterns, then validates it with an independent fact-and-quality check. Use when asked to write, generate, improve, or rewrite a README. Triggers: "readme", "write readme", "generate readme", "improve readme", "rewrite readme".'
 user-invocable: true
 ---
 
 # /apogee:readme — Gold-Standard README Generation
 
-> **Purpose:** Generate a README that converts skimmers into users and satisfies deep readers — then validate it with the `review-work` skill.
+> **Purpose:** Generate a README that converts skimmers into users and satisfies deep readers — then validate it with an independent fact-and-quality check.
 
 **YOU MUST EXECUTE THIS WORKFLOW. Do not just describe it.**
 
@@ -264,14 +264,25 @@ Write the generated README to `README.md`.
 
 ### Step 5: Review Validation
 
-Validate the README with Apogee's native multi-agent review instead of a separate council. Invoke
-`/apogee:review-work` on `README.md`, using the anti-pattern table below as the rubric: is it clear,
-non-repetitive, problem-first, and does it serve both skimmers and deep readers? Check it against the
-README anti-patterns (flywheel echo, framework-first, guru tone, jargon-before-definition, buried trust
-info, theory-before-try, claim-without-evidence).
+A README is prose, not code, so `/apogee:review-work` (built for code branches) is the wrong tool.
+Spawn **one** read-only agent (`subagent_type: "Explore"`), fresh, with the path to `README.md` and
+this brief, and nothing about what you intended:
 
-If `review-work` is unavailable for any reason, fall back to `/apogee:second-opinion` (the `agy` CLI)
-with the same rubric.
+```
+Review README.md on two axes. Read-only.
+A. FACTS: verify every concrete claim (install steps, commands, flags, file paths, what a tool
+   touches, default behaviour, example output) against the repository's code and docs. Report
+   only claims that are false, misleading or unverifiable, with the file:line that shows it.
+B. QUALITY: flag real instances, quoting the sentence, of: flywheel echo (core value stated 3+
+   times), framework-first lead, guru tone, jargon before its definition, trust info below the
+   fold, no visible uninstall, the install command in 3+ places, theory before examples, claims
+   without evidence, broken <details> formatting, broken relative links or anchors.
+Each finding: [high|medium|low] <section>: <quote> — what is wrong — evidence — suggested fix.
+```
+
+Judge the findings as `review-work` does: fix the valid ones, reject what misread intent, and say
+which you rejected and why. If the agent cannot run, fall back to `/apogee:second-opinion` (the
+`agy` CLI) with the same brief.
 
 Present the review findings to the user. If significant issues found, offer:
 - "Fix — apply review recommendations automatically"
@@ -324,7 +335,7 @@ When rewriting or validating, flag these:
 **What happens:**
 1. Pre-flight detects no existing README.md and proceeds to generate from scratch.
 2. The skill reads project context (manifest files, source directories, license) and runs a short interview asking about the problem, the fix, the audience, install command, quick demo, and trust concerns.
-3. A README is generated following all 8 gold-standard patterns (problem-first lead, trust block near install, collapsed depth, etc.) and validated by a quick `review-work` pass.
+3. A README is generated following all 8 gold-standard patterns (problem-first lead, trust block near install, collapsed depth, etc.) and validated by an independent fact-and-quality check.
 
 **Result:** A complete `README.md` written to disk that converts skimmers into users and serves deep readers, with a review verdict confirming quality.
 
@@ -334,7 +345,7 @@ When rewriting or validating, flag these:
 
 **What happens:**
 1. Pre-flight confirms README.md exists and enters validate-only mode, skipping the interview and generation steps.
-2. A full `review-work` pass evaluates the README against the 8 patterns and the anti-pattern detection table (flywheel echo, guru tone, buried trust info, etc.).
+2. An independent check evaluates the README against the 8 patterns and the anti-pattern detection table (flywheel echo, guru tone, buried trust info, etc.).
 3. Findings are presented with options to auto-fix, review manually, or ship as-is.
 
 **Result:** A detailed review report identifying specific anti-patterns and structural issues in the existing README, with actionable fix suggestions.
@@ -343,7 +354,7 @@ When rewriting or validating, flag these:
 
 | Problem | Cause | Solution |
 |---------|-------|----------|
-| Review validation step fails | The `review-work` skill is unavailable in this session | Ensure the Apogee plugin is enabled (`/reload-plugins`), then retry. Fall back to `/apogee:second-opinion` for the same rubric |
+| Review validation step fails | The check agent could not run | Retry; fall back to `/apogee:second-opinion` with the same brief |
 | Generated README has no trust block | No trust concerns were selected during the interview (step 3f answered "None of the above") | If your tool does run hooks, modify config, or make network calls, re-run `/readme --rewrite` and select the applicable trust concerns |
 | `<details>` blocks render as raw HTML on GitHub | Missing blank line after `<summary>` tag or before `</details>` | The skill enforces this formatting rule, but manual edits may break it. Ensure there is a blank line after every `<summary>...</summary>` line and before every `</details>` |
 | Interview keeps asking questions the project manifest already answers | The manifest file format is not recognized by the context-gathering step | Ensure your project has a standard manifest (`package.json`, `go.mod`, `pyproject.toml`, `Cargo.toml`) in the repo root |
@@ -352,5 +363,4 @@ When rewriting or validating, flag these:
 ## See Also
 
 - `/apogee:public-docs` — professional human-facing project documentation (different scope — guides/API docs, not the README)
-- `/apogee:review-work` — the multi-agent review used in Step 5
 - `/apogee:second-opinion` — independent `agy` review, fallback for Step 5

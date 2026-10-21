@@ -248,7 +248,7 @@ refreshes the ones whose sources changed.
 | `/apogee:start`, `/apogee:finish` | Open and close every unit of work (feature, bugfix, hotfix, research) |
 | `/apogee:release` | Prepare a release from `develop`; you run the finish |
 | `/apogee:run-plan` | Execute an approved `br` plan unattended, epic by epic |
-| `/apogee:review-work` | Built-in `/code-review` for bugs, plus a project-rules audit and an intent check |
+| `/apogee:review-work` | The review loop `finish` runs: tests of the change, `/code-review` for bugs, a rules audit and an intent check, fixes, tests again |
 | `/apogee:update-docs`, `/apogee:public-docs` | Agent context and human docs, respectively |
 | `/apogee:second-opinion` | An independent model via `agy` for contested decisions |
 | `/apogee:readme` | Write or validate a README like this one |

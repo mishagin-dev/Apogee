@@ -37,8 +37,10 @@ tree, a failing gate, open steps), STOP and surface it.
    `git diff <base> --stat`, `git status`. No commits and a clean tree → offer
    `git flow <type> delete <slug>` instead of a finish. Diffs over ~200 lines or 10 files: summarise
    through an `Explore` sub-agent rather than reading the whole diff here.
-2. **Review.** Unless `apogee:review-work` already ran on this branch's final state in this
-   session, run it now and act on its verdicts.
+2. **Review loop.** Run `apogee:review-work <base>`: tests of the change, review of the whole
+   branch, fixes committed on the branch, tests again. It stops the finish if its tests are still
+   red after two repair rounds. Skip only if it already ran in this session and no code was
+   committed after its last commit. Note the commit it ended on.
 3. **Docs.** Skip criteria from `apogee:update-docs` ("When to Skip") apply. Otherwise, if
    `git log <base>..HEAD --name-only` shows no touch of `docs/apogee/ai-context/` or `CLAUDE.md`
    while the change is substantive: run `apogee:update-docs`. Then, when any doc under `docs/`
@@ -51,11 +53,9 @@ tree, a failing gate, open steps), STOP and surface it.
 5. **Tracker** (beads projects). The epic linked to this branch (`external_ref`) should have all
    steps closed. Open steps → close the ones actually done, ask about the rest; don't close
    unfinished work to get past this.
-6. **Tests of the change.** Run the tests that cover what this branch changed, not the full suite
-   (that belongs to the release preparation and CI). Use the targeted form the project's
-   `CLAUDE.md` Testing section documents (HTML comments stripped); without one, run the test files
-   for the changed code with the project's test runner. Changed code with no tests at all → say so
-   in the report. A failure → STOP on the branch.
+6. **Still current.** If code (not docs) was committed after the commit `review-work` ended on —
+   typically by step 3 or 5 — re-run its step 4 (tests of the change) on the new head. Red → STOP
+   on the branch. The full suite is not run here; it belongs to the release preparation and CI.
 7. **Finish.** Via the `apogee:git-flow` skill's command map:
    ```bash
    git flow <type> finish <slug>
@@ -76,7 +76,8 @@ tree, a failing gate, open steps), STOP and surface it.
 
 ## Hotfix
 
-Steps 1–6 of the work branch, with base = the production branch, then the release preparation:
+Steps 1–6 of the work branch, with base = the production branch (so `review-work main`), then the
+release preparation, whose CI gate runs the full suite:
 follow sections A–G of
 `${CLAUDE_PLUGIN_ROOT}/skills/release/references/prepare-and-hand-over.md` with `<type>` =
 `hotfix` and `<version>` = the branch slug. That bumps the version, writes the CHANGELOG section,

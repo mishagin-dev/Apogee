@@ -131,9 +131,9 @@ Repeat until termination (see below). Each iteration:
    - `br close <stepId> --suggest-next --actor "${BR_ACTOR:-assistant}"`.
 
 4. **Close the epic with `/apogee:finish`.** It runs, in order, everything an unattended run needs
-   to stay honest: `review-work`, `update-docs`, `public-docs update`, the clean-tree check, the
-   tests covering the epic's changes (**closing br steps is not evidence the code works**; a
-   failure halts the loop on the branch), the git-flow finish, the push of `develop` (submodules
+   to stay honest: the `review-work` loop (tests of the epic's changes, review of the branch,
+   fixes, tests again; **closing br steps is not evidence the code works**, and red tests halt the
+   loop on the branch), `update-docs`, `public-docs update`, the clean-tree check, the git-flow finish, the push of `develop` (submodules
    first), and `br epic close-eligible`. Two loop-specific rules on top:
    - The finish command it issues must carry the tag:
      `APOGEE_RUN_PLAN=1 git flow feature|bugfix finish <slug>`. That arms the open-children DENY,

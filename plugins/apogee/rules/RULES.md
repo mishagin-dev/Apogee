@@ -12,8 +12,9 @@ project's `CLAUDE.md` overrides anything here; it holds the project's own facts 
 - **Decompose.** Split a complex task or a batch of bugs into separate units, one branch each.
   Sequential when their files overlap, parallel when they don't. State the split and the order
   before starting.
-- **Use the skills.** `/apogee:review-work` before finishing, `/apogee:update-docs` after
-  significant changes (it hands off to `/apogee:public-docs update`).
+- **Review and docs are part of the finish.** `/apogee:finish` runs the review loop
+  (`/apogee:review-work`: tests of the change, review, fixes, tests again) and `/apogee:update-docs`;
+  don't run them separately unless the user asks.
 - **Track work in `br`** (projects with `.beads/`): the work exists as an issue before code
   changes; claim the step you start, close it when done; one epic per branch via `external_ref`.
   `br` is the project's memory across sessions: code no issue reflects is lost to the next one.
@@ -53,7 +54,7 @@ project's `CLAUDE.md` overrides anything here; it holds the project's own facts 
 | Cut a release | `/apogee:release [major\|minor\|patch]` |
 | Library docs | Context7, before relying on training data |
 | IDE inspections, rename, call graph, run configs (JetBrains) | `mcp__idea__*`, schema loaded with `ToolSearch("select:mcp__idea__<tool>")` first; only where the shell has no equivalent, a bounded grep is cheaper for search; ignore when no IDE is open |
-| Code review | `/apogee:review-work` |
+| Code review | inside `/apogee:finish`; `/apogee:review-work` on request |
 | Second opinion | `/apogee:second-opinion` (`agy`) |
 | Agent context / human docs | `/apogee:update-docs` / `/apogee:public-docs` |
 
