@@ -7,7 +7,7 @@
 #   MACHINERY (hooks + commands + workflow skills) lives in the `apogee` plugin.
 #   It is never copied into projects, so it has nothing to sync file-by-file.
 #   To ship a machinery change: bump plugins/apogee/.claude-plugin/plugin.json
-#   "version", then in each Claude session refresh the local marketplace:
+#   "version", release, then in each Claude session refresh the marketplace:
 #       /plugin marketplace update apogee
 #       /reload-plugins
 #   Every project with `apogee@apogee` enabled then picks up the new version.

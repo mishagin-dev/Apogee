@@ -4,6 +4,70 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-10-21
+
+A major release with two breaking changes. Every unit of work now opens with `/apogee:start` and
+closes with `/apogee:finish` ([ADR 0008](docs/decisions/0008-start-finish-units-of-work.md)), and
+Apogee's general rules move out of each project's `CLAUDE.md` into the plugin, so they update with
+it ([ADR 0009](docs/decisions/0009-rules-in-the-plugin.md)). Projects set up with 3.x run
+`/apogee:init --migrate` once.
+
+### Added
+
+- **`/apogee:start` and `/apogee:finish`**, the only entry and exit for work. Four types:
+  `feature` and `bugfix` (branch off a fresh `develop`, uncommitted changes carried along, branch
+  published, `br` epic linked or created; finish runs review, docs, public docs, the clean-tree
+  check and the test gate, merges into `develop` and pushes it), `hotfix` (branch off `main` with
+  the next patch version; finish runs the release preparation and hands the operator the finish,
+  push and publish commands), `research` (a dated note in `docs/apogee/research/` with no branch;
+  finish checks the conclusion and sources, promotes lasting facts, proposes the follow-up).
+  `/apogee:run-plan` opens and closes each epic through them.
+- **Toolkit rules in the plugin**: `plugins/apogee/rules/SOUL.md` (voice, dialogue language,
+  honesty, restraint) and `rules/RULES.md` (work loop, git, files, tools, code, shell output),
+  injected by the SessionStart hook on every session source in projects with `docs/apogee/`. The
+  project's `CLAUDE.md` overrides them.
+- `/apogee:init --migrate` converts a 3.x `CLAUDE.md`: toolkit lines are dropped, project lines are
+  kept verbatim, after confirmation.
+- Shell output rules: filter before slicing, keep the tail of builds, tests and logs, never let a
+  pipe hide a failing exit status.
+- `symfony-cli-workflow` replaces the `symfony` skill: version-aware (8.1, 7.4 LTS, 6.4 LTS), with
+  references and a project probe.
+- ADR 0008 and ADR 0009.
+
+### Changed
+
+- **`/apogee:merge` is renamed `/apogee:finish`**; `merge` stays one release as a deprecated alias.
+  Its plain-repository mode no longer merges into `main` (the wall denies it): it pushes the branch
+  and hands the merge to the operator.
+- **`/apogee:release hotfix` is replaced by `/apogee:start hotfix`.** `/apogee:release` covers the
+  regular release from `develop`; its preparation lives in
+  `skills/release/references/prepare-and-hand-over.md`, shared with the hotfix finish.
+- **The scaffold `CLAUDE.md` is project-only** (Project, Operator Model, Key Architecture Decisions,
+  Project Rules, Testing, Privacy & Security, Bilingual Documentation). `init` and `update-docs`
+  write project facts only and report general rules as candidates for `RULES.md`.
+- The plugin is installed and updated from the GitHub marketplace only. `install.sh` clones the
+  templates into a temporary directory instead of keeping `~/.apogee`; `setup.sh` registers
+  `mishagin-dev/Apogee` when no `apogee` marketplace is known and never re-points one.
+- The Rules Auditor in `review-work` checks against `RULES.md` as well as the project's
+  `CLAUDE.md`.
+- README rewritten around the start/finish workflow, with a trust block, a what-it-touches table
+  and an uninstall section. Apogee is described as its own project that started from CCDK; the
+  `LICENSE` adds the project's copyright line above the CCDK one.
+
+### Fixed
+
+- `setup.sh` initialised git-flow with `master` on a fresh repository, whatever `git init -b` or
+  `init.defaultBranch` said, because the branch did not exist yet. It now runs `git init -b main`
+  and pins `gitflow.branch.master` before `git flow init -d`; an existing `master` is respected.
+- The commit validator rejected `type(scope)!:`, the Conventional Commits breaking-change marker
+  that `/apogee:release` looks for.
+
+### Removed
+
+- The "Use sub-agents for tasks spanning 3+ files" rule, and "always ask before git commits" from
+  the Operator Model example (one of the formulations that made agents believe commits were
+  forbidden).
+
 ## [3.0.2] - 2026-10-20
 
 ### Fixed

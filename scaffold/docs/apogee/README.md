@@ -26,7 +26,7 @@ the Index below; a file without an index line is invisible to the next session.
 | `diagrams/` | Mermaid, draw.io, PNG. |
 | `research/` | Dated reports, second opinions, comparisons: `YYYY-MM-DD-<topic>.md`. |
 | `prompts/` | Reusable prompts and request templates (a finance-report prompt, a release-notes prompt). |
-| `reports/` | Generated reports and other ceremony-free deliverables (CLAUDE.md §1). |
+| `reports/` | Generated reports and other ceremony-free deliverables (Apogee RULES.md, "Files"). |
 
 ## Index
 

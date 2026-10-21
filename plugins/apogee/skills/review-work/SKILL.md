@@ -1,6 +1,6 @@
 ---
 name: review-work
-description: Review uncommitted code changes before they merge. Delegates bug and security hunting to Claude Code's built-in /code-review, then runs an Apogee rules audit (CLAUDE.md compliance, test coverage, language, no AI-tooling files staged) and an intent verdict against what was actually asked (the br epic/step, progress.md, or the request). Use after completing substantial implementation work, before /apogee:merge, and inside /apogee:run-plan.
+description: Review uncommitted code changes before they merge. Delegates bug and security hunting to Claude Code's built-in /code-review, then runs an Apogee rules audit (CLAUDE.md compliance, test coverage, language, no AI-tooling files staged) and an intent verdict against what was actually asked (the br epic/step, progress.md, or the request). Use after completing substantial implementation work, before /apogee:finish, and inside /apogee:run-plan.
 user-invocable: true
 ---
 
@@ -9,7 +9,8 @@ user-invocable: true
 Three passes, each with a different question:
 
 1. **Is it correct?** Bugs and security: delegated to the built-in `code-review` skill.
-2. **Does it follow this project's rules?** A read-only Rules Auditor agent against `CLAUDE.md`.
+2. **Does it follow the rules?** A read-only Rules Auditor agent against the project's `CLAUDE.md`
+   and Apogee's `RULES.md`.
 3. **Is it what was asked?** An intent verdict against the recorded plan.
 
 You are the judge of all three. Reviewers have fresh eyes and no conversation context; you have the
@@ -39,13 +40,15 @@ and say so in the report.
 ## Step 3: Rules audit
 
 Spawn **one** read-only agent (`subagent_type: "Explore"`), named Rules Auditor, with the full diff,
-the test output, and this brief:
+the test output, the contents of `${CLAUDE_PLUGIN_ROOT}/rules/RULES.md` pasted in (a subagent cannot
+resolve the plugin path), and this brief:
 
 ```
-You are a Rules Auditor. Read CLAUDE.md for this project's rules and settled decisions, then check
+You are a Rules Auditor. The toolkit rules (RULES.md) are pasted below; read CLAUDE.md for this
+project's own rules, decisions and exceptions (CLAUDE.md wins on conflict), then check
 ONLY the diff against these categories. Do not look for general bugs; another pass does that.
 
-COMPLIANCE — violations of rules and decisions written in CLAUDE.md (architecture decisions,
+COMPLIANCE — violations of RULES.md and of the rules and decisions in CLAUDE.md (architecture decisions,
 conventions, constraints). Cite the rule.
 TESTS — do the changes touch shared modules or critical paths? If so, do corresponding tests exist,
 and are assertions structural rather than exact-string?

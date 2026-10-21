@@ -1,8 +1,8 @@
 # Apogee — Architecture
 
-Apogee is a personal Claude Code toolkit: a fork of the
-[Claude Code Development Kit](https://github.com/peterkrueck/Claude-Code-Development-Kit) repackaged as
-a **plugin + local marketplace**. Its job is to keep Claude Code coherent across sessions (durable
+Apogee is a personal Claude Code toolkit, delivered as a **plugin + GitHub marketplace**. It started
+from the [Claude Code Development Kit](https://github.com/peterkrueck/Claude-Code-Development-Kit)
+and keeps a couple of its ideas; the rest is its own. Its job is to keep Claude Code coherent across sessions (durable
 context + repeatable work loop) and to keep a disciplined workflow available via lifecycle hooks.
 Since [ADR 0005](decisions/0005-enforcement-safety-only.md) those hooks mostly *inform* rather than
 *block*: exactly two can refuse an action, and both defend outcomes that cannot be undone — a
@@ -12,8 +12,8 @@ secret leaving the machine, and anything reaching the production branch or a tag
 
 | Layer | What | Where it lives | Delivery |
 |---|---|---|---|
-| **Machinery** | hooks + workflow skills | `plugins/apogee/` | installed once, **enabled** per project (`enabledPlugins`) — never copied |
-| **Content** | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project; kept out of git via the host's `.git/info/exclude` together with `.claude/` and `.beads/` (the plugin's `exclude-list.txt`, re-asserted every session start) — the repository holds code and project documentation only |
+| **Machinery** | hooks + workflow skills + the toolkit's rules and tone (`rules/RULES.md`, `rules/SOUL.md`) | `plugins/apogee/` | installed once, **enabled** per project (`enabledPlugins`) — never copied; the rules are injected at every session start ([ADR 0009](decisions/0009-rules-in-the-plugin.md)) |
+| **Content** | `CLAUDE.md` (project facts, decisions and exceptions only), `GEMINI.md`, `docs/apogee/…` | `scaffold/` → host project | **copied** by `setup.sh`; owned by the project and never rewritten on update; kept out of git via the host's `.git/info/exclude` together with `.claude/` and `.beads/` (the plugin's `exclude-list.txt`, re-asserted every session start) — the repository holds code and project documentation only |
 | **Preferences** | `language`, `defaultMode`, `effortLevel`, `env` | `~/.claude/settings.json` | stays global (can't be delivered per project) |
 | **Per-project settings** | baseline `permissions.allow`, `plansDirectory`, `autoMemoryDirectory` | `TARGET/.claude/settings.local.json` | **written** (non-clobbering merge) by `setup.sh`; personal, git-excluded ([ADR 0002 Amendment](decisions/0002-plugin-not-global-hooks.md)) |
 
@@ -24,24 +24,25 @@ globally-wired hooks.
 
 ```
 Apogee/
-├── .claude-plugin/marketplace.json   # local marketplace "apogee" → exposes the plugin
+├── .claude-plugin/marketplace.json   # marketplace "apogee" (GitHub: mishagin-dev/Apogee) → exposes the plugin
 ├── plugins/apogee/                   # THE PLUGIN (machinery)
 │   ├── .claude-plugin/plugin.json    # name: apogee, version (hooks/hooks.json auto-loads by convention)
+│   ├── rules/                        # SOUL.md (tone) + RULES.md (work loop, git, files, tools, code)
 │   ├── hooks/
 │   │   ├── hooks.json                # lifecycle wiring; all paths via ${CLAUDE_PLUGIN_ROOT}
 │   │   ├── br/    # br-capture-gate (plan -> epic), br-prime (agent guide)
 │   │   ├── git/   # enforce-git-flow-skill (the only Bash gate) + unfinished-branch-nudge, lib/
 │   │   └── core/  # security-scan (+ config/sensitive-patterns.json), cleanup, apogee-session-start
-│   ├── skills/    # update-docs, review-work, second-opinion, public-docs, readme, symfony,
+│   ├── skills/    # update-docs, review-work, second-opinion, public-docs, readme, symfony-cli-workflow,
 │   │              #   ai-clean-room, br, git-commit, git-flow
-│   │              #   + the entry points init, prime, plan-feature, release, merge, run-plan → /apogee:<name>
+│   │              #   + the entry points init, prime, plan-feature, start, finish, release, run-plan → /apogee:<name>
 │   │              #   (skills, not commands/: Claude Code merged the two formats; user-only ones set
 │   │              #   disable-model-invocation)
 ├── scaffold/                         # project CONTENT (copied per project)
-│   ├── CLAUDE.md  GEMINI.md          # convention files (Claude + agy)
+│   ├── CLAUDE.md  GEMINI.md          # project-only CLAUDE.md template + agy convention file
 │   └── docs/apogee/ai-context/       # {spec,project-structure,progress,deployment-infrastructure}.md
 ├── tests/     # smoke-run-plan.sh: the hook backstop against real br + git-flow sandboxes
-├── install.sh # online one-liner: clone the toolkit into ~/.apogee + run setup.sh
+├── install.sh # online one-liner: temp clone for the templates + run setup.sh
 ├── setup.sh   # scaffold (copy) + enable plugin (link)
 ├── sync.sh    # re-scaffold new template files into an installed project
 └── docs/      # THIS documentation
@@ -78,13 +79,16 @@ managed projects. A project is considered **Apogee-managed** when it has both `.
 One-time bootstrap: `/apogee:init` (research the codebase, fill `docs/apogee/ai-context` + root
 `CLAUDE.md`, seed a flat `CLAUDE.md` in each first-level submodule). Then the recurring loop:
 
-`/apogee:prime` (load `docs/apogee/ai-context` + beads state) → work (tracked in `br`, on a git-flow
-branch) → `/apogee:review-work` → `/apogee:update-docs` → `/apogee:merge` (runs the docs/clean-tree
-guardrails, then delegates to the `git-flow` skill).
+`/apogee:prime` (load the `docs/apogee` index + core docs) → `/apogee:start` → work, committed through
+`apogee:git-commit` → `/apogee:finish`. `start`/`finish` are the only way a unit of work opens and
+closes ([ADR 0008](decisions/0008-start-finish-units-of-work.md)): `feature`/`bugfix` (branch off
+`develop`, finished into it and pushed), `hotfix` (branch off `main`, finish prepared for the
+operator), `research` (a note in `docs/apogee/research/`, no branch). Releases are cut with
+`/apogee:release`.
 
 Nothing forces that order any more — the Stop gate that did was removed by ADR 0005 after it spent
-more releases being repaired than it spent catching mistakes. `/apogee:merge` still checks docs
-freshness and a clean tree before finishing a branch, which is where the check has teeth without
+more releases being repaired than it spent catching mistakes. `/apogee:finish` runs review, docs
+and a clean-tree check before finishing a branch, which is where the check has teeth without
 being able to wedge a session. For unattended runs, `/apogee:run-plan` drives the whole loop itself.
 
 ## Tracker

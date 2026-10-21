@@ -34,8 +34,8 @@ Anything else in `$ARGUMENTS` is free-form context for you to factor into which 
 
 ## Philosophy
 
-This is the autonomous counterpart to the normal work loop (`/apogee:prime` → work, tracked in
-`br` on a git-flow branch → `/apogee:review-work` → `/apogee:update-docs` → `/apogee:merge`) — it *is* that
+This is the autonomous counterpart to the normal work loop (`/apogee:prime` → `/apogee:start` → work, tracked in
+`br` → `/apogee:finish`) — it *is* that
 loop, run end-to-end by the agent instead of pausing between each stage. It's also the intended
 continuation of a Plan Mode approval in a git-flow project: `plugins/apogee/hooks/br/br-capture-
 gate.py` (fires on `ExitPlanMode`) captures the approved plan into `br` as an epic + steps, then
@@ -78,7 +78,7 @@ review; the regression coverage lives in `enforce-git-flow-skill.py --test` and
 3. **Resolve the circuit breaker and the test gate.** `max_epics` is the `max-epics:` value from
    `$ARGUMENTS`, default 3 (`0` = unlimited). The test gate is the project's full-suite command
    documented in the Testing section of its `CLAUDE.md` -- strip HTML comments before scanning,
-   exactly as `/apogee:release` Step 5 does, because the scaffold ships that section as
+   exactly as the release preparation's CI gate does, because the scaffold ships that section as
    commented-out boilerplate. No command documented → there is no test gate; state that in the
    pre-flight summary rather than silently skipping it.
 4. Initialize an in-context epic counter at 0 (tracked across this session's turns — no file
@@ -88,11 +88,10 @@ review; the regression coverage lives in `enforce-git-flow-skill.py --test` and
 
 ## The autonomous tag
 
-Every `git flow feature|bugfix start` and `git flow feature|bugfix finish` command this loop issues
-**must** be prefixed with the literal string `APOGEE_RUN_PLAN=1`, e.g.:
+The `git flow feature|bugfix finish` that `/apogee:finish` issues inside this loop **must** be
+prefixed with the literal string `APOGEE_RUN_PLAN=1`:
 
 ```bash
-APOGEE_RUN_PLAN=1 git flow feature start <epic-slug>
 APOGEE_RUN_PLAN=1 git flow feature finish <epic-slug>
 ```
 
@@ -117,56 +116,34 @@ Repeat until termination (see below). Each iteration:
    on it as the default; fall back to `br ready`'s own ordering otherwise. No ready epic → the loop
    is done (success termination).
 
-2. **Open or resume the epic's branch.** If the epic's `external_ref` is already set and that
-   branch exists locally, check it out. Otherwise:
-   ```bash
-   APOGEE_RUN_PLAN=1 git flow feature start <epic-slug>   # or `bugfix` for a bug-labeled epic
-   br update <epicId> --external-ref <branch> --actor "${BR_ACTOR:-assistant}"
-   ```
-   Log it: `br comments add <epicId> --message "run-plan: opened branch <branch>"`.
+2. **Open or resume the epic.** If the epic's `external_ref` is set and that branch exists
+   locally, check it out. Otherwise run `/apogee:start <feature|bugfix> <epic-slug> epic: <epicId>`
+   (`bugfix` for a bug-labeled epic). It opens the branch off a fresh `develop`, links the epic,
+   publishes the branch and logs the comment; the loop adds nothing on top.
 
 3. **Drain the epic's steps.** Loop:
    - `br ready --json` filtered to `parent == epicId`. None left → break to step 4.
    - `br update <stepId> --claim --actor "${BR_ACTOR:-assistant}"`.
-   - Implement the step (normal Edit/Write flow — nothing gates edits since ADR 0005; keeping the
-     step `in_progress` and the branch linked to its epic is now discipline, and the finish-time
-     DENY in step 5 is what catches it if you let that slip).
+   - Implement the step (normal Edit/Write flow; keeping the step `in_progress` and the branch
+     linked to its epic is discipline, and the finish-time DENY is what catches it if it slips).
    - **Commit immediately via the `apogee:git-commit` skill, before moving to the next step.** This
-     discipline is exactly what keeps the tree clean at merge time (Step 5's clean-tree guardrail
-     has zero autonomous-mode exceptions — see Philosophy — so a dirty tree there means this step
-     was skipped somewhere).
-   - `br close <stepId> --suggest-next --actor "${BR_ACTOR:-assistant}"` (the `--suggest-next` flag
-     directly returns newly-unblocked work).
+     is what keeps the tree clean when `/apogee:finish` checks it (no autonomous exception, ADR 0006).
+   - `br close <stepId> --suggest-next --actor "${BR_ACTOR:-assistant}"`.
 
-4. **Epic-level checks — run proactively, before ever calling `/merge`.** No hook enforces this
-   order any more (the review→docs Stop gate is gone), which makes running them here the only thing
-   that keeps an unattended run honest:
-   - Invoke the `apogee:review-work` skill.
-   - Invoke the `apogee:update-docs` skill; commit any doc changes via `git-commit`.
-   - Invoke `apogee:public-docs update`; it refreshes the human-facing docs whose `sources:` overlap
-     the epic's changed files (a one-line no-op when the project has none) and commits them.
-   - **If a test command was resolved in Pre-flight 3**, run it now. A failure halts here — the
-     branch stays open, uncommitted work (if any) stays as-is, and this is surfaced to the user as a
-     hard stop. **Closing br steps is not evidence the code actually works** — this check exists
-     specifically because it isn't.
+4. **Close the epic with `/apogee:finish`.** It runs, in order, everything an unattended run needs
+   to stay honest: `review-work`, `update-docs`, `public-docs update`, the clean-tree check, the
+   test gate from the project's `CLAUDE.md` (**closing br steps is not evidence the code works**;
+   a failure halts the loop on the branch), the git-flow finish, the push of `develop` (submodules
+   first), and `br epic close-eligible`. Two loop-specific rules on top:
+   - The finish command it issues must carry the tag:
+     `APOGEE_RUN_PLAN=1 git flow feature|bugfix finish <slug>`. That arms the open-children DENY,
+     fail-closed: if the hook cannot positively confirm every step of this epic is closed, it
+     refuses, and the loop halts with that reason surfaced.
+   - Any stop inside `finish` (dirty tree, failing gate, merge conflict, open steps) is a hard stop
+     of the loop, exactly as in interactive use.
+   Log it: `br comments add <epicId> --message "run-plan: finished <branch>, pushed develop"`.
 
-5. **Finish the branch.** Invoke `/apogee:merge`; when it reaches the Git Flow finish step, the
-   underlying command must be tagged: `APOGEE_RUN_PLAN=1 git flow feature|bugfix finish <slug>`.
-   Rule 1 (`enforce-git-flow-skill.py`'s release/hotfix DENY) never fires for feature/bugfix finish —
-   confirmed by its regex, which only matches `(release|hotfix)`. The open-children DENY does apply
-   here, fail-closed for this tagged command: if it can't positively confirm every step of this epic
-   is closed, it refuses, and the loop halts with that reason surfaced.
-
-6. **Publish develop.** If the repo has a remote (`git remote` non-empty): `git push origin develop`.
-   In a superproject, push each submodule's work branch *before* the superproject (the git-flow
-   skill's submodule rule), so no pushed commit references a submodule commit the remote lacks.
-   Never `main`, never tags; the hook denies both, and that is by design, not a bug to route around.
-   Log it: `br comments add <epicId> --message "run-plan: pushed develop"`.
-
-7. **Close the epic**: `br epic close-eligible` (closes epics whose children are all closed —
-   no custom logic needed).
-
-8. **Increment the epic counter.** If it reaches `max_epics_per_invocation` (and the cap isn't 0),
+5. **Increment the epic counter.** If it reaches `max_epics_per_invocation` (and the cap isn't 0),
    stop here (circuit-breaker termination) rather than continuing to the next epic.
 
 ---
@@ -189,7 +166,7 @@ On every exit path, print a structured summary before returning control:
 - Any halt reason, verbatim, if the loop stopped on something other than success or the circuit
   breaker.
 - **Always**, regardless of how the loop ended: whether `develop` is pushed (and if not, why --
-  no remote, or a halt before step 6), and the reminder that releasing (`/apogee:release`, then
+  no remote, or a halt before the finish), and the reminder that releasing (`/apogee:release`, then
   the finish and push of `main` by the operator) is a separate, manual act.
 
 ---

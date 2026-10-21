@@ -1,7 +1,7 @@
 ---
 name: init
 description: "Bootstrap a project's Apogee context: research the codebase, fill docs/apogee/ai-context and the root CLAUDE.md, seed a CLAUDE.md per first-level submodule. Run once per project, in Plan Mode."
-argument-hint: "[notes]"
+argument-hint: "[--migrate] [notes]"
 effort: high
 disable-model-invocation: true
 ---
@@ -12,10 +12,39 @@ Bootstrap a project's Apogee context: research the codebase, plan, then fill the
 (`docs/apogee/ai-context/*` + root `CLAUDE.md`) and seed a flat `CLAUDE.md` in each first-level
 submodule. Designed to run inside Plan Mode (toggle with Shift+Tab).
 
-**Usage:** `/apogee:init [notes]`
+**Usage:** `/apogee:init [--migrate] [notes]`
 
 Run this once on a new project (or after adding submodules). Optional `[notes]` steer focus
-(e.g. "this is a mobile app", "skip the legacy/ dir").
+(e.g. "this is a mobile app", "skip the legacy/ dir"). `--migrate` converts an existing project's
+`CLAUDE.md` to the project-only layout (section "Migrate" below) and stops.
+
+**What goes into `CLAUDE.md`.** Only this project's facts, settled decisions and its own rules or
+exceptions, in the scaffold's sections (Project, Operator Model, Key Architecture Decisions,
+Project Rules, Testing, Privacy & Security, Bilingual Documentation). Apogee's general rules and
+tone are not written there: they come from the plugin's `rules/RULES.md` and `rules/SOUL.md`,
+injected at every session start (ADR 0009).
+
+---
+
+## Migrate (`--migrate`)
+
+For a project set up before 4.0, whose `CLAUDE.md` still carries Apogee's general sections
+(typically "Critical Rules", "Communication Style", "Tool Usage Rules", "Coding Standards").
+
+1. Read the project's `CLAUDE.md` and the plugin's rules:
+   `${CLAUDE_PLUGIN_ROOT}/rules/RULES.md` and `${CLAUDE_PLUGIN_ROOT}/rules/SOUL.md`.
+2. Classify every line of those general sections: **toolkit** (restates something in RULES.md or
+   SOUL.md, in any wording or version) or **project** (a fact, constraint or exception that
+   belongs to this project only: a test command, a naming rule, "never touch `legacy/`", a
+   deliberate deviation from a toolkit rule).
+3. Show the plan: toolkit lines to drop, project lines to keep and where they go (Project Rules,
+   Testing, …). Ask for confirmation; this is the user's file.
+4. Rewrite `CLAUDE.md` into the scaffold layout
+   (`${CLAUDE_PLUGIN_ROOT}/../../scaffold/CLAUDE.md` is not reachable from a project, so use the
+   section list above), preserving every project line verbatim. Sections that end up empty keep
+   only their heading and a one-line comment.
+5. Report what was removed and what was kept. Stop; the rest of init does not run.
+
 
 ---
 
@@ -54,8 +83,8 @@ spots. Then exit Plan Mode with the synthesized plan.
 ## Phase 3 — Execute (after approval)
 
 **Root docs + CLAUDE.md.** Follow the `/apogee:update-docs` skill's initial-creation path (its
-"Create Missing Files" step) to populate the core docs and refine the root `CLAUDE.md` from the actual
-codebase. **A core doc is MISSING when it does not exist OR still carries the `apogee:scaffold-stub`
+"Create Missing Files" step) to populate the core docs and fill the root `CLAUDE.md`'s project
+sections from the actual codebase (project facts only, see "What goes into CLAUDE.md"). **A core doc is MISSING when it does not exist OR still carries the `apogee:scaffold-stub`
 sentinel** (`setup.sh` scaffolds these template stubs — placeholders, not real docs). Treat a stub as
 create-from-scratch: replace its entire content with researched project context and drop the sentinel;
 refine only docs that lack it. Do not restate that skill's ownership/density rules here — defer to it (single source of

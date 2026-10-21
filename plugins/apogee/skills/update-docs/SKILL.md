@@ -66,7 +66,7 @@ Identify what categories of change occurred:
 - **New files or directories** → update `project-structure.md`
 - **Deployment or infrastructure change** → update `deployment-infrastructure.md`
 - **Milestone completed or status change** → update `progress.md`
-- **New architecture decision or rule** → update `CLAUDE.md`
+- **New architecture decision or project rule** → update `CLAUDE.md`
 
 ### Step 2: Update Relevant Files
 
@@ -78,7 +78,7 @@ Only update files where the change is meaningful. The 4 core files and their own
 | `docs/apogee/ai-context/project-structure.md` | File tree, tech stack, directory organization | New files/dirs, dependency changes, tech stack change |
 | `docs/apogee/ai-context/progress.md` | What's done, what's next, blockers | Phase completed, new work started, status change |
 | `docs/apogee/ai-context/deployment-infrastructure.md` | Hosting, accounts, secrets, CI/CD | Infrastructure change, new service, new secret |
-| `CLAUDE.md` | Project rules, architecture decisions, coding standards | New rule, new decision, changed constraint |
+| `CLAUDE.md` | This project's facts, decisions and own rules/exceptions (never Apogee's general rules) | New project rule, new decision, changed constraint |
 
 ### Step 3: Apply the Single Source of Truth Rule
 
@@ -116,13 +116,19 @@ A core doc is **missing** when it does not exist **or** still carries the `apoge
 - Security items: remove when fixed, keep only open issues
 
 **spec.md:**
-- Don't duplicate CLAUDE.md content (architecture principles, coding standards)
+- Don't duplicate CLAUDE.md content (architecture decisions, project rules)
 - Document request format + error codes + key behaviors — skip response examples
 - Reference shared utility files by path, don't reproduce their content
 
 **CLAUDE.md:**
+- Project-only. Apogee's general rules and tone live in the plugin (`rules/RULES.md`,
+  `rules/SOUL.md`, injected at session start) and are never copied into `CLAUDE.md`; write here
+  only this project's facts, decisions and its own rules or exceptions to the toolkit's.
 - Only rules that change Claude's behavior — if removing a line wouldn't cause Claude to do anything differently, delete it
 - Not a reference doc: no test structure tables, no naming convention tables for standard patterns
+- A rule that is clearly general (it would help every project, not just this one) is not written
+  anywhere: name it in the report as "candidate for Apogee RULES.md: …" and leave the decision to
+  the user, who adds it in the Apogee repository.
 
 ### Step 6: Index and hand-off
 

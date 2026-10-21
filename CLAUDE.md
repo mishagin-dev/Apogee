@@ -1,6 +1,6 @@
 # Apogee — developing the toolkit
 
-This repo IS the toolkit (a Claude Code plugin + local marketplace), not a project that uses it.
+This repo IS the toolkit (a Claude Code plugin + its GitHub marketplace), not a project that uses it.
 Read `docs/ARCHITECTURE.md` first.
 
 ## Operator model
@@ -30,6 +30,9 @@ Read `docs/ARCHITECTURE.md` first.
   `language` setting), including the captions on tool calls; code,
   comments, commit messages, docs, branch names, and anything sent to external tools (`agy`) — in
   **English**. An English-heavy context is never a reason to answer in English.
+- **Toolkit rules live in the plugin** (ADR 0009): `plugins/apogee/rules/RULES.md` (work loop,
+  git, files, tools, code) and `SOUL.md` (tone, honesty, restraint), injected at session start.
+  `scaffold/CLAUDE.md` is a project-only template; never put a general rule there.
 - **Machinery vs content vs preferences** — respect the boundary (ADR 0002): hooks/skills go in
   `plugins/apogee/`; project templates in `scaffold/`; personal prefs stay in `~/.claude/settings.json`.
 
@@ -47,7 +50,7 @@ Read `docs/ARCHITECTURE.md` first.
   finish with open epic steps). Everything else is
   context — nudges and injected directives. Before adding a gate, answer both questions ADR 0005
   used: *is the outcome irreversible*, and *is a human present to catch it*. If either is "no", the
-  rule belongs in a SKILL.md or `scaffold/CLAUDE.md`, not in a hook.
+  rule belongs in a SKILL.md or `plugins/apogee/rules/RULES.md`, not in a hook.
 - Every hook must self-gate (no-op without `.beads/` / git-flow) and fail open. The
   one exception is Rule 2b, which fails *closed* precisely because it only runs unattended.
 - After editing hooks, run `bash scripts/validate.sh` (py/sh/json syntax, `${CLAUDE_PLUGIN_ROOT}`
@@ -62,14 +65,16 @@ Read `docs/ARCHITECTURE.md` first.
   separate global setup step. The old global `~/.claude/skills/` copies are left in place until
   manually cleaned up post-release (see the amendment for why).
 - Tracker is `br` (beads_rust), not `bd` — ADR 0001. Don't reintroduce `bd` invocations.
-- Attribution to upstream (`peterkrueck/Claude-Code-Development-Kit`) stays; the system name is Apogee.
+- Apogee is its own project; CCDK (`peterkrueck/Claude-Code-Development-Kit`) is credited as the
+  starting point it kept a couple of ideas from, and its copyright line stays in `LICENSE`. Never
+  call Apogee a fork in docs or manifests.
 - **Decompose complex work.** A complex task or a batch of bugs is split into separate git-flow
-  features (one logical change == one `feature/`/`bugfix/` branch via the `git-flow` skill), not
+  features (one logical change == one `feature/`/`bugfix/` branch opened with `/apogee:start`), not
   crammed into one branch. Run them **sequentially** when they touch overlapping files (to avoid
   merge conflicts), or **in parallel** (separate branches/worktrees) when their file sets are
   disjoint. State the split and the chosen order before starting. When a branch's work is complete,
-  finish it through `/apogee:merge` (docs/clean-tree guardrails, then delegates to the git-flow
-  finish) — not hand-rolled merges. `/apogee:release` prepares a release and stops; the `release`/`hotfix`
+  close it with `/apogee:finish` (review, docs, clean tree, git-flow finish, push `develop`) — not
+  hand-rolled merges. `/apogee:release` prepares a release and stops; the `release`/`hotfix`
   finish and the push of `main` + tags are the operator's, in a terminal (ADR 0007). Pushing
   `develop` and work branches is allowed.
 
