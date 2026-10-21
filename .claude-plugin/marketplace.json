@@ -5,7 +5,7 @@
     "email": "mishagin.a.a@gmail.com"
   },
   "metadata": {
-    "description": "Apogee — personal fork of the Claude Code Development Kit (CCDK). Per-project install of the workflow machinery (durable docs context, br issue memory, git-flow conventions, two safety hooks) plus the prime/plan/run-plan/merge/release entry points and the docs/apogee doc loop."
+    "description": "Apogee: durable project memory and a safe, repeatable git workflow for Claude Code. Per-project install of the workflow machinery (docs context, br issue memory, git-flow start/finish, two safety hooks) plus the prime/plan/run-plan/release entry points."
   },
   "plugins": [
     {
@@ -14,7 +14,7 @@
       "description": "Claude Code workflow machinery: lifecycle hooks (secret scan + the production-branch wall, plus context injectors), workflow skills (update-docs, review-work, second-opinion, public-docs, readme, symfony-cli-workflow, ai-clean-room, br, git-commit, git-flow), and the init/prime/plan-feature/start/finish/release/run-plan entry-point skills. Install once, enable per project.",
       "version": "3.0.2",
       "author": {
-        "name": "mishagin.dev (fork of peterkrueck/Claude-Code-Development-Kit)"
+        "name": "mishagin.dev"
       },
       "category": "workflows",
       "license": "MIT"
