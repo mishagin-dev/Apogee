@@ -112,5 +112,5 @@ No git anywhere in this mode: `docs/apogee/` is local-only.
 The production-branch wall (ADR 0007) applies in every repo with a `main`, so an agent never
 merges into it. Steps 1–6 of the work branch with base = the default branch, then push the
 branch (`git push -u origin <branch>`) and hand over: print `gh pr create --fill` (or the merge
-command) for the operator. Offer `git flow init -d` for next time; with git-flow, `finish` can
+command) for the operator. Offer to initialise git-flow for next time (the `apogee:git-flow` skill, `main` + `develop`); with git-flow, `finish` can
 merge into `develop` on its own.

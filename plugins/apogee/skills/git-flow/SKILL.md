@@ -12,7 +12,7 @@ This skill operates only inside a git repository. Before anything else, check:
 !`git rev-parse --is-inside-work-tree 2>/dev/null && echo GIT_OK || echo NOT_A_GIT_REPO`
 
 If the line above reads `NOT_A_GIT_REPO`, **stop immediately**: tell the user
-this directory is not a git repository (offer `git init`, then `git flow init -d`),
+this directory is not a git repository (offer `git init -b main`, then the initialisation under "Detect first"),
 and run none of the commands below.
 
 Drive Git Flow through the **installed `git flow` binary** (AVH Edition 1.12.3,
@@ -34,8 +34,17 @@ git status -sb
 
 `git flow config` is the source of truth for this repo's production branch,
 develop branch, and prefixes. If it errors or `develop` is missing, the repo
-is not yet gitflow-initialized — run `git flow init -d` (the `-d` accepts
-default conventions non-interactively) before any branch work.
+is not yet gitflow-initialized. Initialise it with `main` as the production branch, never AVH's
+bare `-d` default, which picks `master` on a repo without commits:
+
+```bash
+prod=main; git show-ref --verify --quiet refs/heads/main || ! git show-ref --verify --quiet refs/heads/master || prod=master
+git config gitflow.branch.master "$prod"
+git config gitflow.branch.develop develop
+git flow init -d
+```
+
+An existing `master` (and no `main`) is respected; renaming it is the user's call.
 
 > Check for remotes with `git remote`. If the output is empty, skip `publish`,
 > `track`, and the `-p/--push` flags — they need an `origin`.
@@ -217,4 +226,8 @@ first refusal, `gh`/`glab` are the fallback.
   source of truth, not the chatter. Force English with `LC_ALL=C git flow …`.
 - **`finish` opens vim** on a release/hotfix: you omitted `-m "<msg>"`. Re-run
   with an explicit message.
-- **`Fatal: Not a gitflow-enabled repo yet`**: run `git flow init -d` first.
+- **`Fatal: Not a gitflow-enabled repo yet`**: initialise as under "Detect first".
+- **The production branch is `master`, not `main`**, in a repo initialised with bare `git flow
+  init -d` on zero commits: `git branch -m master main && git config gitflow.branch.master main`
+  (and, if it was pushed, `git push -u origin main` plus deleting the remote `master`, both the
+  operator's).

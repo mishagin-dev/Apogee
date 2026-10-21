@@ -61,8 +61,8 @@ If `$ARGUMENTS` is empty, run the normal suggestion flow in Step 1.
    ```bash
    git config --get-regexp '^gitflow\.branch\.'
    ```
-   Empty → STOP: this repo isn't git-flow-initialized; offer to run `git flow init -d` via the
-   `apogee:git-flow` skill first, then re-invoke this command.
+   Empty → STOP: this repo isn't git-flow-initialized; offer to initialise it (the `apogee:git-flow`
+   skill's "Detect first": `main` + `develop`) first, then re-invoke this command.
 
 2. **Base.** `gitflow.branch.develop` (fallback `develop`). `hotfix` in `$ARGUMENTS` → STOP and
    point at `/apogee:start hotfix`.

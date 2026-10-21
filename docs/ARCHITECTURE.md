@@ -1,8 +1,8 @@
 # Apogee — Architecture
 
-Apogee is a personal Claude Code toolkit: a fork of the
-[Claude Code Development Kit](https://github.com/peterkrueck/Claude-Code-Development-Kit) repackaged as
-a **plugin + local marketplace**. Its job is to keep Claude Code coherent across sessions (durable
+Apogee is a personal Claude Code toolkit, delivered as a **plugin + GitHub marketplace**. It started
+from the [Claude Code Development Kit](https://github.com/peterkrueck/Claude-Code-Development-Kit)
+and keeps a couple of its ideas; the rest is its own. Its job is to keep Claude Code coherent across sessions (durable
 context + repeatable work loop) and to keep a disciplined workflow available via lifecycle hooks.
 Since [ADR 0005](decisions/0005-enforcement-safety-only.md) those hooks mostly *inform* rather than
 *block*: exactly two can refuse an action, and both defend outcomes that cannot be undone — a
@@ -24,7 +24,7 @@ globally-wired hooks.
 
 ```
 Apogee/
-├── .claude-plugin/marketplace.json   # local marketplace "apogee" → exposes the plugin
+├── .claude-plugin/marketplace.json   # marketplace "apogee" (GitHub: mishagin-dev/Apogee) → exposes the plugin
 ├── plugins/apogee/                   # THE PLUGIN (machinery)
 │   ├── .claude-plugin/plugin.json    # name: apogee, version (hooks/hooks.json auto-loads by convention)
 │   ├── hooks/
@@ -41,7 +41,7 @@ Apogee/
 │   ├── CLAUDE.md  GEMINI.md          # convention files (Claude + agy)
 │   └── docs/apogee/ai-context/       # {spec,project-structure,progress,deployment-infrastructure}.md
 ├── tests/     # smoke-run-plan.sh: the hook backstop against real br + git-flow sandboxes
-├── install.sh # online one-liner: clone the toolkit into ~/.apogee + run setup.sh
+├── install.sh # online one-liner: temp clone for the templates + run setup.sh
 ├── setup.sh   # scaffold (copy) + enable plugin (link)
 ├── sync.sh    # re-scaffold new template files into an installed project
 └── docs/      # THIS documentation

@@ -1,6 +1,6 @@
 # Apogee — developing the toolkit
 
-This repo IS the toolkit (a Claude Code plugin + local marketplace), not a project that uses it.
+This repo IS the toolkit (a Claude Code plugin + its GitHub marketplace), not a project that uses it.
 Read `docs/ARCHITECTURE.md` first.
 
 ## Operator model
@@ -62,7 +62,9 @@ Read `docs/ARCHITECTURE.md` first.
   separate global setup step. The old global `~/.claude/skills/` copies are left in place until
   manually cleaned up post-release (see the amendment for why).
 - Tracker is `br` (beads_rust), not `bd` — ADR 0001. Don't reintroduce `bd` invocations.
-- Attribution to upstream (`peterkrueck/Claude-Code-Development-Kit`) stays; the system name is Apogee.
+- Apogee is its own project; CCDK (`peterkrueck/Claude-Code-Development-Kit`) is credited as the
+  starting point it kept a couple of ideas from, and its copyright line stays in `LICENSE`. Never
+  call Apogee a fork in docs or manifests.
 - **Decompose complex work.** A complex task or a batch of bugs is split into separate git-flow
   features (one logical change == one `feature/`/`bugfix/` branch opened with `/apogee:start`), not
   crammed into one branch. Run them **sequentially** when they touch overlapping files (to avoid

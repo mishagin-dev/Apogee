@@ -38,8 +38,8 @@ this skill's internals; don't run them directly.
 Skip for `research`.
 
 1. **Git repo + git-flow.** `git rev-parse --is-inside-work-tree`, then
-   `git config --get-regexp '^gitflow\.branch\.'`. Not git-flow → offer `git flow init -d` (via
-   the `apogee:git-flow` skill) and stop until the user agrees; never hand-roll `git checkout -b`.
+   `git config --get-regexp '^gitflow\.branch\.'`. Not git-flow → offer to initialise it (the
+   `apogee:git-flow` skill's "Detect first": `main` + `develop`) and stop until the user agrees; never hand-roll `git checkout -b`.
 2. **Where am I.** `git branch --show-current`.
    - On `develop` or the production branch: fine; uncommitted changes (staged or not) travel to
      the new branch, which is exactly the fix for "I edited on develop by mistake".

@@ -10,7 +10,7 @@
 #              it's personal AI-tooling context, not a project deliverable. Back it up yourself
 #              (e.g. to a NAS) if you want it to survive a fresh clone.
 #   ENABLE   — the MACHINERY (hooks + commands + workflow skills) is NOT copied. It
-#              lives once in the `apogee` plugin (this repo is its local marketplace) and
+#              lives once in the `apogee` plugin (this repo is its marketplace, installed from GitHub) and
 #              is merely enabled for the project via `enabledPlugins`. Update once
 #              (bump the plugin, `/plugin marketplace update apogee`) → every enabled
 #              project gets it.
@@ -52,7 +52,20 @@ git_exclude() {
   fi
 }
 
+# Initialise git-flow with `main` as the production branch: an existing `master` (and no `main`) is
+# respected, otherwise `main`. Runs in the current directory.
+gitflow_init_main() {
+  local prod=main
+  if ! git show-ref --verify --quiet refs/heads/main && git show-ref --verify --quiet refs/heads/master; then
+    prod=master
+  fi
+  git config gitflow.branch.master "$prod"
+  git config gitflow.branch.develop develop
+  git flow init -d >/dev/null 2>&1
+}
+
 MARKETPLACE_NAME="apogee"
+MARKETPLACE_REPO="mishagin-dev/Apogee"   # the plugin is installed from the GitHub marketplace
 PLUGIN_NAME="apogee"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCAFFOLD_DIR="$REPO_DIR/scaffold"
@@ -93,7 +106,7 @@ echo
 # (or the hooks' self-gating) can do anything. Safe and idempotent -- no-op if already a repo.
 if [[ $DO_GIT_INIT -eq 1 ]] && command -v git >/dev/null 2>&1 \
    && ! git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
-  ( cd "$TARGET" && git init -q )
+  ( cd "$TARGET" && git init -q -b main )
   echo "→ git init: $TARGET was not a git repo -- initialized."
   echo
 fi
@@ -147,20 +160,20 @@ fi
 # ---- ENABLE: register marketplace + enable the plugin (link, not copy) ----
 echo "→ Enabling the apogee plugin (link)…"
 
-# Best-effort: use the claude CLI if it exposes plugin management. `marketplace add` on an already
-# registered name silently RE-POINTS that marketplace at the new source, so it only runs when the
-# `apogee` marketplace is unknown or already points here -- running setup.sh from a dev checkout
-# must not hijack an install that comes from ~/.apogee or GitHub.
+# Best-effort: use the claude CLI if it exposes plugin management. The plugin is always installed
+# from the GitHub marketplace ($MARKETPLACE_REPO), never from the directory setup.sh runs from (a
+# temp clone under install.sh, or a dev checkout). `marketplace add` on an already registered name
+# silently RE-POINTS it, so an existing registration is left exactly as it is.
 CLI_OK=0
 if command -v claude >/dev/null 2>&1 && claude plugin --help >/dev/null 2>&1; then
-  KNOWN_SRC="$(jq -r --arg m "$MARKETPLACE_NAME" '.[$m].source | (.path // .repo // .url // empty)' \
+  KNOWN_SRC="$(jq -r --arg m "$MARKETPLACE_NAME" '.[$m].source | (.repo // .path // .url // empty)' \
     "$HOME/.claude/plugins/known_marketplaces.json" 2>/dev/null || true)"
-  if [[ -z "$KNOWN_SRC" || "$KNOWN_SRC" == "$REPO_DIR" ]]; then
-    claude plugin marketplace add "$REPO_DIR" 2>/dev/null || true
-    claude plugin install "${PLUGIN_NAME}@${MARKETPLACE_NAME}" 2>/dev/null && CLI_OK=1 || true
+  if [[ -z "$KNOWN_SRC" ]]; then
+    claude plugin marketplace add "$MARKETPLACE_REPO" 2>/dev/null || true
   else
-    echo "  • marketplace '$MARKETPLACE_NAME' is registered from $KNOWN_SRC — left as is (not re-pointed to $REPO_DIR)."
+    echo "  • marketplace '$MARKETPLACE_NAME' already registered ($KNOWN_SRC) — left as is."
   fi
+  claude plugin install "${PLUGIN_NAME}@${MARKETPLACE_NAME}" 2>/dev/null && CLI_OK=1 || true
 fi
 
 # Reliable fallback / source of truth: write enabledPlugins into the chosen settings
@@ -187,10 +200,10 @@ if [[ $CLI_OK -eq 0 ]]; then
   cat <<EOF
 
   NOTE: register the marketplace once in an interactive Claude session if not already:
-        /plugin marketplace add $REPO_DIR
+        /plugin marketplace add $MARKETPLACE_REPO
         /plugin install ${PLUGIN_NAME}@${MARKETPLACE_NAME}
         /reload-plugins
-  After updating the plugin in this repo, refresh installed projects with:
+  Updates arrive with:
         /plugin marketplace update $MARKETPLACE_NAME
 EOF
 fi
@@ -234,18 +247,18 @@ fi
 
 # ---- tracker init: br + git-flow, both auto by default -- the hooks self-gate to .beads/ and
 # gitflow.* config, so without this step they silently stay inert until someone remembers to run
-# `br init`/`git flow init` by hand. `git flow init -d` just creates `develop` off current HEAD
-# with AVH's default naming conventions (verified: works even on a brand-new, zero-commit repo)
-# -- it doesn't touch existing history, so auto-running it is as low-risk as `br init`.
+# `br init`/`git flow init` by hand. The production branch is pinned before `git flow init -d`:
+# on a zero-commit repo AVH's default is `master` no matter what `git init -b` or
+# init.defaultBranch say, because the branch does not exist yet. An existing main/master is kept.
 if [[ $DO_TRACKER_INIT -eq 1 ]]; then
   echo "→ Tracker init (the hooks self-gate to .beads/ + gitflow projects)…"
   ( cd "$TARGET" && command -v br >/dev/null 2>&1 && [[ ! -d .beads ]] && br init && echo "  • br init done." ) || true
   ( cd "$TARGET" && command -v git-flow >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 \
       && ! git config --get-regexp '^gitflow\.branch\.' >/dev/null 2>&1 \
-      && git flow init -d >/dev/null 2>&1 && echo "  • git flow init -d done." ) || true
+      && gitflow_init_main && echo "  • git flow init done (main + develop)." ) || true
   ( cd "$TARGET" && ! command -v git-flow >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 \
       && ! git config --get-regexp '^gitflow\.branch\.' >/dev/null 2>&1 \
-      && echo "  • git-flow (AVH) not installed -- run 'git flow init -d' by hand once it is, to enable the git-flow workflow." ) || true
+      && echo "  • git-flow (AVH) not installed -- once it is, run: git config gitflow.branch.master main && git config gitflow.branch.develop develop && git flow init -d" ) || true
   echo
 fi
 

@@ -5,29 +5,20 @@ copied). `setup.sh` does both halves; the plugin must also be registered once wi
 
 ## One-time: register the marketplace + install the plugin
 
-The online installer (below) and `setup.sh` register the marketplace themselves when the `claude`
-CLI is reachable: the `apogee` marketplace points at the clone (`~/.apogee` for the one-liner),
-and updates come from pulling that clone. Register by hand only if `setup.sh` printed a NOTE
-saying it could not:
+The plugin is installed from the GitHub marketplace, once per machine, in a Claude Code session:
 
 ```
-/plugin marketplace add ~/.apogee
+/plugin marketplace add mishagin-dev/Apogee
 /plugin install apogee@apogee
 /reload-plugins
 ```
 
-`apogee@apogee` is `<plugin>@<marketplace>`; both names come from the repo's manifests
-(`marketplace.json` → `name: "apogee"`), independent of how the marketplace was added.
+`apogee@apogee` is `<plugin>@<marketplace>`; both names come from the repo's manifests. Updates:
+`/plugin marketplace update apogee`, then `/reload-plugins`; hook matchers are read at session
+start, so open a new session (or reload) after an update. To try unreleased changes of the
+toolkit itself, load the working tree for one session: `claude --plugin-dir plugins/apogee`.
 
-Don't run `/plugin marketplace add` for a *different* source once `apogee` is registered: adding a
-known name re-points it, so `git -C ~/.apogee pull` would stop updating anything. To develop the
-toolkit, load the working tree for one session instead: `claude --plugin-dir plugins/apogee`.
-
-This makes the `apogee` plugin available system-wide (cached by the marketplace; files are referenced,
-never copied into projects). Entry points appear namespaced: `/apogee:init`, `/apogee:prime`, `/apogee:plan-feature`,
-`/apogee:start`, `/apogee:finish`, `/apogee:release`, `/apogee:run-plan`; skills as `/apogee:review-work`, `/apogee:update-docs`, `/apogee:second-opinion`, etc.
-
-## Quick: online one-liner
+## Quick: online one-liner (project setup)
 
 From the project directory you want to set up:
 
@@ -35,9 +26,10 @@ From the project directory you want to set up:
 curl -fsSL https://raw.githubusercontent.com/mishagin-dev/Apogee/main/install.sh | bash
 ```
 
-`install.sh` clones the toolkit into `$APOGEE_HOME` (default `~/.apogee`) — re-running pulls the latest
-— then hands off to `setup.sh` against the current directory (scaffold + enable globally). That clone
-doubles as the local marketplace source, so registration uses `~/.apogee` rather than the GitHub ref.
+`install.sh` clones the repo into a temporary directory, runs `setup.sh` against the current
+directory (scaffold + enable), and deletes the clone. When the `claude` CLI is on PATH and the
+`apogee` marketplace is not registered yet, `setup.sh` registers `mishagin-dev/Apogee` and installs
+the plugin; an existing registration is never re-pointed.
 
 Forward `setup.sh` flags or an explicit target through `bash -s --`:
 
@@ -46,7 +38,7 @@ curl -fsSL .../install.sh | bash -s -- --per-project
 curl -fsSL .../install.sh | bash -s -- /path/to/project --no-scaffold
 ```
 
-Env overrides: `APOGEE_HOME` (clone dir), `APOGEE_BRANCH` (default `main`).
+Env override: `APOGEE_BRANCH` (default `main`).
 
 ## Set up a project (local clone)
 
@@ -84,7 +76,9 @@ What it does:
   list on every session start, for the repo root and each first-level submodule, so paths created
   later (plans, memory, a submodule `CLAUDE.md`) never surface in `git status`.
 - **TRACKER INIT (auto):** if `TARGET` has no `.beads/` yet, runs `br init`; if it has no
-  `gitflow.*` config yet and the AVH `git-flow` binary is installed, runs `git flow init -d`
+  `gitflow.*` config yet and the AVH `git-flow` binary is installed, initialises git-flow with
+  `main` as the production branch (pinned before `git flow init -d`, whose own default on a
+  zero-commit repo is `master`; an existing `master` is respected),
   (default branch/prefix conventions, non-interactive — works even on a brand-new zero-commit
   repo). Without the binary installed, prints a reminder instead. Skip both with
   `--no-tracker-init`.
@@ -112,17 +106,18 @@ The plugin is the single source. To ship a change:
 
 1. Edit `plugins/apogee/…`.
 2. Cut a release with the `/apogee:release` command (Apogee's own dev workflow): it decides the
-   SemVer bump, keeps `plugins/apogee/.claude-plugin/plugin.json` `version` and
-   `.claude-plugin/marketplace.json` `plugins[0].version` in lockstep, refreshes the CHANGELOG,
-   gates on `scripts/validate.sh`, then runs `git flow release finish` itself.
-3. After finishing: push (`git push origin main develop --tags` — stays a manual step), then in
-   any session, `/plugin marketplace update apogee` then `/reload-plugins`.
+   SemVer bump, keeps `plugins/apogee/.claude-plugin/plugin.json` `version` and the `apogee` entry
+   of `.claude-plugin/marketplace.json` in lockstep, refreshes the CHANGELOG, gates on
+   `scripts/validate.sh`, writes the release notes to `$TMPDIR`, and stops (ADR 0007).
+3. The operator runs the three printed commands (finish, `git push origin main develop --tags`,
+   `gh release create`), then in any session `/plugin marketplace update apogee` and
+   `/reload-plugins`.
 
 `/apogee:release` isn't Apogee-specific tooling — it detects where (if anywhere) a project
 declares its version and generalizes accordingly, so the same command also drives releases in any
 other project that has the plugin enabled.
 
-Local marketplaces **do not auto-update**, so upgrades are always intentional. Every project with
+Marketplaces do not auto-update by default, so upgrades are always intentional. Every project with
 `apogee@apogee` enabled then runs the new version — no per-project copying. `scripts/validate.sh`
 also asserts the two manifests and the CHANGELOG agree, so a version bump that misses one of them
 fails CI.
