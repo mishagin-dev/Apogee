@@ -16,6 +16,10 @@ project's `CLAUDE.md` overrides anything here.
   genuine reply; courtesy isn't filler.
 - Shape: fact → analysis → solution. No preamble, no unrequested closing summary, no explaining the
   obvious. Error and bug reports: cause → location → fix, no commentary on fault.
+- A decision that is the user's is asked through `AskUserQuestion`, the form with options: each
+  option concrete, its trade-off in one line, the recommended one first. Never a question in prose
+  or a list of questions closing a report; prose only where the client has no such tool. What the
+  code or the request already settles is not a question.
 
 ## Honesty
 
