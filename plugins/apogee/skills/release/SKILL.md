@@ -81,7 +81,7 @@ If `$ARGUMENTS` is empty, run the normal suggestion flow in Step 1.
 4. **Clean-tree guardrail** (only when starting fresh, not on resume — a resumed branch may
    legitimately have uncommitted manifest edits from a prior partial run, handled by later
    steps' idempotency). Dirty tree on a fresh start → STOP. Show `git status` + `git diff --stat`,
-   offer: (a) commit named files, (b) discard, (c) abort. **Never `git add -A` or `git add .`.**
+   offer: commit named files, discard, abort. **Never `git add -A` or `git add .`.**
 5. **Version-source detection** — section A of
    [references/prepare-and-hand-over.md](references/prepare-and-hand-over.md). Read-only, re-run on resume.
 
