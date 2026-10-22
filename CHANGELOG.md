@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2026-10-22
+
+### Added
+
+- **Decisions are asked as a form.** `SOUL.md` routes every decision that is the user's through
+  `AskUserQuestion`: concrete options, a one-line trade-off each, the recommended one first. A
+  question in prose, or a list of questions closing a report, is no longer acceptable; prose
+  remains only where the client has no such tool. The `release` skill no longer prescribes a
+  lettered text menu for its dirty-tree choice.
+
 ## [4.0.1] - 2026-10-21
 
 The first live run of the 4.0 work loop, in a sandbox project, found three defects; this release
