@@ -1,22 +1,39 @@
 # Apogee — developing the toolkit
 
+<!-- This file holds THIS project's facts, decisions and exceptions, and nothing else.
+     Apogee's general rules (work loop, git, files, tools, code standards) and its tone come from
+     the plugin itself (rules/RULES.md and rules/SOUL.md), injected at every session start, and
+     update with the plugin. Anything written here overrides them for this project.
+     Written by /apogee:init, kept current by /apogee:update-docs; Apogee never rewrites it on
+     update. -->
+
+## 1. Project
+
 This repo IS the toolkit (a Claude Code plugin + its GitHub marketplace), not a project that uses it.
 Read `docs/ARCHITECTURE.md` first.
 
-## Operator model
+## 2. Operator Model
 
 - **Solo, AI-agent-driven.** The user directs and reviews; Claude + sub-agents write the code. Build
   effort is cheap — the real cost is maintenance, debuggability, and decision overhead.
 - **Judge by maintenance burden, not build effort.** "Too much code for a solo dev" is not a valid
   critique; pick architectures on technical merit.
 
-## Critical rules
+## 3. Key Architecture Decisions
+
+Settled decisions live in `docs/decisions/` (ADRs). Don't relitigate them; cite the ADR instead.
+
+- **Toolkit rules live in the plugin** (ADR 0009): `plugins/apogee/rules/RULES.md` (work loop,
+  git, files, tools, code) and `SOUL.md` (tone, honesty, restraint), injected at session start.
+  `scaffold/CLAUDE.md` is a project-only template; never put a general rule there.
+- **Machinery vs content vs preferences** — respect the boundary (ADR 0002): hooks/skills go in
+  `plugins/apogee/`; project templates in `scaffold/`; personal prefs stay in `~/.claude/settings.json`.
+
+## 4. Project Rules
 
 - **Beads stays inert; git-flow is enabled.** This repo has no `.beads/`, so the `br` machinery is a
-  no-op here. git-flow IS configured: commit only on gitflow branches via the `git-flow` /
-  `git-commit` skills. Since ADR 0005 nothing *blocks* a commit on `main`/`develop` — the rule holds
-  because it's written here, not because a hook enforces it. A release (`git flow release`, tags
-  `<version>`) spans `main` + `develop` + the tag — all three must be pushed together
+  no-op here. git-flow IS configured. A release (`git flow release`, tags `<version>`) spans
+  `main` + `develop` + the tag — all three must be pushed together
   (`git push origin main develop --tags`), by you as usual.
 - **Dogfooding is live; the plugin is installed from the GitHub marketplace.** `apogee@apogee`
   is enabled globally from `mishagin-dev/Apogee`, so it is live in this repo too. Consequence:
@@ -26,17 +43,21 @@ Read `docs/ARCHITECTURE.md` first.
   hook changes with `scripts/validate.sh` and `tests/`, not by expecting live behavior to shift.
   The ADR 0002 migration is complete: the legacy global ccdk hook block is gone from
   `~/.claude/settings.json`. Don't reintroduce a global hook block or per-throwaway-project caution.
-- **Language split.** Dialogue with the user in the language Claude Code is configured with (the
-  `language` setting), including the captions on tool calls; code,
-  comments, commit messages, docs, branch names, and anything sent to external tools (`agy`) — in
-  **English**. An English-heavy context is never a reason to answer in English.
-- **Toolkit rules live in the plugin** (ADR 0009): `plugins/apogee/rules/RULES.md` (work loop,
-  git, files, tools, code) and `SOUL.md` (tone, honesty, restraint), injected at session start.
-  `scaffold/CLAUDE.md` is a project-only template; never put a general rule there.
-- **Machinery vs content vs preferences** — respect the boundary (ADR 0002): hooks/skills go in
-  `plugins/apogee/`; project templates in `scaffold/`; personal prefs stay in `~/.claude/settings.json`.
+- Plugin/command/skill names are namespaced `/apogee:<name>`, including the four universal skills
+  (`br`, `git-commit`, `git-flow`, `idea-mcp`), bundled under `plugins/apogee/skills/` since the
+  ADR 0002 amendment (2026-07-07) — a project that installs the plugin gets them automatically, no
+  separate global setup step. The old global `~/.claude/skills/` copies are left in place until
+  manually cleaned up post-release (see the amendment for why).
+- Tracker is `br` (beads_rust), not `bd` — ADR 0001. Don't reintroduce `bd` invocations.
+- Apogee is its own project; CCDK (`peterkrueck/Claude-Code-Development-Kit`) is credited as the
+  starting point it kept a couple of ideas from, and its copyright line stays in `LICENSE`. Never
+  call Apogee a fork in docs or manifests.
+- In this repo, commit only when asked (the scaffold's pre-authorization for feature branches
+  is for host projects, not the toolkit itself). Commits go through the `git-commit` skill.
+- Don't edit the user's global `~/.claude/` without explicit approval (it's machine-wide).
+- Don't reintroduce per-project hook copying — machinery is the plugin, enabled not copied.
 
-## Working on hooks
+### Working on hooks
 
 - All hook commands in `plugins/apogee/hooks/hooks.json` must use `${CLAUDE_PLUGIN_ROOT}/hooks/<group>/…`.
 - Python hooks: anchor internal imports on `os.path.dirname(os.path.abspath(__file__))`, never on CWD or
@@ -53,39 +74,17 @@ Read `docs/ARCHITECTURE.md` first.
   rule belongs in a SKILL.md or `plugins/apogee/rules/RULES.md`, not in a hook.
 - Every hook must self-gate (no-op without `.beads/` / git-flow) and fail open. The
   one exception is Rule 2b, which fails *closed* precisely because it only runs unattended.
+
+## 5. Testing
+
 - After editing hooks, run `bash scripts/validate.sh` (py/sh/json syntax, `${CLAUDE_PLUGIN_ROOT}`
   hook-path resolution, the two `--test` self-tests, version lockstep, and the language-policy
   check; CI runs it too).
 
-## Conventions
+## 6. Privacy & Security
 
-- Plugin/command/skill names are namespaced `/apogee:<name>`, including the four universal skills
-  (`br`, `git-commit`, `git-flow`, `idea-mcp`), bundled under `plugins/apogee/skills/` since the
-  ADR 0002 amendment (2026-07-07) — a project that installs the plugin gets them automatically, no
-  separate global setup step. The old global `~/.claude/skills/` copies are left in place until
-  manually cleaned up post-release (see the amendment for why).
-- Tracker is `br` (beads_rust), not `bd` — ADR 0001. Don't reintroduce `bd` invocations.
-- Apogee is its own project; CCDK (`peterkrueck/Claude-Code-Development-Kit`) is credited as the
-  starting point it kept a couple of ideas from, and its copyright line stays in `LICENSE`. Never
-  call Apogee a fork in docs or manifests.
-- **Decompose complex work.** A complex task or a batch of bugs is split into separate git-flow
-  features (one logical change == one `feature/`/`bugfix/` branch opened with `/apogee:start`), not
-  crammed into one branch. Run them **sequentially** when they touch overlapping files (to avoid
-  merge conflicts), or **in parallel** (separate branches/worktrees) when their file sets are
-  disjoint. State the split and the chosen order before starting. When a branch's work is complete,
-  close it with `/apogee:finish` (review, docs, clean tree, git-flow finish, push `develop`) — not
-  hand-rolled merges. `/apogee:release` prepares a release and stops; the `release`/`hotfix`
-  finish and the push of `main` + tags are the operator's, in a terminal (ADR 0007). Pushing
-  `develop` and work branches is allowed.
+<!-- No project-specific security rules beyond the plugin's hooks (see §4, Working on hooks). -->
 
-## Decisions
+## 7. Bilingual Documentation
 
-Settled decisions live in `docs/decisions/` (ADRs). Don't relitigate them; cite the ADR instead.
-
-## Don't
-
-- In this repo, commit only when asked (the scaffold's pre-authorization for feature branches
-  is for host projects, not the toolkit itself); never push. Commits go through the `git-commit`
-  skill.
-- Don't edit the user's global `~/.claude/` without explicit approval (it's machine-wide).
-- Don't reintroduce per-project hook copying — machinery is the plugin, enabled not copied.
+<!-- Not applicable: the project's docs ship in English only. -->
