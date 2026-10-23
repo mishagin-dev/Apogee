@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.1] - 2026-10-23
+
+### Fixed
+
+- **`second-opinion` defaults to Gemini 4 Argon (Low).** The previous default, Gemini 3.1 Pro
+  (Low), is no longer the current Pro-tier model in `agy`. `APOGEE_SECOND_OPINION_MODEL` still
+  overrides it.
+
 ## [4.1.0] - 2026-10-22
 
 ### Added
