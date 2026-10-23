@@ -26,7 +26,7 @@ it for decisions where being wrong has real consequences.
 ## Model selection
 
 The model comes from the `APOGEE_SECOND_OPINION_MODEL` environment variable, falling back to
-`Gemini 3.1 Pro (Low)`, a fast Pro-tier model. Set the variable in `~/.claude/settings.json`
+`Gemini 4 Argon (Low)`, a fast Pro-tier model. Set the variable in `~/.claude/settings.json`
 (`env`) to repin without editing this skill; `agy models` lists what is installed. The model name
 is a human-readable string with spaces and parentheses, not an API id, so it is always quoted. A
 non-Claude model keeps the opinion independent from this Claude session.
@@ -64,13 +64,13 @@ flushes its output.
 **Standard call** (agy reads project files itself; preferred):
 
 ```bash
-agy --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 3.1 Pro (Low)}" --dangerously-skip-permissions -p '<your question here>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
+agy --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --dangerously-skip-permissions -p '<your question here>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
 ```
 
 **With context piped via stdin** (for code snippets, diffs, or focused excerpts):
 
 ```bash
-agy --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 3.1 Pro (Low)}" --dangerously-skip-permissions -p '<your question here>' 2>&1 <<'CONTEXT_EOF'
+agy --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --dangerously-skip-permissions -p '<your question here>' 2>&1 <<'CONTEXT_EOF'
 <relevant code, diff, or context here>
 CONTEXT_EOF
 ```
@@ -84,13 +84,14 @@ print a short summary plus a `file://` link to a file like
 
 **Required flags, no exceptions:**
 
-| Flag | Why |
-|------|-----|
-| `--model "..."` | Pro-tier model; quoted because the name has spaces and parentheses |
+| Flag                             | Why                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------ |
+| `--model "..."`                  | Pro-tier model; quoted because the name has spaces and parentheses             |
 | `--dangerously-skip-permissions` | Without it `agy -p` HANGS on a tool-approval prompt nobody can answer headless |
-| `-p` | Non-interactive headless mode |
+| `-p`                             | Non-interactive headless mode                                                  |
 
 **DO NOT use:**
+
 - `$()` command substitution (triggers a permission prompt)
 - `/tmp/` file redirects (triggers a permission prompt)
 - `run_in_background` (`agy -p` never flushes its output when backgrounded)
@@ -116,12 +117,14 @@ concurrently, capture the conversation id from the first call and resume that ex
 `--conversation <id>` instead. Run rounds **sequentially**; never launch parallel `agy` calls.
 
 **When to use multi-turn:**
+
 - Design reviews or architecture discussions: run the full debate autonomously
 - `agy`'s answer is vague: ask it to be specific about the part that matters
 - You want to challenge its reasoning: push back and see if it holds
 - The question naturally has layers, e.g. "which approach?" then "what are the migration risks?"
 
 **When NOT to use multi-turn:**
+
 - The first answer was clear and complete: just present it
 - You're asking an unrelated question: start a fresh call (omit `-c`)
 
