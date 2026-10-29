@@ -54,3 +54,9 @@ all. In practice changes landed on `develop` and had to be moved onto a branch a
 - `/apogee:run-plan` opens each epic with `start` and closes it with `finish`; the
   `APOGEE_RUN_PLAN=1` tag moves with the finish command and keeps its fail-closed check (ADR 0006).
 - `setup.sh` allows pushing `hotfix/*` branches without a prompt.
+
+## Amendment (2026-10-29) — the `merge` alias stays until the next major release
+
+Decision 6 said the `/apogee:merge` alias lasts one release. It was not removed in 4.1.x; it now
+stays until the next major release (5.0.0), where its removal is a breaking change like the
+4.0.0 rename.
