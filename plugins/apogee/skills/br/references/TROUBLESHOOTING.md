@@ -51,13 +51,9 @@ br sync --import-only --skip-prefix-validation
 
 If you get `failed to create worktree: 'main' is already checked out`:
 
-```bash
-git branch beads-sync main
-git push -u origin beads-sync
-br config set sync.branch beads-sync
-```
-
-Always use a dedicated sync branch that you never check out directly.
+In Apogee projects there is no sync branch: `.beads/` is local-only (kept out of git via
+`.git/info/exclude`), `sync.branch` stays unset, and nothing is pushed. If `sync.branch` was
+configured, unset it.
 
 ### Sync Issues After Git Merge
 
