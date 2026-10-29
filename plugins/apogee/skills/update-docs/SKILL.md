@@ -1,6 +1,7 @@
 ---
 name: update-docs
-description: Update project documentation after code changes. Maintains the 4 core docs/apogee files (spec, project-structure, progress, deployment-infrastructure) and CLAUDE.md. Use after completing features, refactors, or any changes that affect project structure, capabilities, or status. Also creates initial documentation if files don't exist yet.
+description: Update project documentation after code changes. Maintains the 4 core docs/apogee files (spec, project-structure, progress, deployment-infrastructure) and CLAUDE.md. Run by /apogee:finish (and /apogee:run-plan) at the end of a unit of work, and by /apogee:init for initial creation; standalone only when the user asks. Skips small changes (see When to Skip).
+argument-hint: "[base branch, default: develop]"
 user-invocable: true
 ---
 
@@ -54,11 +55,14 @@ Claude Code can read files and grep code. Only document what **cannot be inferre
 
 ### Step 1: Analyze What Changed
 
-Check recent changes:
+Base = `$ARGUMENTS` if given; else `git config gitflow.branch.develop`; else `develop` if it
+exists; else the merge-base with the default branch. Check what the branch changed, committed or
+not:
 
 ```bash
-git diff --stat HEAD
-git log --oneline -5
+git diff --stat <base>...HEAD
+git log --oneline <base>..HEAD
+git status --short
 ```
 
 Identify what categories of change occurred:
@@ -147,8 +151,9 @@ After updating, silently check `progress.md`:
 - No duplication with spec.md — if progress.md restates architecture details, delete and cross-reference
 - Dead items: remove completed checklist items done 2+ weeks with no ongoing relevance
 
-**Net-line audit.** Run `git diff --stat` on the docs you touched. If this run added 10 or more
-lines and deleted none, stop and re-read what you added: documentation that only grows is
+**Net-line audit.** These docs are local-only (git-excluded), so git cannot measure them: record
+`wc -l` of each doc before editing and compare after. If this run added 10 or more lines and
+deleted none, stop and re-read what you added: documentation that only grows is
 documentation nobody prunes. Find the lines the additions made redundant, or justify to yourself
 why none exist, before finishing.
 
