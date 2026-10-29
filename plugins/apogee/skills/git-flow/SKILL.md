@@ -15,8 +15,8 @@ If the line above reads `NOT_A_GIT_REPO`, **stop immediately**: tell the user
 this directory is not a git repository (offer `git init -b main`, then the initialisation under "Detect first"),
 and run none of the commands below.
 
-Drive Git Flow through the **installed `git flow` binary** (AVH Edition 1.12.3,
-`/opt/homebrew/bin/git-flow`) — not hand-rolled `git merge`/`tag` sequences. The
+Drive Git Flow through the **installed `git flow` binary** (AVH Edition, resolved from `PATH`;
+`git flow version` confirms it) — not hand-rolled `git merge`/`tag` sequences. The
 binary reads branch names and prefixes from local `gitflow.*` git config and
 performs the merge + tag + back-merge + branch-delete steps atomically.
 
@@ -109,7 +109,8 @@ tags (release/hotfix), back-merges, and deletes the branch**.
   use `git flow <type> start|finish` so the tag and back-merge happen correctly.
 - **`release finish` / `hotfix finish` are the operator's.** They merge into the production
   branch and create the tag; by decision (ADR 0007) an agent never runs them, and the hook denies
-  them. `/apogee:release` prepares the branch and prints the two commands for the operator.
+  them. `/apogee:release` prepares the branch and prints the three commands for the operator (finish,
+  push, publish the release).
 
 ## beads link (CCDK / beads_rust projects)
 

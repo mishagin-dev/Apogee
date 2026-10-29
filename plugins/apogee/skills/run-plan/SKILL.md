@@ -38,8 +38,8 @@ This is the autonomous counterpart to the normal work loop (`/apogee:prime` → 
 `br` → `/apogee:finish`) — it *is* that
 loop, run end-to-end by the agent instead of pausing between each stage. It's also the intended
 continuation of a Plan Mode approval in a git-flow project: `plugins/apogee/hooks/br/br-capture-
-gate.py` (fires on `ExitPlanMode`) captures the approved plan into `br` as an epic + steps, then
-hands off here instead of telling the agent to open the branch and implement by hand — approving
+gate.py` (fires on `ExitPlanMode`) has the agent record the approved plan in `br` as an epic plus
+child steps (it injects the exact commands), then hands off here instead of telling the agent to open the branch and implement by hand — approving
 the plan already is the go-ahead to execute it, so this command should be the default next action,
 not a separately-requested one. It only exists to eliminate confirmation friction on beads+git-flow
 projects where a plan has already been approved and recorded as epics + steps. It does **not**
@@ -143,7 +143,7 @@ Repeat until termination (see below). Each iteration:
      of the loop, exactly as in interactive use.
    Log it: `br comments add <epicId> --message "run-plan: finished <branch>, pushed develop"`.
 
-5. **Increment the epic counter.** If it reaches `max_epics_per_invocation` (and the cap isn't 0),
+5. **Increment the epic counter.** If it reaches `max_epics` (and the cap isn't 0),
    stop here (circuit-breaker termination) rather than continuing to the next epic.
 
 ---
@@ -157,8 +157,9 @@ Repeat until termination (see below). Each iteration:
   softenable confirmation.
 - **A genuine hard-stop fires**, exactly as in interactive use: a merge conflict, worktree+gitflow
   being unsupported, ANY dirty file at merge time (no exceptions — see Philosophy), a
-  test-gate failure, or a release/hotfix epic (route to `/apogee:release`; the finish itself is
-  the operator's — out of scope for this command).
+  test-gate failure, or a release/hotfix epic (halt and tell the operator: a release is prepared
+  with `/apogee:release`, a hotfix is opened with `/apogee:start hotfix` and closed with
+  `/apogee:finish`; the git-flow finish and the push of `main` stay with the operator).
 - **The user interrupts the session.**
 
 On every exit path, print a structured summary before returning control:
@@ -166,8 +167,9 @@ On every exit path, print a structured summary before returning control:
 - Any halt reason, verbatim, if the loop stopped on something other than success or the circuit
   breaker.
 - **Always**, regardless of how the loop ended: whether `develop` is pushed (and if not, why --
-  no remote, or a halt before the finish), and the reminder that releasing (`/apogee:release`, then
-  the finish and push of `main` by the operator) is a separate, manual act.
+  no remote, or a halt before the finish), and the reminder that releasing (`/apogee:release`, or
+  `/apogee:start hotfix` + `/apogee:finish` for a hotfix, then the finish and push of `main` by
+  the operator) is a separate, manual act.
 
 ---
 

@@ -20,8 +20,8 @@ Rules, in evaluation order:
    query error refuses the finish). An interactive finish gets no check. See ADR 0006.
 
 1. DENY — `git flow release|hotfix finish`. It merges into the production branch and tags; by
-   decision (ADR 0007) that step belongs to the operator in a terminal. `/apogee:release` prepares
-   the branch and prints the two commands.
+   decision (ADR 0007) that step belongs to the operator in a terminal. `/apogee:release` (release
+   branches) or `/apogee:finish` (hotfix branches) prepares the branch and prints the commands.
 
 Active only in git repos; fail-open on any parse/IO error. Everything else this file used to
 enforce is prose in `skills/git-flow/SKILL.md` and `scaffold/CLAUDE.md` (ADR 0005).
@@ -170,8 +170,8 @@ def _wall_decision(command: str, cwd: str, prod: str):
             return (
                 f"This push {reason}. Publishing '{prod}' or tags is reserved for the operator "
                 f"(ADR 0007): push `develop` and work branches freely; for a release, "
-                f"/apogee:release prepares the branch and prints the finish and push commands to "
-                f"run in a terminal."
+                f"/apogee:release (or /apogee:finish on a hotfix branch) prepares the branch and "
+                f"prints the finish and push commands to run in a terminal."
             )
     if _MERGE_RE.search(command):
         on_prod = _current_branch(cwd) == prod
@@ -182,7 +182,8 @@ def _wall_decision(command: str, cwd: str, prod: str):
             return (
                 f"Merging into '{prod}' is reserved for the operator (ADR 0007). Finish work "
                 f"branches into develop with `git flow feature|bugfix finish`; releases are "
-                f"prepared by /apogee:release and finished by the operator in a terminal."
+                f"prepared by /apogee:release (hotfixes by /apogee:finish) and finished by the "
+                f"operator in a terminal."
             )
     for m in _TAG_RE.finditer(command):
         tokens = m.group("rest").split()
@@ -301,9 +302,9 @@ def main():
     if _FLOW_FINISH_RE.search(command):
         deny(
             "Finishing a release or hotfix merges into the production branch and creates a tag; "
-            "by decision (ADR 0007) the operator runs that in a terminal. /apogee:release prepares "
-            "the branch (version, CHANGELOG, validate gate, commits) and prints the finish and push "
-            "commands; stop there."
+            "by decision (ADR 0007) the operator runs that in a terminal. /apogee:release (release "
+            "branches) or /apogee:finish (hotfix branches) prepares the branch (version, CHANGELOG, "
+            "validate gate, commits) and prints the finish and push commands; stop there."
         )
 
     sys.exit(0)
