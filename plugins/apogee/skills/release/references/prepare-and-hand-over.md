@@ -132,7 +132,8 @@ Do not commit anything before this gate passes.
 
 ## E. Commit release prep
 
-Via the **`apogee:git-commit` skill** (bundled with this plugin; if unavailable, `git commit -F <file>` directly):
+Via the **`apogee:git-commit` skill** (bundled with this plugin; if unavailable, `git commit -F -` directly,
+the message in a quoted heredoc as in its step 5, no temp file):
 
 1. `docs(changelog): Update for <version>` — only if C actually wrote a new section
    (skip this commit if C was a no-op on resume).

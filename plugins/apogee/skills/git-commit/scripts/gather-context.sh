@@ -21,6 +21,7 @@ if ! git diff --cached --quiet; then
 elif ! git diff --quiet; then
   scope="all"
   echo "NOTICE: nothing staged. Falling back to ALL changes (git diff)."
+  echo "Before committing, stage the files this commit covers by name: git add <path>..."
 else
   echo "No staged or modified tracked changes detected."
   untracked=$(git ls-files --others --exclude-standard)
