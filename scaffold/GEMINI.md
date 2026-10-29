@@ -23,6 +23,7 @@ When a question involves external libraries, frameworks, or APIs, use **Context7
 - **Flag severity.** Use: `blocker` (must fix), `concern` (should fix), `nitpick` (optional). Example: `blocker — this race condition can drop writes` / `nitpick — variable name is unclear`.
 - **Suggest alternatives.** When you identify a problem, propose a concrete fix.
 - **Stay in your lane.** You're a consultant, not the decision-maker. Present options with trade-offs — the developer decides.
+- **Keep secrets out.** Do not read `.env*` files (except `.env.example`), private keys, or credential/secret files, even if asked. If secrets are relevant, say so and work from placeholders.
 
 <!-- ============================================================
      CUSTOMIZE: Add your project-specific context below.

@@ -9,8 +9,9 @@ Get an independent second opinion from a different model family via the locally 
 CLI (antigravity-cli). A genuinely different architecture and training makes it useful for catching
 blind spots, validating reasoning on edge cases, or surfacing trade-offs you might miss.
 
-`agy` has full read access to the project: it can read files, grep code, and explore the codebase.
-You provide the specific question and any focused context; `agy` handles the rest.
+`agy` has full read access to the project: it can read files, grep code, and explore the codebase,
+secret files included (see the secrets rule in Step 1). You provide the specific question and any
+focused context; `agy` handles the rest.
 
 ## When to Use
 
@@ -50,9 +51,11 @@ For questions about existing project code, you can simply reference file paths; 
 them itself. Write the prompt in **English** (the project's language split: everything sent to
 external tools is English).
 
-**Secrets never go into the prompt or the piped context.** The `security-scan` hook inspects every
-`agy` invocation and refuses the call when the payload carries a live credential; replace it with a
-placeholder before retrying.
+**Secrets never go into the prompt or the piped context.** The `security-scan` hook sees only the
+`agy` command line and the piped heredoc, and refuses the call when they carry a live credential;
+replace it with a placeholder before retrying. It does not see the files `agy` opens itself, so
+never point `agy` at, or ask it to explore, `.env*` (except `.env.example`), `*.pem`/`*.key`, or
+credential and config files holding live values; pipe a redacted excerpt instead.
 
 ### Step 2: Invoke agy
 
@@ -109,12 +112,18 @@ identify the disagreements. Typically 2-4 rounds.
 Continue the same conversation instead of starting fresh, in the foreground, prompt in English:
 
 ```bash
-agy -c --dangerously-skip-permissions -p '<your English follow-up>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
+agy -c --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --dangerously-skip-permissions -p '<your English follow-up>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
 ```
 
 `-c` (`--continue`) resumes the most recent conversation. If other `agy` sessions may run
-concurrently, capture the conversation id from the first call and resume that exact one with
-`--conversation <id>` instead. Run rounds **sequentially**; never launch parallel `agy` calls.
+concurrently, capture the conversation id from the first call and resume that exact one instead:
+
+```bash
+agy --conversation <id> --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --dangerously-skip-permissions -p '<your English follow-up>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
+```
+
+The required-flags table applies to every follow-up round too. Run rounds **sequentially**; never
+launch parallel `agy` calls.
 
 **When to use multi-turn:**
 
