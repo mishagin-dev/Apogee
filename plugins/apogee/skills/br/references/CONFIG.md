@@ -34,8 +34,10 @@ output:
 sync:
   auto_import: false
   auto_flush: false
-  branch: beads-sync  # Use dedicated sync branch
 ```
+
+The upstream `sync.branch` option (a dedicated sync branch) is not used in Apogee projects:
+`.beads/` is local-only and never committed or pushed.
 
 ---
 

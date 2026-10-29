@@ -11,7 +11,8 @@
 #
 # Gated to beads projects: fires where a `.beads/` directory exists (walking up from the hook
 # cwd) — br still uses `.beads/`. Silent no-op in a casual chat (no `.beads/`).
-# NOTE: br never runs git; sync/commit of `.beads/` stays the user's job (git-flow/git-commit).
+# NOTE: br never runs git; in Apogee projects .beads/ is local-only (kept out of git via
+# .git/info/exclude) and is never staged or committed.
 
 set -euo pipefail
 

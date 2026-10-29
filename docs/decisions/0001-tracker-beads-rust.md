@@ -52,3 +52,6 @@ Neither applies to a solo workflow today.
 - The `hooks/br/*` machinery stays as-is; `Bash(br:*)` remains in the allow-list.
 - Apogee's tracker contract is the classic `.beads/` + `issues.jsonl` model, committed via git by the
   user (hooks never run git themselves).
+- *Amended 2026-10-29:* `.beads/` is now local-only — kept out of git via `.git/info/exclude`,
+  never staged or committed; `br sync --flush-only` keeps the JSONL current as a local backup. See
+  `plugins/apogee/rules/RULES.md` ("Files") and ADR 0009.
