@@ -43,8 +43,8 @@ Settled decisions live in `docs/decisions/` (ADRs). Don't relitigate them; cite 
   hook changes with `scripts/validate.sh` and `tests/`, not by expecting live behavior to shift.
   The ADR 0002 migration is complete: the legacy global ccdk hook block is gone from
   `~/.claude/settings.json`. Don't reintroduce a global hook block or per-throwaway-project caution.
-- Plugin/command/skill names are namespaced `/apogee:<name>`, including the four universal skills
-  (`br`, `git-commit`, `git-flow`, `idea-mcp`), bundled under `plugins/apogee/skills/` since the
+- Plugin/command/skill names are namespaced `/apogee:<name>`, including the three universal skills
+  (`br`, `git-commit`, `git-flow`), bundled under `plugins/apogee/skills/` since the
   ADR 0002 amendment (2026-07-07) — a project that installs the plugin gets them automatically, no
   separate global setup step. The old global `~/.claude/skills/` copies are left in place until
   manually cleaned up post-release (see the amendment for why).
