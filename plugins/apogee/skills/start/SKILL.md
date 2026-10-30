@@ -91,7 +91,7 @@ Skip when there is no `.beads/` at the repo root.
   <slug> --json`, a hotfix's title carrying its version) plus one child step, link it, then claim
   the step: `br update <stepId> --claim --actor "${BR_ACTOR:-assistant}"`.
 - **Research.** Linked by `apogee:research`; skip here.
-- Log it: `br comments add <id> --message "start: opened <branch or research file>"`.
+- Log it: `br comments add <id> --message "start: opened <branch>"`.
 
 `br` never runs git and `.beads/` is local-only; nothing to commit here.
 
@@ -99,10 +99,9 @@ Skip when there is no `.beads/` at the repo root.
 
 ## Report
 
-Four lines, no more:
+Branch types only; a research item is reported by `apogee:research`. Four lines, no more:
 
-- What was opened: `<type>/<slug>` off `<base>` at `<short sha>` (published or not), or the
-  research file path.
+- What was opened: `<type>/<slug>` off `<base>` at `<short sha>` (published or not).
 - Uncommitted changes carried along, if any.
 - Epic / issue linked, created, or none (not a beads project).
 - Other open work, if any.

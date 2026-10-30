@@ -171,7 +171,7 @@ move its old toolkit sections out of `CLAUDE.md`.
 |---|---|---|
 | `feature`, `bugfix` | A branch off a fresh `develop`, published, linked to a `br` epic | Review, docs, tests of the change, merge into `develop`, push `develop` |
 | `hotfix` | A branch off `main` with the next patch version | Review, version bump, CHANGELOG, then hands you the finish commands |
-| `research` | A dated note in `docs/apogee/research/`, no branch | Checks the conclusion and sources, closes it, proposes the follow-up |
+| `research` | A dated note in `docs/apogee/research/`, no branch | Checks the conclusion, sources and second opinion, closes it, proposes the follow-up |
 
 4. **Releases:** `/apogee:release [major|minor|patch]` prepares the release branch, CHANGELOG
    and release notes, then prints three commands for you to run:
