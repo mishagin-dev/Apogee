@@ -44,18 +44,18 @@ prompt as:
 
 1. **The question**: what exactly you want `agy` to weigh in on
 2. **Your current thinking** (recommended): share your position so `agy` can challenge it
-3. **Specific context** (if needed): pipe code snippets or diffs via stdin when the relevant code
-   is scattered or you want to focus attention on specific sections
+3. **Specific context** (if needed): put code snippets or diffs inside the prompt when the
+   relevant code is scattered or you want to focus attention on specific sections
 
 For questions about existing project code, you can simply reference file paths; `agy` will read
 them itself. Write the prompt in **English** (the project's language split: everything sent to
 external tools is English).
 
-**Secrets never go into the prompt or the piped context.** The `security-scan` hook sees only the
-`agy` command line and the piped heredoc, and refuses the call when they carry a live credential;
-replace it with a placeholder before retrying. It does not see the files `agy` opens itself, so
-never point `agy` at, or ask it to explore, `.env*` (except `.env.example`), `*.pem`/`*.key`, or
-credential and config files holding live values; pipe a redacted excerpt instead.
+**Secrets never go into the prompt.** The `security-scan` hook sees only the `agy` command line,
+prompt included, and refuses the call when it carries a live credential; replace it with a
+placeholder before retrying. It does not see the files `agy` opens itself, so never point `agy`
+at, or ask it to explore, `.env*` (except `.env.example`), `*.pem`/`*.key`, or credential and
+config files holding live values; put a redacted excerpt in the prompt instead.
 
 ### Step 2: Invoke agy
 
@@ -67,16 +67,21 @@ flushes its output.
 **Standard call** (agy reads project files itself; preferred):
 
 ```bash
-agy --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --dangerously-skip-permissions -p '<your question here>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
+agy --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --mode plan -p '<your question here>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
 ```
 
-**With context piped via stdin** (for code snippets, diffs, or focused excerpts):
+**With context in the prompt** (for code snippets, diffs, or focused excerpts):
 
 ```bash
-agy --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --dangerously-skip-permissions -p '<your question here>' 2>&1 <<'CONTEXT_EOF'
-<relevant code, diff, or context here>
-CONTEXT_EOF
+agy --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --mode plan -p '<your question here>
+
+Context:
+<relevant code, diff, or excerpt; write each single quote as '\''>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
 ```
+
+`agy -p` does not read stdin: piped or heredoc input never reaches the model, which then answers
+that no code was provided. Context goes inside the quoted prompt, or `agy` reads it from the
+project files you name.
 
 The Bash tool captures all output directly; no file redirects needed. The `grep -viE` filter drops
 `agy`'s startup noise.
@@ -87,11 +92,18 @@ print a short summary plus a `file://` link to a file like
 
 **Required flags, no exceptions:**
 
-| Flag                             | Why                                                                            |
-| -------------------------------- | ------------------------------------------------------------------------------ |
-| `--model "..."`                  | Pro-tier model; quoted because the name has spaces and parentheses             |
-| `--dangerously-skip-permissions` | Without it `agy -p` HANGS on a tool-approval prompt nobody can answer headless |
-| `-p`                             | Non-interactive headless mode                                                  |
+| Flag            | Why                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| `--model "..."` | Pro-tier model; quoted because the name has spaces and parentheses                         |
+| `--mode plan`   | Read-only: `agy` reads and searches the project but cannot write files or run commands     |
+| `-p`            | Non-interactive headless mode                                                              |
+
+`--mode plan` replaces `--dangerously-skip-permissions`. Without either flag `agy -p` hangs on a
+tool-approval prompt nobody can answer headless; plan mode needs no approval for reading, and
+auto-approving every tool is what Claude Code's auto-mode classifier blocks. Never add
+`--dangerously-skip-permissions` back: a second opinion needs to read, not to act. Ask for
+analysis, not actions: asked to change something, `agy` in plan mode writes an implementation
+plan under `~/.gemini/antigravity-cli/brain/` and stops for approval instead.
 
 **DO NOT use:**
 
@@ -112,14 +124,14 @@ identify the disagreements. Typically 2-4 rounds.
 Continue the same conversation instead of starting fresh, in the foreground, prompt in English:
 
 ```bash
-agy -c --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --dangerously-skip-permissions -p '<your English follow-up>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
+agy -c --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --mode plan -p '<your English follow-up>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
 ```
 
 `-c` (`--continue`) resumes the most recent conversation. If other `agy` sessions may run
 concurrently, capture the conversation id from the first call and resume that exact one instead:
 
 ```bash
-agy --conversation <id> --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --dangerously-skip-permissions -p '<your English follow-up>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
+agy --conversation <id> --model "${APOGEE_SECOND_OPINION_MODEL:-Gemini 4 Argon (Low)}" --mode plan -p '<your English follow-up>' 2>&1 | grep -viE '^(Warning|Loading|Registering|Scheduling|Data collection|Flushing|\[dotenv|True color)'
 ```
 
 The required-flags table applies to every follow-up round too. Run rounds **sequentially**; never
@@ -157,6 +169,8 @@ a faster Pro-tier model from `agy models`. Tell the user which path you took.
 1. **Never fall back to a lesser model.** A Pro-tier model or nothing.
 2. **Don't over-use.** This is for genuinely tricky decisions, not routine coding questions.
 3. **Shell quoting matters.** For prompts containing single quotes, escape with `'\''`. For
-   complex prompts, use the stdin heredoc.
+   long prompts, put the context after the question inside the same quoted argument; never pipe
+   it, `agy -p` ignores stdin.
 4. **Command must start with `agy`** (matches `Bash(agy:*)`), run in the foreground, with
-   `--dangerously-skip-permissions`. Never wrap in `$()` or redirect to `/tmp/`.
+   `--mode plan`, never `--dangerously-skip-permissions`. Never wrap in `$()` or redirect to
+   `/tmp/`.

@@ -3,7 +3,7 @@
 #
 # Wired on three surfaces (hooks.json): every `mcp__*` tool, WebFetch/WebSearch, and Bash -- where
 # it only looks at `agy` invocations, because that is the one shell command this toolkit uses to
-# hand code to an external model (the second-opinion skill pipes diffs through a heredoc). Any
+# hand code to an external model (the second-opinion skill puts diffs inside the prompt). Any
 # other Bash command is skipped untouched.
 #
 # This is the one gate ADR 0005 kept on irreversibility grounds: a secret that reaches a third-party
