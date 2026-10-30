@@ -172,4 +172,5 @@ a faster Pro-tier model from `agy models`. Tell the user which path you took.
    long prompts, put the context after the question inside the same quoted argument; never pipe
    it, `agy -p` ignores stdin.
 4. **Command must start with `agy`** (matches `Bash(agy:*)`), run in the foreground, with
-   `--mode plan`, never `--dangerously-skip-permissions`. Never wrap in `$()` or redirect to `/tmp/`.
+   `--mode plan`, never `--dangerously-skip-permissions`. Never wrap in `$()` or redirect to
+   `/tmp/`.
