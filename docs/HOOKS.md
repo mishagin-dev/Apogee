@@ -23,7 +23,7 @@ applied to the matched token, so `postgres://user:password@localhost` and AWS's 
 `AKIAIOSFODNN7EXAMPLE` stay quiet. This is precision over recall by design: a scanner that fires on
 `password: str` gets switched off, and a switched-off scanner has zero recall. It covers every
 surface this toolkit uses to hand data to an external service: MCP servers, `WebFetch`/`WebSearch`,
-and the `agy` CLI (the second-opinion skill pipes code through a heredoc, which is part of the Bash
+and the `agy` CLI (the second-opinion skill puts code inside the quoted prompt, which is part of the Bash
 command string and therefore scanned). Other Bash commands are skipped. `--test` covers the pattern
 cases and the `agy` detection.
 

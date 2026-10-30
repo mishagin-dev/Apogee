@@ -171,7 +171,7 @@ move its old toolkit sections out of `CLAUDE.md`.
 |---|---|---|
 | `feature`, `bugfix` | A branch off a fresh `develop`, published, linked to a `br` epic | Review, docs, tests of the change, merge into `develop`, push `develop` |
 | `hotfix` | A branch off `main` with the next patch version | Review, version bump, CHANGELOG, then hands you the finish commands |
-| `research` | A dated note in `docs/apogee/research/`, no branch | Checks the conclusion and sources, closes it, proposes the follow-up |
+| `research` | A dated note in `docs/apogee/research/`, no branch | Checks the conclusion, sources and second opinion, closes it, proposes the follow-up |
 
 4. **Releases:** `/apogee:release [major|minor|patch]` prepares the release branch, CHANGELOG
    and release notes, then prints three commands for you to run:
@@ -251,6 +251,7 @@ refreshes the ones whose sources changed.
 | `/apogee:review-work` | The review loop `finish` runs: tests of the change, `/code-review` for bugs, a rules audit and an intent check, fixes, tests again |
 | `/apogee:update-docs`, `/apogee:public-docs` | Agent context and human docs, respectively |
 | `/apogee:second-opinion` | An independent model via `agy` for contested decisions |
+| `apogee:research` | The research procedure `start` and `finish` hand over to: a dated note, deep reasoning, a required second opinion from `agy` |
 | `/apogee:readme` | Write or validate a README like this one |
 | `/apogee:ai-clean-room` | Black-box reimplementation procedure, manual only |
 | `apogee:git-commit`, `apogee:git-flow`, `apogee:br`, `apogee:symfony-cli-workflow` | The lower layer the entry points use |

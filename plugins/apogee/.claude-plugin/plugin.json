@@ -1,7 +1,7 @@
 {
   "name": "apogee",
-  "version": "4.1.2",
-  "description": "Claude Code workflow machinery: lifecycle hooks (secret scan + the production-branch wall, plus context injectors), workflow skills (update-docs, review-work, second-opinion, public-docs, readme, symfony-cli-workflow, ai-clean-room, br, git-commit, git-flow), and the init/prime/plan-feature/start/finish/release/run-plan entry-point skills. Install once, enable per project.",
+  "version": "4.2.0",
+  "description": "Claude Code workflow machinery: lifecycle hooks (secret scan + the production-branch wall, plus context injectors), workflow skills (update-docs, review-work, second-opinion, public-docs, readme, symfony-cli-workflow, ai-clean-room, research, br, git-commit, git-flow), and the init/prime/plan-feature/start/finish/release/run-plan entry-point skills. Install once, enable per project.",
   "author": {
     "name": "mishagin.dev",
     "email": "mishagin.a.a@gmail.com"

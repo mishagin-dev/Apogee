@@ -97,19 +97,9 @@ preparation: sections A–G of the reference with `<type>` = `release`.
 
 ## Research
 
-1. **Completeness.** The file must have a non-empty **Conclusion** and **Sources** (or an explicit
-   "no external sources" with the reason). Missing → finish the research first; don't mark an
-   unanswered question done.
-2. **Close it.** Frontmatter `status: done` plus `finished: <YYYY-MM-DD>`; in
-   `docs/apogee/README.md` change the Index line's `(open)` to the one-line answer.
-3. **Promote what lasts.** A conclusion that is a standing fact about the domain belongs in
-   `docs/apogee/domain/`; a settled architectural choice belongs in `CLAUDE.md` §4 (or an ADR in
-   the project). Move or link it; the research note stays as the record of how it was decided.
-4. **Tracker** (beads): close the research issue with the conclusion as the reason.
-5. **Follow-up.** If the conclusion calls for code, end the report with the exact next command,
-   e.g. `/apogee:start feature <slug>`; don't start it unasked.
-
-No git anywhere in this mode: `docs/apogee/` is local-only.
+Hand over to `apogee:research` with `close <note path>`: it checks the conclusion, the sources and
+the second opinion, closes the note and its tracker issue, promotes what lasts, and proposes the
+follow-up. No git in this mode: `docs/apogee/` is local-only.
 
 ---
 

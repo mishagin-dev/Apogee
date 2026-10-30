@@ -60,3 +60,13 @@ all. In practice changes landed on `develop` and had to be moved onto a branch a
 Decision 6 said the `/apogee:merge` alias lasts one release. It was not removed in 4.1.x; it now
 stays until the next major release (5.0.0), where its removal is a breaking change like the
 4.0.0 rename.
+
+## Amendment (2026-10-30) — research runs in its own skill
+
+The research procedure (decision 1's `research` row) moved out of `start` and `finish` into
+`apogee:research`, which both entry points hand over to; `/apogee:start research` and
+`/apogee:finish` stay the only way a research item is opened and closed. The split exists because
+the skill carries `ultrathink` and `effort: xhigh`, which raise reasoning for the turn the skill
+content runs in: inside `start` they would apply to every branch opened. The research skill also
+makes a second opinion from `agy` a required step before the conclusion, recorded in the note's
+**Second opinion** section (or `Unavailable: <reason>`), and the close checks for it.
