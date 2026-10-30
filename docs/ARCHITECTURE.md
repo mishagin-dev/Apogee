@@ -34,7 +34,7 @@ Apogee/
 │   │   ├── git/   # enforce-git-flow-skill (the only Bash gate) + unfinished-branch-nudge, lib/
 │   │   └── core/  # security-scan (+ config/sensitive-patterns.json), cleanup, apogee-session-start
 │   ├── skills/    # update-docs, review-work, second-opinion, public-docs, readme, symfony-cli-workflow,
-│   │              #   ai-clean-room, br, git-commit, git-flow
+│   │              #   ai-clean-room, research, br, git-commit, git-flow
 │   │              #   + the entry points init, prime, plan-feature, start, finish, release, run-plan → /apogee:<name>
 │   │              #   (skills, not commands/: Claude Code merged the two formats; user-only ones set
 │   │              #   disable-model-invocation)

@@ -76,36 +76,9 @@ this branch; the version bump and CHANGELOG are `/apogee:finish`'s job, not the 
 
 ## Open: research
 
-No branch, no git: the output lands in `docs/apogee/research/`, which is local-only (a
-ceremony-free deliverable, RULES.md "Files"). Create
-
-```
-docs/apogee/research/<YYYY-MM-DD>-<slug>.md
-```
-
-with this skeleton, filled from the request:
-
-```markdown
----
-status: open
-started: <YYYY-MM-DD>
-question: "<the question, one sentence>"
----
-
-# <Title>
-
-## Question
-## Context            <!-- why it is asked now, constraints, what is already decided -->
-## Findings           <!-- evidence, each claim with its source -->
-## Options            <!-- when there is a choice: trade-offs, not a survey -->
-## Conclusion         <!-- the answer, and what it means for the project -->
-## Sources
-```
-
-Add one line to `docs/apogee/README.md`'s Index: path, the question, `(open)`. Then do the
-research into that file, not into the chat: Context7 for library questions, WebSearch for the
-rest, `apogee:second-opinion` for a contested trade-off. Code is not changed under a research
-item; if the answer calls for code, `/apogee:finish` proposes the follow-up `start`.
+No branch, no git. Hand over to `apogee:research` with `open <the question or slug>`: it creates
+the dated note in `docs/apogee/research/`, links the tracker, and runs the research with deep
+reasoning and a second opinion from `agy`. Code is not changed under a research item.
 
 ---
 
@@ -117,9 +90,8 @@ Skip when there is no `.beads/` at the repo root.
   --actor "${BR_ACTOR:-assistant}"`. No epic: create one (`br create "<title>" -t epic --slug
   <slug> --json`, a hotfix's title carrying its version) plus one child step, link it, then claim
   the step: `br update <stepId> --claim --actor "${BR_ACTOR:-assistant}"`.
-- **Research.** One issue, no epic: `br create "<question>" -t task -l research --json`, its
-  `external_ref` set to the research file's path; claim it.
-- Log it: `br comments add <id> --message "start: opened <branch or research file>"`.
+- **Research.** Linked by `apogee:research`; skip here.
+- Log it: `br comments add <id> --message "start: opened <branch>"`.
 
 `br` never runs git and `.beads/` is local-only; nothing to commit here.
 
@@ -127,10 +99,9 @@ Skip when there is no `.beads/` at the repo root.
 
 ## Report
 
-Four lines, no more:
+Branch types only; a research item is reported by `apogee:research`. Four lines, no more:
 
-- What was opened: `<type>/<slug>` off `<base>` at `<short sha>` (published or not), or the
-  research file path.
+- What was opened: `<type>/<slug>` off `<base>` at `<short sha>` (published or not).
 - Uncommitted changes carried along, if any.
 - Epic / issue linked, created, or none (not a beads project).
 - Other open work, if any.
