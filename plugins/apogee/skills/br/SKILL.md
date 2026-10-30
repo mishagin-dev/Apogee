@@ -3,7 +3,8 @@ name: br
 description: >-
   Official skill for beads_rust (`br`), a local-first, dependency-aware issue
   tracker for AI agents. Use when creating issues, triaging backlogs, managing
-  dependencies, finding ready work, updating status, or syncing to git via JSONL.
+  dependencies, finding ready work, updating status, or exporting the local JSONL
+  backup (br sync --flush-only).
 license: MIT
 domain: project-management
 role: specialist
@@ -350,11 +351,9 @@ which br                     # Verify br is installed
 
 **"Database locked"**: Check for other `br` processes with `pgrep -f "br "`.
 
-**Worktree error** (`'main' is already checked out`):
-```bash
-git branch beads-sync main
-br config set sync.branch beads-sync
-```
+**Worktree error** (`'main' is already checked out`): in Apogee projects there is no sync branch.
+`.beads/` is local-only, `sync.branch` stays unset, and nothing is pushed; unset `sync.branch` if
+it was configured.
 
 **Verbose debugging:**
 ```bash

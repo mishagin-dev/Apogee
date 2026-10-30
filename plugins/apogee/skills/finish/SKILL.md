@@ -41,11 +41,13 @@ tree, a failing gate, open steps), STOP and surface it.
    branch, fixes committed on the branch, tests again. It stops the finish if its tests are still
    red after two repair rounds. Skip only if it already ran in this session and no code was
    committed after its last commit. Note the commit it ended on.
-3. **Docs.** Skip criteria from `apogee:update-docs` ("When to Skip") apply. Otherwise, if
-   `git log <base>..HEAD --name-only` shows no touch of `docs/apogee/ai-context/` or `CLAUDE.md`
-   while the change is substantive: run `apogee:update-docs`. Then, when any doc under `docs/`
-   declares `sources:` overlapping the branch's changed files and was not itself touched on the
-   branch, run `apogee:public-docs update`. Both commit through `apogee:git-commit`.
+3. **Docs.** Skip if `apogee:update-docs` already ran in this session after the last code commit.
+   Otherwise apply its "When to Skip" list; if the change is substantive, run
+   `apogee:update-docs <base>`. Then, when any doc under `docs/` declares `sources:` overlapping
+   the branch's changed files and was not itself touched on the branch, run
+   `apogee:public-docs update`. `update-docs` edits local-only files (`docs/apogee/`, the root
+   `CLAUDE.md`), so there is nothing to commit; only public-docs output under `docs/` (and a
+   tracked `CLAUDE.md`, if the project tracks it) commits through `apogee:git-commit`.
 4. **Clean tree.** `git status` must be empty. Dirty → STOP; show `git status` and
    `git diff --stat`, and offer: commit named files, discard, abort. **Never `git add -A`.** This
    has no exception, autonomous or not (ADR 0006): a dirty tree at this point means commit

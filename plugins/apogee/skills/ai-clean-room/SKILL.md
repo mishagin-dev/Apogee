@@ -4,7 +4,7 @@ description: >-
   Personal black-box clean-room skill: build an independent product that reproduces the
   functionality of a closed-source reference application using only its public documentation,
   observed behavior and screenshots, without copying its code, texts, icons, design or name.
-  Manual invocation only (/ai-clean-room).
+  Manual invocation only (/apogee:ai-clean-room).
 disable-model-invocation: true
 ---
 

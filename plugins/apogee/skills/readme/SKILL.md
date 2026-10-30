@@ -83,7 +83,7 @@ Theory and architecture come AFTER the user has seen examples and knows how to s
 
 ## Execution Steps
 
-Given `/readme [--rewrite] [--validate]`:
+Given `/apogee:readme [--rewrite] [--validate]`:
 
 ### Step 1: Pre-flight
 
@@ -330,7 +330,7 @@ When rewriting or validating, flag these:
 
 ### Generating a README from scratch for a new project
 
-**User says:** `/readme`
+**User says:** `/apogee:readme`
 
 **What happens:**
 1. Pre-flight detects no existing README.md and proceeds to generate from scratch.
@@ -341,7 +341,7 @@ When rewriting or validating, flag these:
 
 ### Validating an existing README without changes
 
-**User says:** `/readme --validate`
+**User says:** `/apogee:readme --validate`
 
 **What happens:**
 1. Pre-flight confirms README.md exists and enters validate-only mode, skipping the interview and generation steps.
@@ -355,7 +355,7 @@ When rewriting or validating, flag these:
 | Problem | Cause | Solution |
 |---------|-------|----------|
 | Review validation step fails | The check agent could not run | Retry; fall back to `/apogee:second-opinion` with the same brief |
-| Generated README has no trust block | No trust concerns were selected during the interview (step 3f answered "None of the above") | If your tool does run hooks, modify config, or make network calls, re-run `/readme --rewrite` and select the applicable trust concerns |
+| Generated README has no trust block | No trust concerns were selected during the interview (step 3f answered "None of the above") | If your tool does run hooks, modify config, or make network calls, re-run `/apogee:readme --rewrite` and select the applicable trust concerns |
 | `<details>` blocks render as raw HTML on GitHub | Missing blank line after `<summary>` tag or before `</details>` | The skill enforces this formatting rule, but manual edits may break it. Ensure there is a blank line after every `<summary>...</summary>` line and before every `</details>` |
 | Interview keeps asking questions the project manifest already answers | The manifest file format is not recognized by the context-gathering step | Ensure your project has a standard manifest (`package.json`, `go.mod`, `pyproject.toml`, `Cargo.toml`) in the repo root |
 | Anti-pattern detection flags false positives on rewrite | Some content patterns trigger heuristic detection even when intentional | Review each finding during the review step and select "Ship it" for intentional choices. The detection is heuristic, not absolute |

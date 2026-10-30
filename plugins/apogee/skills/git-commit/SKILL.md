@@ -45,7 +45,12 @@ driven by two scripts:
 2. **Compose the message** following the Rules below. If the diff contains
    multiple unrelated changes, focus on the single most significant one.
 
-3. **Validate** before committing:
+3. **Stage** if the scope was the ALL-changes fallback, or if the commit covers only part of the
+   changes: `git commit` takes only the index, so an empty one fails. Stage exactly the files
+   this commit is about, by name (`git add <path>...`); never `git add -A`, `git add .` or `-f`.
+   Confirm with `git diff --cached --stat`.
+
+4. **Validate** before committing:
 
    ```bash
    bash "${CLAUDE_PLUGIN_ROOT}/skills/git-commit/scripts/check-message.sh" <<'EOF'
@@ -59,7 +64,7 @@ driven by two scripts:
    violation. Fix every failure and re-validate. `WARN` (subject 51–72 chars)
    does not block but prefer ≤ 50.
 
-4. **Create the commit** with the message on stdin, `-F -` (not `-m`, which
+5. **Create the commit** with the message on stdin, `-F -` (not `-m`, which
    mangles the multi-line body), using the exact text that passed validation:
 
    ```bash
@@ -141,6 +146,6 @@ There used to be a PreToolUse hook denying `git commit -m` / `-am` / bare
 removed it: a badly-formatted commit message is a `git commit --amend` away
 from fixed, and the rule was already stated three times in this file.
 
-So the `-F -` pattern in step 4 of the Workflow is now a convention you
+So the `-F -` pattern in step 5 of the Workflow is now a convention you
 follow, not one you are forced into. Follow it anyway — `-m` collapses the
 multi-line body, which is the actual reason for the rule.

@@ -37,7 +37,7 @@ import sys
 PRIME_DIRECTIVE = (
     "This is an Apogee-managed project (beads tracker detected). "
     "Before doing anything else, run the /apogee:prime command to load project "
-    "context (docs/apogee and the beads tracker state)."
+    "context (docs/apogee)."
 )
 
 # Only auto-prime fresh sessions, not resumed/compacted ones.
