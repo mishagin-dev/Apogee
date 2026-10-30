@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-10-30
+
+### Added
+
+- **Research runs in its own skill, `apogee:research`, with deep reasoning and a required second
+  opinion.** `/apogee:start research` and `/apogee:finish` hand over to it, so they stay the only
+  way a research item is opened and closed. The skill carries `ultrathink` and `effort: xhigh`,
+  which raise reasoning for research only, not for every branch opened. Before concluding, it asks
+  `agy` to challenge the findings and the draft conclusion and records each point and its
+  resolution in the note's new **Second opinion** section (or `Unavailable: <reason>`); the close
+  checks for it. ADR 0008 carries an amendment.
+
+### Fixed
+
+- **`second-opinion` was blocked in auto mode and its stdin variant sent no context.** `agy` now
+  runs with `--mode plan`: it reads the project without approval prompts and cannot write files or
+  run commands, where `--dangerously-skip-permissions` approved everything and is blocked by
+  Claude Code's auto-mode classifier. `agy -p` ignores stdin, so the heredoc form delivered an
+  empty context; context now goes inside the quoted prompt, where the secret scan also sees it.
+
 ## [4.1.2] - 2026-10-29
 
 An audit of when and how each skill is invoked found these defects; all are fixed.
