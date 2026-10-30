@@ -4,6 +4,34 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.2] - 2026-10-29
+
+An audit of when and how each skill is invoked found these defects; all are fixed.
+
+### Fixed
+
+- **Hotfixes were routed to a skill that refuses them.** The `enforce-git-flow-skill` deny
+  messages and `run-plan`'s stop rule sent a hotfix finish to `/apogee:release`; they now name
+  `/apogee:finish` for hotfix branches. `run-plan`'s circuit breaker reads the `max_epics` it
+  defines, and `plan-feature`/`run-plan` state that the agent records the approved plan in `br`
+  (the plan-approval hook only supplies the commands).
+- **`git-commit` could fail on an empty index.** When nothing is staged it now stages the
+  commit's files by name and checks `git diff --cached --stat` first. The release reference's
+  fallback commits through stdin like the skill.
+- **`update-docs` relied on git for local-only files.** Its net-line audit counts lines with
+  `wc -l`, it takes a base branch and reads the whole branch instead of the last commit, and its
+  description no longer invites runs in the middle of a branch. `/apogee:finish` passes the base
+  and no longer tests git history for docs that git cannot see.
+- **`br` still described syncing `.beads/` through git.** The description, the sync-branch
+  troubleshooting and the sample config now match the local-only rule; ADR 0001 carries an
+  amendment.
+- **`second-opinion` could leak secret files.** `agy` reads files itself, out of the secret
+  scan's sight; the skill and `scaffold/GEMINI.md` now keep it away from `.env*`, keys and
+  credential files. Follow-up rounds pass `--model` too.
+- **Stale references:** the `merge` alias removal date (next major release, ADR 0008 amended),
+  `/apogee:readme` and `/apogee:ai-clean-room` namespaces, the prime directive's tracker claim,
+  the `git-flow` operator command count and its hardcoded binary path.
+
 ## [4.1.1] - 2026-10-23
 
 ### Fixed
