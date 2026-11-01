@@ -82,8 +82,9 @@ Every line a command prints lands in the context. Ask for what you need, not for
   such a command does, and safety classifiers read it as obfuscation and block it.
 - **Decode from disk.** Data already in a file (an export, a dump, a captured payload) is decoded
   by a short script that reads the file and writes the result: write the script with the Write
-  tool, then run `python3 <script> <input> <output>`. The blob never passes through the command
-  line or the context.
+  tool to a git-ignored scratch path inside the project (`.claude/`, which Apogee keeps out of
+  git), run `python3 <script> <input> <output>`, and delete the script when done. The blob never
+  passes through the command line or the context.
 - **Hand files over as files.** To give the user a file, write it to disk and name its path; never
   encode it inline in a message or a command.
 
