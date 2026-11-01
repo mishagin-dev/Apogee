@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2026-11-01
+
+Rules from an audit of what Claude Code's safety checks blocked across the operator's projects:
+scratch probes outside the project, inline edits, chained deletions, printed secrets, encoded
+blobs, and research briefs worded as attacks on what was the operator's own service.
+
+### Added
+
+- **Commands** (`RULES.md`): probes, helper scripts and temporary files go in the project's
+  `.scratch/`, which Apogee now keeps out of git, instead of `/tmp`, `mktemp` or `.claude/` (a
+  protected path whose writes are always reviewed). Files change through Edit and Write, not
+  `python3 -` heredocs or `sed -i`; one state-changing action per command, deletions by named
+  path; a denied action is not retried in another form; background work is awaited with Monitor,
+  not `sleep`.
+- **Encoded data**: no long base64 or hex strings in commands; data on disk is decoded by a short
+  script in `.scratch/`, and files reach the user as files.
+- **Secrets by shape, never by value**: env and config files are inspected by key names; secrets
+  live in git-ignored local files the user fills in; what goes to `agy`, MCP or the web carries
+  placeholders, and in infrastructure repos `agy` gets redacted excerpts instead of reading files
+  with real hosts.
+- **Security-sensitive work**: task and subagent briefs state the real context (whose service,
+  own hosts, the goal) and scope work to documented behaviour, as a matter of accuracy, never to
+  get past a check; a refusal or an empty subagent result after one is reported as blocked, not
+  merged as "nothing found".
+
 ## [4.2.0] - 2026-10-30
 
 ### Added
