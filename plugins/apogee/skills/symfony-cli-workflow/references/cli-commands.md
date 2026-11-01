@@ -89,14 +89,19 @@ symfony var:export SYMFONY_DEFAULT_ROUTE_URL
 
 **Reading logs without hanging.** `server:log` prints the log file paths on its first lines
 (`Following Web Server log file (…/symfony-cli/log/<hash>.log)`), then tails them; `--no-follow`
-did not stop the tailing in testing. Two safe options:
+did not stop the tailing in testing. Two safe options, the first preferred:
 
 ```bash
-# a) bounded run: give it a few seconds, then kill it
-( symfony server:log --no-ansi -n 50 & p=$!; sleep 4; kill $p ) 2>/dev/null
-# b) read the files directly (macOS path; Linux: ~/.symfony5/log/)
+# a) read the files directly (macOS path; Linux: ~/.symfony5/log/)
 ls -t "$HOME/Library/Application Support/symfony-cli/log/"*.log | head -1 | xargs tail -n 50
+# b) stream it as a background task, never in the foreground
+symfony server:log --no-ansi -n 50
 ```
+
+For b), start the command with `run_in_background`, watch its output with Monitor until the lines
+you need appear, then stop the task. Do not bound a foreground run with `sleep` and `kill`. The
+server itself already runs detached with `server:start -d`; check it with `server:status` and stop
+it with `server:stop`.
 
 Worker output (`[messenger_async] …`, `Restarting command`) goes to the same server log.
 
@@ -126,7 +131,8 @@ Ad hoc, with the injected env and optional restart-on-change:
 ```bash
 symfony run -d --watch=config,src,templates,vendor symfony console messenger:consume async -vv
 symfony run -d npm run watch                      # Encore / Vite / Tailwind watcher
-symfony run printenv DATABASE_URL                 # any command sees the injected env
+symfony var:export --multiline | cut -d= -f1     # names of the injected vars, no values
+symfony run sh -c '[ -n "$DATABASE_URL" ] && echo set || echo unset'   # any command sees them
 ```
 
 Declarative, started and stopped together with the web server (`server:start` / `server:stop`;
