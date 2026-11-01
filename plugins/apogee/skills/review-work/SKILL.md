@@ -93,7 +93,7 @@ SIMPLICITY — a new abstraction, layer, option or flag with a single user or no
 solution built for one case; speculative extensibility. Cite the line.
 TESTS — new behaviour without tests; tests asserting exact strings where structure would do.
 LANGUAGE — identifiers, comments and docs in English; no narrating comments.
-AI TOOLING — nothing under .claude/, docs/apogee/, .beads/, or CLAUDE.md/GEMINI.md/AGENTS.md is
+AI TOOLING — nothing under .claude/, docs/apogee/, .beads/, .scratch/, or CLAUDE.md/GEMINI.md/AGENTS.md is
 staged or referenced as a deliverable (these are local-only by decision).
 
 Any claim about a third-party library or API must be checked against its current documentation via

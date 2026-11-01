@@ -68,8 +68,8 @@ What it does:
   so the layout is visible from day one. Existing files are preserved.
 - **EXCLUDE:** appends the plugin's AI-tooling exclude list
   (`plugins/apogee/hooks/core/config/exclude-list.txt`: `docs/apogee/`, `CLAUDE.md`, `GEMINI.md`,
-  `AGENTS.md`, `.claude/`, `.beads/`, `.scratch/`) to the project's `.git/info/exclude`. All of it is personal
-  working state (worked with locally, an IDE with "respect gitignore" off still shows it), not a
+  `AGENTS.md`, `.claude/`, `.beads/`, `.scratch/`) to the project's `.git/info/exclude`. All of it
+  is personal working state (worked with locally, an IDE with "respect gitignore" off still shows it), not a
   project deliverable, so none of it touches the host's committed `.gitignore` or its git history.
   The decision is deliberate: the repository holds code and project documentation only, and the
   tracker's JSONL is backed up with the rest of the local context rather than committed. Skipped
