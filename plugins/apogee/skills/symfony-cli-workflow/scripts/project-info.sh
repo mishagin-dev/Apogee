@@ -108,7 +108,8 @@ elif [ "$HAVE_CLI" = 1 ]; then
   INJECTED=$(cd "$ROOT" && symfony var:export --multiline 2>/dev/null | grep -cE '^export (DATABASE|MAILER|REDIS|RABBITMQ|MESSENGER|MONGODB)_' || true)
   if [ "${INJECTED:-0}" -gt 0 ]; then
     ok "$INJECTED service var(s) injected from running containers — bare 'php bin/console' would NOT see them"
-    (cd "$ROOT" && symfony var:export --multiline 2>/dev/null | grep -E '^export (DATABASE_URL|MAILER_DSN|MESSENGER_TRANSPORT_DSN)=' | sed 's/^/        /')
+    # Names only: injected DSNs carry credentials.
+    (cd "$ROOT" && symfony var:export --multiline 2>/dev/null | sed -nE 's/^export ((DATABASE|MAILER|REDIS|RABBITMQ|MESSENGER|MONGODB)_[A-Z_]*)=.*/        \1/p')
   else
     warn "compose file present ($(basename "$COMPOSE")) but nothing injected — containers down? 'docker compose ps' / 'symfony var:export --debug'"
   fi

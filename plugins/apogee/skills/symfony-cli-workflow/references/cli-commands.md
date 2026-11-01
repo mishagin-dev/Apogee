@@ -166,8 +166,7 @@ Redis → `REDIS_URL`, RabbitMQ → `MESSENGER_TRANSPORT_DSN` / `RABBITMQ_*`, Ma
 
 ```bash
 docker compose up -d
-symfony var:export --multiline               # one `export K=V` per line — the complete injected env
-symfony var:export DATABASE_URL              # a single value
+symfony var:export --multiline | cut -d= -f1 # the injected variable names; values carry credentials
 symfony var:export --debug                   # why a service was or was not picked up
 symfony var:export --dir="$root"             # from outside the project directory
 symfony console doctrine:database:create     # uses the live port; bare php would use .env's placeholder
