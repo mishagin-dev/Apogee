@@ -75,6 +75,18 @@ Every line a command prints lands in the context. Ask for what you need, not for
 - **Non-interactive by default**: `--no-pager` (or `PAGER=cat`) where a tool may page; `-q` /
   `--quiet` only where it drops progress noise, not errors.
 
+## Encoded data
+
+- **No encoded blobs in commands.** Never put a long base64, hex or other opaque encoded string
+  into a Bash command: not in a heredoc, an `echo`/`printf`, or a variable. Nobody can review what
+  such a command does, and safety classifiers read it as obfuscation and block it.
+- **Decode from disk.** Data already in a file (an export, a dump, a captured payload) is decoded
+  by a short script that reads the file and writes the result: write the script with the Write
+  tool, then run `python3 <script> <input> <output>`. The blob never passes through the command
+  line or the context.
+- **Hand files over as files.** To give the user a file, write it to disk and name its path; never
+  encode it inline in a message or a command.
+
 ## Code
 
 - Follow the project's existing style, naming and idioms.
