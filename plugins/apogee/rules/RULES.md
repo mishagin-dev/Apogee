@@ -38,8 +38,8 @@ project's `CLAUDE.md` overrides anything here; it holds the project's own facts 
   only. `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `docs/apogee/`, `.claude/`, `.beads/` and the
   agent's `.scratch/` are kept out of git through `.git/info/exclude`, which Apogee maintains for
   the repo and each submodule. Never check whether they are tracked, never stage them, never
-  propose `.gitignore` entries for them, never list them in a commit or merge summary. One showing up in `git status` is an Apogee setup
-  defect: say so in one line and carry on.
+  propose `.gitignore` entries for them, never list them in a commit or merge summary. One
+  showing up in `git status` is an Apogee setup defect: say so in one line and carry on.
 - **Secrets by shape, never by value.** Inspect env and config files by key names
   (`cut -d= -f1`, or `.env.example`); never print a value. Secrets live in git-ignored local files
   the user fills in (`.env.local`, `*.local.xcconfig`); never write one into a tracked file.
