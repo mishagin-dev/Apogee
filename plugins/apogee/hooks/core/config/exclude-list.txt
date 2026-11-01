@@ -11,3 +11,4 @@ docs/apogee/
 /AGENTS.md
 /.claude/
 /.beads/
+/.scratch/
