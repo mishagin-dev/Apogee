@@ -115,7 +115,7 @@ it registers the marketplace and installs the plugin itself.
 |---|---|---|
 | `~/.claude/settings.json` | `enabledPlugins["apogee@apogee"] = true`; with `--per-project`, `<project>/.claude/settings.json` instead | `/plugin disable apogee@apogee` |
 | Your project | `CLAUDE.md`, `GEMINI.md`, `docs/apogee/` (index, four context docs, six empty working-memory dirs), `.claude/settings.local.json` (permission baseline, `plansDirectory`, `autoMemoryDirectory`) | delete them; none are tracked |
-| `.git/info/exclude` | Lines keeping the files above, plus `AGENTS.md`, `.claude/` and `.beads/`, out of git; never `.gitignore` | delete the lines |
+| `.git/info/exclude` | Lines keeping the files above, plus `AGENTS.md`, `.claude/`, `.beads/` and the agent's `.scratch/`, out of git; never `.gitignore` | delete the lines |
 | Repo setup | `git init -b main`, `br init` (`.beads/`), git-flow with `main` + `develop` (`gitflow.*` config) if missing; `--no-git-init`, `--no-tracker-init` to skip | see Uninstall |
 
 Hooks run locally on tool calls; none of them sends data anywhere. The permission baseline

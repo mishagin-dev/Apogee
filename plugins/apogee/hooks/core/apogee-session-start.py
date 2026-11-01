@@ -12,7 +12,7 @@ Three jobs:
    or one of its submodules); elsewhere the plugin stays silent.
 
 1. **Exclude maintenance.** The toolkit's decision is that a repository holds code and project
-   documentation only: `CLAUDE.md`, `GEMINI.md`, `docs/apogee/`, `.claude/`, `.beads/` are
+   documentation only: `CLAUDE.md`, `GEMINI.md`, `docs/apogee/`, `.claude/`, `.beads/`, `.scratch/` are
    personal working state and live in `.git/info/exclude`, never in `.gitignore`. `setup.sh` writes
    that list once; this hook re-asserts it on every session start, for the repo root and each
    first-level submodule, so a path created later (the first plan file, the first memory entry, a

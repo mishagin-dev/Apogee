@@ -55,7 +55,9 @@ external tools is English).
 prompt included, and refuses the call when it carries a live credential; replace it with a
 placeholder before retrying. It does not see the files `agy` opens itself, so never point `agy`
 at, or ask it to explore, `.env*` (except `.env.example`), `*.pem`/`*.key`, or credential and
-config files holding live values; put a redacted excerpt in the prompt instead.
+config files holding live values; put a redacted excerpt in the prompt instead. In an
+infrastructure repo whose ordinary files carry real hostnames, node lists or subscription URLs,
+do the same for those files: excerpt them with placeholders rather than letting `agy` read them.
 
 ### Step 2: Invoke agy
 

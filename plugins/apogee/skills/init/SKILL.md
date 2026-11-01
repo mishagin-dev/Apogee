@@ -103,7 +103,7 @@ Keep it short — a flat working file, not the full root template. Never overwri
 
 A submodule is its own git repo, so the parent's `.git/info/exclude` does not cover it. Nothing to
 do by hand: the plugin's SessionStart hook re-asserts the AI-tooling exclude list (`CLAUDE.md`,
-`GEMINI.md`, `docs/apogee/`, `.claude/`, `.beads/`) for the parent and every first-level
+`GEMINI.md`, `docs/apogee/`, `.claude/`, `.beads/`, `.scratch/`) for the parent and every first-level
 submodule at the start of each session, so a submodule `CLAUDE.md` created here stays out of git
 from the next session on. Do not verify it, do not stage it, do not add it to `.gitignore`.
 

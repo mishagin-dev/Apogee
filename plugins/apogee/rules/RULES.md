@@ -35,11 +35,17 @@ project's `CLAUDE.md` overrides anything here; it holds the project's own facts 
 - **English on disk and towards tools**: code, identifiers, comments, commit messages, branch
   names, docs, `br` issues, and anything sent to `agy` or other CLIs.
 - **AI tooling is local-only, by decision.** The repository holds code and project documentation
-  only. `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `docs/apogee/`, `.claude/` and `.beads/` are kept out
-  of git through `.git/info/exclude`, which Apogee maintains for the repo and each submodule. Never
-  check whether they are tracked, never stage them, never propose `.gitignore` entries for them,
-  never list them in a commit or merge summary. One showing up in `git status` is an Apogee setup
-  defect: say so in one line and carry on.
+  only. `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `docs/apogee/`, `.claude/`, `.beads/` and the
+  agent's `.scratch/` are kept out of git through `.git/info/exclude`, which Apogee maintains for
+  the repo and each submodule. Never check whether they are tracked, never stage them, never
+  propose `.gitignore` entries for them, never list them in a commit or merge summary. One
+  showing up in `git status` is an Apogee setup defect: say so in one line and carry on.
+- **Secrets by shape, never by value.** Inspect env and config files by key names
+  (`cut -d= -f1`, or `.env.example`); never print a value. Secrets live in git-ignored local files
+  the user fills in (`.env.local`, `*.local.xcconfig`); never write one into a tracked file.
+  Anything sent to an external model or service (`agy`, MCP, web) carries placeholders for hosts,
+  keys, tokens and subscription URLs; where the files themselves hold real hosts or subscription
+  URLs (infrastructure repos), send a redacted excerpt instead of letting the tool read them.
 - **Git-ignored deliverables are ceremony-free**: a report, a research note or other output
   written to an ignored path needs no `br` step, no branch and no commit.
 - **Working memory** lives in `docs/apogee/`; `docs/apogee/README.md` is its index, and a file
@@ -74,6 +80,54 @@ Every line a command prints lands in the context. Ask for what you need, not for
 - **Large files**: Read with `offset`/`limit`, or `grep -n` to find the lines first; not `cat`.
 - **Non-interactive by default**: `--no-pager` (or `PAGER=cat`) where a tool may page; `-q` /
   `--quiet` only where it drops progress noise, not errors.
+
+## Commands
+
+Every command is a reviewable action. Keep each one obvious about what it touches.
+
+- **Scratch inside the project.** Probes, helper scripts and temporary files go in `.scratch/` at
+  the project root, which Apogee keeps out of git, created with the Write tool. Not `/tmp` or
+  `mktemp` (outside the project, every write there is reviewed), not `.claude/` (a protected path,
+  same). Delete what you made, by name, when done. A deliverable the operator picks up from a
+  named place, like the release notes file in `$TMPDIR`, is not scratch.
+- **Edit files with Edit and Write**, not `python3 -` heredocs, `sed -i` or `perl -pi`: the change
+  stays a reviewable diff, and edits inside the project need no extra approval.
+- **One state-changing action per command.** Writes, deletions, branch switches and pushes run as
+  their own commands, not chained after reads. Delete by named path, never by wildcard, glob or
+  `find -delete`.
+- **A denied action stays denied.** Don't retry it in another form or chain other commands onto
+  it. Tell the user what was blocked and why it was needed; they run it or approve it.
+- **Wait with Monitor, not sleep.** Poll a background job or a CI run with `run_in_background` and
+  Monitor; a foreground `sleep N; cat <output>` is blocked. (`agy -p` is the exception: it only
+  flushes its output in the foreground.)
+
+## Encoded data
+
+- **No encoded blobs in commands.** Never put a long base64, hex or other opaque encoded string
+  into a Bash command: not in a heredoc, an `echo`/`printf`, or a variable. Nobody can review what
+  such a command does, and safety classifiers read it as obfuscation and block it.
+- **Decode from disk.** Data already in a file (an export, a dump, a captured payload) is decoded
+  by a short script that reads the file and writes the result: write the script to `.scratch/`
+  with the Write tool, run `python3 <script> <input> <output>`, and delete the script when done.
+  The blob never passes through the command line or the context.
+- **Hand files over as files.** To give the user a file, write it to disk and name its path; never
+  encode it inline in a message or a command.
+
+## Security-sensitive work
+
+For projects that run network infrastructure (VPN, proxy, DNS, server fleets) or touch security
+topics.
+
+- **Describe the work as it is.** A task, research brief or subagent prompt states the real
+  context: whose service it is, that the hosts are the operator's own, and the goal (keep users
+  connected, harden, diagnose, migrate). Scope it to the documented behaviour of the software in
+  use (upstream docs, issues, source) at design level. Attack vocabulary ("weaponise",
+  "exploit") describes going after other people's systems, which maintaining one's own service is
+  not. This is accuracy, not rewording: never reshape a request to get past a safety check, and
+  work aimed at third parties is out of scope.
+- **A refusal is a result.** A declined request, a model-switch notice, or a subagent that returns
+  empty after a refusal is reported as blocked, with what was asked; never merged as "nothing
+  found". The user decides what next: rewind, another approach, or the documented fallback model.
 
 ## Code
 
