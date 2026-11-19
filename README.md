@@ -252,6 +252,7 @@ refreshes the ones whose sources changed.
 | `/apogee:update-docs`, `/apogee:public-docs` | Agent context and human docs, respectively |
 | `/apogee:second-opinion` | An independent model via `agy` for contested decisions |
 | `apogee:research` | The research procedure `start` and `finish` hand over to: a dated note, deep reasoning, a required second opinion from `agy` |
+| `/apogee:cleanup` | Find agent worktrees, their stale records and build directories across the repo and its submodules; delete what you pick |
 | `/apogee:readme` | Write or validate a README like this one |
 | `/apogee:ai-clean-room` | Black-box reimplementation procedure, manual only |
 | `apogee:git-commit`, `apogee:git-flow`, `apogee:br`, `apogee:symfony-cli-workflow` | The lower layer the entry points use |

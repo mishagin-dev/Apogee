@@ -1,6 +1,6 @@
 ---
 name: symfony-cli-workflow
-description: 'Work on Symfony projects (8.1 by default; version-aware for 7.4 LTS and 6.4 LTS) through the official `symfony` CLI — `symfony console`, `symfony composer`, `symfony php`, `symfony server:*`, `symfony run` — instead of bare `php bin/console`, `composer` or `vendor/bin/*`. Use it whenever a task touches a Symfony app: a `composer.json` with `symfony/*` packages or a `symfony.lock`, `bin/console`, Doctrine entities or migrations, Twig templates, Messenger workers, MakerBundle generators, the local web server, PHPUnit inside a Symfony project, or an error mentioning `bin/console`, a `Connection refused` to a Docker database, or a maker crash. Trigger even when the user only says "add an entity", "create a controller", "run the migrations" or "start the app" inside such a project. Not for production deployment or Platform.sh/Upsun operations.'
+description: 'Work on Symfony projects (8.1 by default; version-aware for 7.4 LTS and 6.4 LTS) through the official `symfony` CLI — `symfony console`, `symfony composer`, `symfony php`, `symfony server:*`, `symfony run` — instead of bare `php bin/console`, `composer` or `vendor/bin/*`. A Symfony app is a project with `bin/console` and `symfony/framework-bundle` (or a `symfony.lock`); `symfony/*` packages alone do not make one. Use it whenever a task in such an app touches Doctrine entities or migrations, Twig templates, Messenger workers, MakerBundle generators, the local web server, PHPUnit, or an error mentioning `bin/console`, a `Connection refused` to a Docker database, or a maker crash, even when the user only says "add an entity", "run the migrations" or "start the app". Its command forms take precedence over generic PHP or Composer guidance from other skills. Not for production deployment or Platform.sh/Upsun operations.'
 ---
 
 # Symfony CLI workflow
@@ -21,11 +21,15 @@ bash "<skill-dir>/scripts/project-info.sh"
 ```
 
 `<skill-dir>` is the base directory announced when this skill loads (inside a plugin it is
-`${CLAUDE_PLUGIN_ROOT}/skills/symfony`). The probe prints: CLI presence, project root, Symfony
-version (from `composer.lock`, else `extra.symfony.require`), the PHP constraint from
+`${CLAUDE_PLUGIN_ROOT}/skills/symfony-cli-workflow`). The probe prints: CLI presence, project root,
+Symfony version (from `composer.lock`, else `extra.symfony.require`), the PHP constraint from
 `composer.json`, the PHP the CLI would actually use, a compatibility verdict, which bundles are
 installed (Maker, ORM, migrations, fixtures, Messenger, AssetMapper/Encore, PHPUnit, PHPStan,
 CS Fixer), whether Docker env vars are being injected, and the web-server state.
+
+A Symfony app here means a project with `bin/console` and `symfony/framework-bundle` (or a
+`symfony.lock`); `symfony/*` packages alone are not enough, Laravel and Drupal ship them too. When
+the probe exits `1` (not a Symfony project), drop this skill and use the project's normal tooling.
 
 Manual fallback when you cannot run the script:
 
@@ -89,6 +93,10 @@ The two reasons that bite agents hardest, both reproduced:
 | Production / staging hosts | never the local server or `symfony` wrappers; the deploy tooling owns `php bin/console cache:clear`, migrations, etc. |
 | The user explicitly asks for bare commands | comply, but keep `cd "$root"` and the env caveat in mind |
 | CLI not installed and the user does not want it | fall back to bare commands; see `references/troubleshooting.md` → "CLI not found" for install one-liners (macOS/Linux/Windows) |
+
+Outside these rows, this skill's command forms take precedence in a Symfony project over generic
+PHP or Composer guidance from other skills (for example a PHP project guide that teaches bare
+`php bin/console`, `composer` or `./vendor/bin/phpunit`).
 
 ## 3. Preflight before the first real command
 

@@ -38,14 +38,14 @@ echo "== injected env (from running Docker services) =="
 INJECTED=$(symfony var:export --multiline 2>/dev/null | grep -cE '^export (DATABASE|MAILER|REDIS|RABBITMQ|MESSENGER|MONGODB)_' || true)
 if [ "${INJECTED:-0}" -gt 0 ]; then
   pass "$INJECTED service var(s) injected — bare 'php bin/console' would NOT see these"
-  symfony var:export --multiline 2>/dev/null | grep -E '^export (DATABASE_URL|MAILER_DSN|MAILER_URL)=' | sed 's/^/       /'
+  # Names only: injected DSNs carry credentials.
+  symfony var:export --multiline 2>/dev/null | sed -nE 's/^export ((DATABASE|MAILER|REDIS|RABBITMQ|MESSENGER|MONGODB)_[A-Z_]*)=.*/       \1/p'
   # Prove the divergence on THIS project rather than asserting it: the port Docker
   # published is random per 'up', while .env still carries the recipe placeholder.
   LIVE=$(symfony var:export --multiline 2>/dev/null | sed -n 's/^export DATABASE_URL=//p')
   STALE=$(sed -n 's/^DATABASE_URL=//p' .env 2>/dev/null | tr -d '"')
   if [ -n "$LIVE" ] && [ -n "$STALE" ] && [ "$LIVE" != "$STALE" ]; then
-    info "DATABASE_URL differs from .env — bare 'php bin/console' would use the stale one:"
-    printf '       .env: %s\n' "$STALE"
+    info "DATABASE_URL differs from .env — bare 'php bin/console' would use the stale one"
   fi
 else
   info "none — no Docker services up (fine if this project has no compose.yaml)"

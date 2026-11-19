@@ -88,7 +88,8 @@ Symptom: `SQLSTATE[08006] … connection to server at "127.0.0.1", port 5432 fai
 5. The service must publish a port the CLI recognises (5432, 3306, 6379, 5672, 1025, 9200, 27017,
    11211…). `ports: ["5432"]` (random host port) is fine; no `ports:` at all means nothing to inject.
 6. A real env var in the shell (e.g. `DATABASE_URL` exported in `.bashrc`) wins over injection.
-   `env | grep DATABASE_URL` to check.
+   Check by name, without printing the value:
+   `[ -n "${DATABASE_URL+x}" ] && echo set || echo unset`.
 7. Never paste the injected URL into `.env.local` as a "fix" — the port changes after the next
    `docker compose up` (observed: 32770 → 32771 across a `down -v`/`up`). If the user needs a stable
    port for a GUI client, pin it in `compose.override.yaml` (`"5432:5432"`) and tell them why.
@@ -160,9 +161,10 @@ Symptom: `SQLSTATE[08006] … connection to server at "127.0.0.1", port 5432 fai
 ## 10. Scripts hang
 
 - `symfony server:log` streams until interrupted — **including with `--no-follow`** (CLI 5.20,
-  verified twice). Run it under a watchdog (`cmd & p=$!; sleep 4; kill $p`) or read the log files
-  it names on its first lines (`~/Library/Application Support/symfony-cli/log/<hash>.log` on macOS,
-  `~/.symfony5/log/` on Linux). Details in `cli-commands.md` §2.
+  verified twice). Read the log files it names on its first lines
+  (`~/Library/Application Support/symfony-cli/log/<hash>.log` on macOS, `~/.symfony5/log/` on
+  Linux), or start it with `run_in_background` and watch it with Monitor, then stop the task; not a
+  foreground `sleep`/`kill` watchdog. Details in `cli-commands.md` §2.
 - `.env.local` is **not loaded when `APP_ENV=test`**. A dev override such as a SQLite
   `DATABASE_URL` silently does not apply to `symfony php bin/phpunit`; tests then hit the `.env`
   value (often the Docker Postgres). Put test overrides in `.env.test` (committed) or
