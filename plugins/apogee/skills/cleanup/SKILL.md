@@ -30,11 +30,11 @@ tab-separated line per entry: `VERDICT SIZE PATH REF NOTE`.
 | Verdict | Meaning | Default action |
 |---|---|---|
 | `PRUNE` | git records a worktree whose directory is gone | prune the record |
-| `REMOVE` | clean, every commit on `develop`/`main`/`master` or a remote, not used in the last 2 hours | remove |
-| `KEEP` | uncommitted changes, unpushed commits (its own or in a submodule inside it), locked, or used in the last 2 hours | leave; the note says why |
-| `NESTED` | a submodule worktree inside another listed worktree | goes with its parent |
-| `ORPHAN` | a directory whose `.git` file points at a gitdir that no longer exists | remove on request |
-| `BUILD` | a build directory of the main checkout | report only |
+| `REMOVE` | clean, every commit on `develop`/`main`/`master` or a remote, not used recently | remove |
+| `KEEP` | uncommitted changes, unpushed commits (its own, a submodule's inside it, or a nested worktree's), locked, or used recently: another session may be in it | leave; the note says why |
+| `NESTED` | a submodule worktree inside another listed worktree | goes with its parent, which already accounts for it |
+| `ORPHAN` | a directory in the repo whose `.git` file points at a gitdir that no longer exists | remove on request |
+| `BUILD` | a Rust `target/` (next to a `Cargo.toml`) or `DerivedData/` of the main checkout | report only |
 
 Show the user a summary, not the raw output: `PRUNE` as one count, then every other entry with
 its size, ref and note, largest first, and the total that the default actions would free. The
