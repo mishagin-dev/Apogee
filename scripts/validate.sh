@@ -283,7 +283,7 @@ echo "Stage 8 done."
 # Stage 9: hook integration smoke against real br + git-flow sandboxes.
 #          Skipped when either binary is missing (CI).
 # ---------------------------------------------------------------------------
-echo "=== Stage 9: run-plan backstop smoke ==="
+echo "=== Stage 9: run-plan backstop smoke, cleanup inventory ==="
 if command -v br >/dev/null 2>&1 && command -v git-flow >/dev/null 2>&1; then
     if bash "${REPO_ROOT}/tests/smoke-run-plan.sh" >/dev/null 2>&1; then
         echo "ok  tests/smoke-run-plan.sh"
@@ -293,6 +293,12 @@ if command -v br >/dev/null 2>&1 && command -v git-flow >/dev/null 2>&1; then
     fi
 else
     echo "skip  br or git-flow not installed"
+fi
+if bash "${REPO_ROOT}/tests/cleanup-inventory.sh" >/dev/null 2>&1; then
+    echo "ok  tests/cleanup-inventory.sh"
+else
+    echo "FAIL tests/cleanup-inventory.sh (run it directly for details)"
+    fail=1
 fi
 echo "Stage 9 done."
 
