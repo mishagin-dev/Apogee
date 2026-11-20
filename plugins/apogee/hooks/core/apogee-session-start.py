@@ -2,7 +2,7 @@
 """
 SessionStart hook — inject Apogee's rules, keep AI tooling out of git, auto-prime managed projects.
 
-Three jobs:
+Four jobs:
 
 0. **Rules injection.** Apogee's general rules (`rules/RULES.md`) and tone (`rules/SOUL.md`) live
    in the plugin, not in the project's `CLAUDE.md`, so they update with the plugin and a project's
@@ -25,6 +25,11 @@ Three jobs:
    `/apogee:prime`. A hook cannot run a slash command, so this injects an additionalContext
    directive. Trigger: `.beads/` AND `docs/apogee/` at the same repo root. Only `startup` and
    `clear` sessions — re-priming a resumed or compacted session is redundant and noisy.
+
+3. **Cleanup reminder.** Parallel agents leave linked worktrees behind, each with its own build
+   directory. On `startup` and `clear`, in a repo with `docs/apogee/` at its root, this counts the
+   worktrees of the repo and its first-level submodules. When one is stale or holds no unpushed
+   commit, or there are many, it injects one line pointing at `/apogee:cleanup`. Context only.
 
 Fail-open: any parse/IO error exits 0 with no output, so session start is never blocked.
 """
@@ -51,6 +56,8 @@ RULES_PREAMBLE = (
     "CLAUDE.md overrides them wherever the two disagree."
 )
 EXCLUDE_COMMENT = "# Apogee: AI tooling is local-only by decision (see exclude-list.txt in the plugin)"
+# Live worktrees at which the cleanup reminder fires even when none is merged yet.
+LIVE_WORKTREE_THRESHOLD = 5
 
 
 def _git(args, cwd, timeout=3):
@@ -116,6 +123,54 @@ def maintain_excludes(cwd):
         ensure_excluded(sub, patterns)
 
 
+def worktree_counts(root: str) -> tuple[int, int, int]:
+    """(live, stale, merged) linked worktrees of `root` and its first-level submodules.
+
+    stale: git records a directory that is gone. merged: HEAD holds no commit that a base
+    branch or a remote lacks. Cheap by design (no du, no status): one list per gitdir and one
+    rev-list per live worktree, run against the gitdir so no worktree is touched.
+    """
+    live = stale = merged = 0
+    seen = set()
+    for repo in [root, *submodule_paths(root)]:
+        common = _git(["rev-parse", "--path-format=absolute", "--git-common-dir"], repo)
+        if not common or common in seen:
+            continue
+        seen.add(common)
+        bases = _git(["--git-dir", common, "for-each-ref", "--format=%(refname)",
+                      "refs/heads/develop", "refs/heads/main", "refs/heads/master"], repo).split()
+        blocks = _git(["--git-dir", common, "worktree", "list", "--porcelain"], repo).split("\n\n")
+        for block in blocks[1:]:
+            fields = dict((ln.split(" ", 1) + [""])[:2] for ln in block.splitlines() if ln)
+            path, head = fields.get("worktree", ""), fields.get("HEAD", "")
+            if not path:
+                continue
+            if "prunable" in fields or not os.path.isdir(path):
+                stale += "locked" not in fields
+                continue
+            live += 1
+            ahead = _git(["--git-dir", common, "rev-list", "--count", head, "--not", "--remotes",
+                          *bases], repo)
+            merged += ahead == "0"
+    return live, stale, merged
+
+
+def cleanup_reminder(cwd: str) -> str:
+    """One line pointing at /apogee:cleanup when worktrees pile up; '' otherwise."""
+    root = _git(["rev-parse", "--show-toplevel"], cwd)
+    if not root or not os.path.isdir(os.path.join(root, "docs", "apogee")):
+        return ""
+    live, stale, merged = worktree_counts(root)
+    if stale + merged == 0 and live < LIVE_WORKTREE_THRESHOLD:
+        return ""
+    return (
+        f"Worktrees in this repo and its submodules: {live} live ({merged} with no unpushed "
+        f"commits, so possibly done), "
+        f"{stale} stale records of deleted directories. Mention this to the user once, in one "
+        "line, and offer /apogee:cleanup (it inventories and removes only what they pick)."
+    )
+
+
 def has_apogee_docs(start: str) -> bool:
     """True if `start` or an ancestor holds `docs/apogee/` (a project set up with Apogee)."""
     dir_ = os.path.abspath(start)
@@ -169,8 +224,12 @@ def main() -> None:
         rules = load_rules()
         if rules:
             context.append(rules)
-    if data.get("source", "") in ACTIVE_SOURCES and find_apogee_root(cwd):
-        context.append(PRIME_DIRECTIVE)
+    if data.get("source", "") in ACTIVE_SOURCES:
+        if find_apogee_root(cwd):
+            context.append(PRIME_DIRECTIVE)
+        reminder = cleanup_reminder(cwd)
+        if reminder:
+            context.append(reminder)
     if not context:
         return
 
@@ -235,6 +294,28 @@ def _run_self_test() -> None:
         os.makedirs(os.path.join(tmp, "docs", "apogee"))
         os.makedirs(sub)
         check("docs/apogee in an ancestor -> rules", has_apogee_docs(sub), True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+
+        def g(*args):
+            subprocess.run(["git", "-C", repo, *args], check=True, capture_output=True, env=env)
+
+        repo = os.path.join(tmp, "repo")
+        os.makedirs(os.path.join(repo, "docs", "apogee"))
+        g("init", "-q", "-b", "develop")
+        g("commit", "-q", "--allow-empty", "-m", "c0")
+        check("no worktrees -> no reminder", cleanup_reminder(repo), "")
+        g("worktree", "add", "-q", "--detach", os.path.join(tmp, "ahead"))
+        subprocess.run(["git", "-C", os.path.join(tmp, "ahead"), "commit", "-q", "--allow-empty",
+                        "-m", "x"], check=True, capture_output=True, env=env)
+        check("one unmerged worktree -> no reminder", cleanup_reminder(repo), "")
+        g("worktree", "add", "-q", "--detach", os.path.join(tmp, "merged"))
+        g("worktree", "add", "-q", "--detach", os.path.join(tmp, "gone"))
+        subprocess.run(["rm", "-rf", os.path.join(tmp, "gone")], check=True)
+        check("counts live, stale, merged", worktree_counts(repo), (2, 1, 1))
+        check("merged or stale -> reminder", "/apogee:cleanup" in cleanup_reminder(repo), True)
 
     print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
     raise SystemExit(0 if ok else 1)
