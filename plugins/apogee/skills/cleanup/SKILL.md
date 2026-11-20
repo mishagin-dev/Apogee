@@ -1,6 +1,6 @@
 ---
 name: cleanup
-description: "Reclaim disk space that agent work leaves behind: linked git worktrees (of the repository and of every submodule), the stale records of worktrees deleted by hand, orphaned worktree directories, and the build directories (Rust target/, DerivedData) that make each copy 5–35 GB. Inventories first with a read-only script, deletes only what the user picks. Use when the disk fills up, when worktrees pile up after parallel agents, or when the user asks to clean up, tidy up or free space, in any language."
+description: "Reclaim disk space that agent work leaves behind: linked git worktrees (of the repository and of every submodule), the stale records of worktrees deleted by hand, orphaned worktree directories, and the build directories (Rust target/, DerivedData) that make each copy 5–35 GB. Inventories first with a read-only script, deletes only what the user picks. Use when the disk fills up, when worktrees pile up after parallel agents, or when the user asks to clean up, tidy up or free space, in any language. Offered by the session-start reminder and by /apogee:finish."
 argument-hint: "[<path inside the repo>] [--no-size]"
 ---
 

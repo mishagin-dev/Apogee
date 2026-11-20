@@ -118,7 +118,9 @@ it registers the marketplace and installs the plugin itself.
 | `.git/info/exclude` | Lines keeping the files above, plus `AGENTS.md`, `.claude/`, `.beads/` and the agent's `.scratch/`, out of git; never `.gitignore` | delete the lines |
 | Repo setup | `git init -b main`, `br init` (`.beads/`), git-flow with `main` + `develop` (`gitflow.*` config) if missing; `--no-git-init`, `--no-tracker-init` to skip | see Uninstall |
 
-Hooks run locally on tool calls; none of them sends data anywhere. The permission baseline
+Hooks run locally on tool calls; none of them sends data anywhere. At session start one also
+counts the repo's git worktrees and, when some look done or stale, has the agent offer
+`/apogee:cleanup`; it deletes nothing. The permission baseline
 allows the plugin's own commands (`br`, `agy`, `git diff`, pushes of `develop` and work branches)
 and the JetBrains and Context7 MCP tools,
 and denies destructive ones (`sudo`, `rm -rf`, `git push --force`, `git reset --hard`, pushes of

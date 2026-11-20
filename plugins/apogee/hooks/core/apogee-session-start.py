@@ -2,7 +2,7 @@
 """
 SessionStart hook — inject Apogee's rules, keep AI tooling out of git, auto-prime managed projects.
 
-Three jobs:
+Four jobs:
 
 0. **Rules injection.** Apogee's general rules (`rules/RULES.md`) and tone (`rules/SOUL.md`) live
    in the plugin, not in the project's `CLAUDE.md`, so they update with the plugin and a project's
@@ -26,6 +26,11 @@ Three jobs:
    directive. Trigger: `.beads/` AND `docs/apogee/` at the same repo root. Only `startup` and
    `clear` sessions — re-priming a resumed or compacted session is redundant and noisy.
 
+3. **Cleanup reminder.** Parallel agents leave linked worktrees behind, each with its own build
+   directory. On `startup` and `clear`, in a repo with `docs/apogee/` at its root, this counts the
+   worktrees of the repo and its first-level submodules. When one is stale or holds no unpushed
+   commit, or there are many, it injects one line pointing at `/apogee:cleanup`. Context only.
+
 Fail-open: any parse/IO error exits 0 with no output, so session start is never blocked.
 """
 
@@ -33,6 +38,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 PRIME_DIRECTIVE = (
     "This is an Apogee-managed project (beads tracker detected). "
@@ -51,6 +57,12 @@ RULES_PREAMBLE = (
     "CLAUDE.md overrides them wherever the two disagree."
 )
 EXCLUDE_COMMENT = "# Apogee: AI tooling is local-only by decision (see exclude-list.txt in the plugin)"
+# Live worktrees at which the cleanup reminder fires even when none is merged yet.
+LIVE_WORKTREE_THRESHOLD = 5
+# A worktree whose index is older than this is taken as idle (no agent in it).
+IDLE_MINUTES = 120
+# Session start must stay fast; counting stops refining past this.
+SCAN_BUDGET_SECONDS = 2
 
 
 def _git(args, cwd, timeout=3):
@@ -116,6 +128,70 @@ def maintain_excludes(cwd):
         ensure_excluded(sub, patterns)
 
 
+def _idle(worktree: str) -> bool:
+    """True when the worktree's index has not been written for IDLE_MINUTES (no one in it)."""
+    try:
+        with open(os.path.join(worktree, ".git"), encoding="utf-8") as f:
+            gitdir = f.read().strip().removeprefix("gitdir: ")
+        if not os.path.isabs(gitdir):
+            gitdir = os.path.join(worktree, gitdir)
+        return time.time() - os.path.getmtime(os.path.join(gitdir, "index")) > IDLE_MINUTES * 60
+    except OSError:
+        return False
+
+
+def worktree_counts(root: str) -> tuple[int, int, int]:
+    """(live, prunable, idle) linked worktrees of `root` and its first-level submodules.
+
+    prunable: git would prune the record (its directory is gone). idle: nobody has touched it
+    for IDLE_MINUTES and HEAD holds no commit that a base branch or a remote lacks; it may
+    still hold uncommitted work, which /apogee:cleanup checks. Cheap by design (no du, no
+    status, a time budget): one list per gitdir, one rev-list per idle candidate.
+    """
+    live = prunable = idle = 0
+    seen = set()
+    deadline = time.monotonic() + SCAN_BUDGET_SECONDS
+    for repo in [root, *submodule_paths(root)]:
+        common = _git(["rev-parse", "--path-format=absolute", "--git-common-dir"], repo)
+        if not common or common in seen:
+            continue
+        seen.add(common)
+        bases = _git(["--git-dir", common, "for-each-ref", "--format=%(refname)",
+                      "refs/heads/develop", "refs/heads/main", "refs/heads/master"], repo).split()
+        blocks = _git(["--git-dir", common, "worktree", "list", "--porcelain"], repo).split("\n\n")
+        for block in blocks[1:]:
+            fields = dict((ln.split(" ", 1) + [""])[:2] for ln in block.splitlines() if ln)
+            path, head = fields.get("worktree", ""), fields.get("HEAD", "")
+            if not path:
+                continue
+            if "prunable" in fields:
+                prunable += "locked" not in fields
+                continue
+            live += 1
+            if time.monotonic() > deadline or not _idle(path):
+                continue
+            ahead = _git(["--git-dir", common, "rev-list", "--count", head, "--not", "--remotes",
+                          *bases], repo, timeout=1)
+            idle += ahead == "0"
+    return live, prunable, idle
+
+
+def cleanup_reminder(cwd: str) -> str:
+    """One line pointing at /apogee:cleanup when worktrees pile up; '' otherwise."""
+    root = _git(["rev-parse", "--show-toplevel"], cwd)
+    if not root or not os.path.isdir(os.path.join(root, "docs", "apogee")):
+        return ""
+    live, prunable, idle = worktree_counts(root)
+    if prunable + idle == 0 and live < LIVE_WORKTREE_THRESHOLD:
+        return ""
+    return (
+        f"Worktrees in this repo and its first-level submodules: {live} live, {idle} of them "
+        f"idle with every commit pushed or merged (maybe done), {prunable} prunable records. "
+        "Mention this to the user once, in one line, and offer /apogee:cleanup (it checks for "
+        "uncommitted work and removes only what they pick)."
+    )
+
+
 def has_apogee_docs(start: str) -> bool:
     """True if `start` or an ancestor holds `docs/apogee/` (a project set up with Apogee)."""
     dir_ = os.path.abspath(start)
@@ -169,8 +245,12 @@ def main() -> None:
         rules = load_rules()
         if rules:
             context.append(rules)
-    if data.get("source", "") in ACTIVE_SOURCES and find_apogee_root(cwd):
-        context.append(PRIME_DIRECTIVE)
+    if data.get("source", "") in ACTIVE_SOURCES:
+        if find_apogee_root(cwd):
+            context.append(PRIME_DIRECTIVE)
+        reminder = cleanup_reminder(cwd)
+        if reminder:
+            context.append(reminder)
     if not context:
         return
 
@@ -235,6 +315,38 @@ def _run_self_test() -> None:
         os.makedirs(os.path.join(tmp, "docs", "apogee"))
         os.makedirs(sub)
         check("docs/apogee in an ancestor -> rules", has_apogee_docs(sub), True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # Isolated from the user's git config (signing, hooks) so the test runs the same anywhere.
+        env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+               "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+        def backdate(worktree):
+            gitdir = open(os.path.join(worktree, ".git")).read().strip().removeprefix("gitdir: ")
+            old = time.time() - (IDLE_MINUTES + 1) * 60
+            os.utime(os.path.join(gitdir, "index"), (old, old))
+
+        def g(*args):
+            subprocess.run(["git", "-C", repo, *args], check=True, capture_output=True, env=env)
+
+        repo = os.path.join(tmp, "repo")
+        os.makedirs(os.path.join(repo, "docs", "apogee"))
+        g("init", "-q", "-b", "develop")
+        g("commit", "-q", "--allow-empty", "-m", "c0")
+        check("no worktrees -> no reminder", cleanup_reminder(repo), "")
+        g("worktree", "add", "-q", "--detach", os.path.join(tmp, "ahead"))
+        subprocess.run(["git", "-C", os.path.join(tmp, "ahead"), "commit", "-q", "--allow-empty",
+                        "-m", "x"], check=True, capture_output=True, env=env)
+        check("one unmerged worktree -> no reminder", cleanup_reminder(repo), "")
+        g("worktree", "add", "-q", "--detach", os.path.join(tmp, "merged"))
+        check("merged but in use -> no reminder", cleanup_reminder(repo), "")
+        backdate(os.path.join(tmp, "ahead"))
+        backdate(os.path.join(tmp, "merged"))
+        check("idle and merged -> reminder", "/apogee:cleanup" in cleanup_reminder(repo), True)
+        g("worktree", "add", "-q", "--detach", os.path.join(tmp, "gone"))
+        subprocess.run(["rm", "-rf", os.path.join(tmp, "gone")], check=True)
+        check("counts live, prunable, idle", worktree_counts(repo), (2, 1, 1))
 
     print("\n" + ("All tests passed." if ok else "SOME TESTS FAILED."))
     raise SystemExit(0 if ok else 1)
