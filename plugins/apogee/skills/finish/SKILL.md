@@ -58,12 +58,20 @@ tree, a failing gate, open steps), STOP and surface it.
 6. **Still current.** If code (not docs) was committed after the commit `review-work` ended on —
    typically by step 3 or 5 — re-run its step 4 (tests of the change) on the new head. Red → STOP
    on the branch. The full suite is not run here; it belongs to the release preparation and CI.
-7. **Finish.** First release the branch from linked worktrees: git will not delete a branch that
-   another worktree has checked out, so the finish would stop half-way. In the repo and in each
-   submodule, `git worktree list --porcelain` names them (`branch refs/heads/<type>/<slug>`);
-   remove each with `git worktree remove <path>`. No `--force`: git refusing a dirty worktree
-   means work the branch does not hold yet → STOP and report the path. Then, via the
-   `apogee:git-flow` skill's command map:
+7. **Finish.** Run from the main checkout: if `git rev-parse --git-dir` differs from
+   `git rev-parse --git-common-dir`, this is a linked worktree → STOP and point at the main
+   checkout before touching anything. Then release the branch from linked worktrees: git will
+   not delete a branch another worktree has checked out, so the finish would stop half-way. In
+   the repo and in each submodule, `git worktree list --porcelain` names them
+   (`branch refs/heads/<type>/<slug>`); remove each with `git worktree remove <path>`, no
+   `--force`. When git refuses:
+   - uncommitted or untracked files, or a lock → work the branch does not hold, or a lock someone
+     set → STOP and report the path;
+   - "working trees containing submodules cannot be moved or removed" → check it with
+     `apogee:cleanup`'s inventory (`--no-size`); only a `REMOVE` verdict lets you delete the
+     directory by its path and `git worktree prune` the gitdirs, else STOP and report.
+
+   Then, via the `apogee:git-flow` skill's command map:
    ```bash
    git flow <type> finish <slug>
    ```
