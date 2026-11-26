@@ -78,6 +78,14 @@ if [ -n "$nonascii" ]; then
   printf '%s\n' "$nonascii" | sed 's/^/      offending line /'
 fi
 
+# --- No names of the local-only AI tooling ---
+local_out=$(printf '%s\n' "$msg" | bash "$(dirname "${BASH_SOURCE[0]}")/check-local-names.sh")
+if [ $? -ne 0 ]; then
+  fails=$(printf '%s\n' "$local_out" | grep '^FAIL')
+  printf '%s\n' "$fails"
+  errors=$((errors + $(printf '%s\n' "$fails" | grep -c .)))
+fi
+
 if [ "$errors" -eq 0 ]; then
   echo "OK"
   exit 0

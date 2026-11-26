@@ -38,7 +38,8 @@ project's `CLAUDE.md` overrides anything here; it holds the project's own facts 
   only. `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `docs/apogee/`, `.claude/`, `.beads/` and the
   agent's `.scratch/` are kept out of git through `.git/info/exclude`, which Apogee maintains for
   the repo and each submodule. Never check whether they are tracked, never stage them, never
-  propose `.gitignore` entries for them, never list them in a commit or merge summary. One
+  propose `.gitignore` entries for them, never name them (or a note from `docs/apogee/`) in a
+  commit message or merge summary; `apogee:git-commit`'s check refuses such a message. One
   showing up in `git status` is an Apogee setup defect: say so in one line and carry on.
 - **Secrets by shape, never by value.** Inspect env and config files by key names
   (`cut -d= -f1`, or `.env.example`); never print a value. Secrets live in git-ignored local files
@@ -97,6 +98,10 @@ Every command is a reviewable action. Keep each one obvious about what it touche
   `find -delete`.
 - **A denied action stays denied.** Don't retry it in another form or chain other commands onto
   it. Tell the user what was blocked and why it was needed; they run it or approve it.
+- **A pending decision holds the steps it decides.** Once you have asked the user, or reported a
+  refusal they have to settle, take no step that removes one of the options (merge, finish, push,
+  delete, rewrite) until they answer; work that keeps every option open may go on. Ask through
+  `AskUserQuestion`, which waits for the answer; a question in prose doesn't.
 - **Wait with Monitor, not sleep.** Poll a background job or a CI run with `run_in_background` and
   Monitor; a foreground `sleep N; cat <output>` is blocked. (`agy -p` is the exception: it only
   flushes its output in the foreground.)
