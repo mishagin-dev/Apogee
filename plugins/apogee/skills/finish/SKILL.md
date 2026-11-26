@@ -66,9 +66,17 @@ tree, a failing gate, open steps), STOP and surface it.
 6. **Still current.** If code (not docs) was committed after the commit `review-work` ended on —
    typically by step 3 or 5 — re-run its step 4 (tests of the change) on the new head. Red → STOP
    on the branch. The full suite is not run here; it belongs to the release preparation and CI.
-7. **Finish.** Run from the main checkout: if `git rev-parse --git-dir` differs from
-   `git rev-parse --git-common-dir`, this is a linked worktree → STOP and point at the main
-   checkout before touching anything. Then release the branch from linked worktrees: git will
+7. **Finish.** A zone worktree (`git config --worktree --get apogee.zone` prints its
+   submodules) closes itself: inside it, run
+   `bash "${CLAUDE_PLUGIN_ROOT}/skills/start/scripts/zone-worktree.sh" close`. It merges each
+   zone submodule's branch into that submodule's develop with git flow from the main checkout,
+   pins the superproject branch to them, and removes the worktrees; then run the
+   `git flow <type> finish <slug>` it prints, from the main checkout, and go on to step 8. It
+   stops on uncommitted changes, on a main checkout off `develop`, or on a merge conflict:
+   report where, and resolve there before re-running. Any other linked worktree
+   (`git rev-parse --git-dir` differs from `--git-common-dir`) → STOP and point at the main
+   checkout before touching anything. Otherwise, from the main checkout, release the branch from
+   linked worktrees: git will
    not delete a branch another worktree has checked out, so the finish would stop half-way. In
    the repo and in each submodule, `git worktree list --porcelain` names them
    (`branch refs/heads/<type>/<slug>`); remove each with `git worktree remove <path>`, no

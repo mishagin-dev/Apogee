@@ -1,7 +1,7 @@
 ---
 name: start
 description: "Open a unit of work the right way, and the only way work is opened in an Apogee project: feature or bugfix branch off an up-to-date develop, hotfix branch off main with its version, or a research note with no branch at all. Carries uncommitted changes along, links the br epic in beads projects, publishes the branch. Closed by /apogee:finish."
-argument-hint: "[feature|bugfix|hotfix|research] <slug or description> [epic: <br id>] [version: <x.y.z>]"
+argument-hint: "[feature|bugfix|hotfix|research] <slug or description> [in <path>...] [read <path>...] [epic: <br id>] [version: <x.y.z>]"
 ---
 
 # Start
@@ -27,6 +27,9 @@ this skill's internals; don't run them directly.
   don't ask for approval.
 - **Epic.** `epic: <id>` names the br epic to link. Without it, in a beads project, look for an
   open epic whose slug or title matches (`br list --json`, `issue_type == "epic"`).
+- **Zone** (feature/bugfix in a superproject). `in <path>...` names the submodules the work
+  changes, `read <path>...` the ones it only builds against; a path may be a directory holding
+  several (`in platform`). Present → open in a zone worktree (below).
 - **Version** (hotfix only). `version: <x.y.z>`, else the last tag with the patch number bumped
   (`git describe --tags --abbrev=0`, keeping its `v` prefix style). The hotfix branch is named
   after the version, as git-flow expects; the slug goes into the br epic title and the report.
@@ -62,6 +65,34 @@ Skip for `research`.
 git flow <type> start <slug>
 git push -u origin <type>/<slug>        # only if a remote exists
 ```
+
+## Open: feature / bugfix in a zone worktree (superproject)
+
+A superproject checkout has one `HEAD` and one index. Sessions that work in it in parallel move
+them under each other: a `start` switches everyone's branch, a `git add` picks up another
+session's submodule pins. A zone worktree gives the session its own: a linked worktree of the
+superproject in which only the zone's submodules are populated, each a linked worktree of the
+main checkout's own submodule repository (shared objects, branches and git-flow config, nothing
+cloned, a few MB of sources; build directories start cold).
+
+Without `in`, in a superproject whose `git worktree list` or recent `git log` shows other work
+in flight, offer the zone with the submodules the task names; a single session needs none.
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/skills/start/scripts/zone-worktree.sh" open <type>/<slug> <path>... [--read <path>...]
+```
+
+Run from the main checkout, which stays on `develop` (pre-flight 2 does not apply to it). It
+prints the worktree path, `<root>/worktrees/<slug>`; it refuses a submodule without git-flow or
+not initialised. Then publish the branch in the superproject worktree and in each `in`
+submodule (`git -C <path> push -u origin <type>/<slug>`).
+
+From here on, work only inside that worktree: absolute paths for Read/Edit/Write, `cd` or
+`git -C` into it for commands. Pin a submodule in the superproject branch as you go
+(`git add <path>`, through `apogee:git-commit`). The main checkout belongs to no session; don't
+switch, commit or `submodule update` there. Inside the worktree the other submodules are
+inactive and the zone's have `update=none`, so `git submodule update` (or `make sync`) is a
+no-op there instead of repointing the shared repositories. `/apogee:finish` closes it.
 
 ## Open: hotfix
 

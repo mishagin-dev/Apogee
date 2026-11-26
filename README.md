@@ -175,6 +175,11 @@ move its old toolkit sections out of `CLAUDE.md`.
 | `hotfix` | A branch off `main` with the next patch version | Review, version bump, CHANGELOG, then hands you the finish commands |
 | `research` | A dated note in `docs/apogee/research/`, no branch | Checks the conclusion, sources and second opinion, closes it, proposes the follow-up |
 
+   In a superproject where several sessions work at once, `/apogee:start feature <slug> in <path>...`
+   opens the work in a worktree of its own, populated with just those submodules (each a worktree
+   of its own repository, so nothing is cloned). Sessions stop moving each other's branch and
+   submodule pins; `/apogee:finish` merges the submodules, pins them and removes the worktree.
+
 4. **Releases:** `/apogee:release [major|minor|patch]` prepares the release branch, CHANGELOG
    and release notes, then prints three commands for you to run:
 
