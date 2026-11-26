@@ -92,7 +92,9 @@ From here on, work only inside that worktree: absolute paths for Read/Edit/Write
 (`git add <path>`, through `apogee:git-commit`). The main checkout belongs to no session; don't
 switch, commit or `submodule update` there. Inside the worktree the other submodules are
 inactive and the zone's have `update=none`, so `git submodule update` (or `make sync`) is a
-no-op there instead of repointing the shared repositories. `/apogee:finish` closes it.
+no-op there instead of repointing the shared repositories. Local-only notes (`docs/apogee/`,
+`.scratch/`) stay in the main checkout, by absolute path: the worktree has none, and closing
+refuses while it holds any. `/apogee:finish` closes it.
 
 ## Open: hotfix
 

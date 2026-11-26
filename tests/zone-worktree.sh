@@ -7,6 +7,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ZONE="${REPO_ROOT}/plugins/apogee/skills/start/scripts/zone-worktree.sh"
+CHECK="${REPO_ROOT}/plugins/apogee/skills/git-commit/scripts/check-local-names.sh"
 SANDBOX="$(cd "$(mktemp -d)" && pwd -P)"
 trap 'rm -rf "$SANDBOX"' EXIT
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
@@ -39,12 +40,30 @@ done
 ROOT="$SANDBOX/super"
 WT="$ROOT/worktrees/zone-test"
 
-out=$(cd "$ROOT" && /bin/bash "$ZONE" open feature/zone-test a x --read b)
+echo '/docs/apogee/' >> "$ROOT/.git/info/exclude"
+mkdir -p "$ROOT/docs/apogee/research"
+: > "$ROOT/docs/apogee/research/2026-01-01-zone-note.md"
+
+refused() { # refused <label> <dir> <args...>: open/close exits non-zero
+  local label=$1 dir=$2 rc=0; shift 2
+  (cd "$dir" && /bin/bash "$ZONE" "$@") >/dev/null 2>&1 || rc=$?
+  check "$label" '[ "$rc" -ne 0 ]'
+}
+refused "a mistyped --read path stops open" "$ROOT" open feature/typo a --read nosuch
+check "  and leaves no worktree" '[ ! -e "$ROOT/worktrees/typo" ]'
+git -C "$ROOT/b" config --unset gitflow.branch.develop
+refused "open refuses a submodule without git-flow" "$ROOT" open feature/noflow b
+git -C "$ROOT/b" config gitflow.branch.develop develop
+refused "open refuses to run inside a submodule" "$ROOT/a" open feature/inside a
+refused "close refuses the main checkout" "$ROOT" close
+
+out=$(cd "$ROOT/a" && cd .. && /bin/bash "$ZONE" open feature/zone-test a x --read b)
 check "open prints the worktree" '[ "$out" = "$WT" ]'
 check "superproject branch" '[ "$(git -C "$WT" branch --show-current)" = feature/zone-test ]'
 check "a on the branch" '[ "$(git -C "$WT/a" branch --show-current)" = feature/zone-test ]'
 check "x/c2 on the branch" '[ "$(git -C "$WT/x/c2" branch --show-current)" = feature/zone-test ]'
 check "b detached at its pin" '[ "$(git -C "$WT/b" rev-parse HEAD)" = "$(git -C "$WT" rev-parse HEAD:b)" ] && [ -z "$(git -C "$WT/b" branch --show-current)" ]'
+refused "open refuses an existing worktree" "$ROOT" open feature/zone-test a
 check "main checkout untouched" '[ "$(git -C "$ROOT" branch --show-current)" = develop ] && [ "$(git -C "$ROOT/a" branch --show-current)" = develop ]'
 
 git -C "$WT" submodule update --init --recursive >/dev/null 2>&1 || true
@@ -59,7 +78,21 @@ git -C "$ROOT" add b
 git -C "$ROOT" commit -q -m "pin b"
 git -C "$ROOT" flow feature finish other-pin >/dev/null 2>&1
 
+rc=0; printf 'fix: Follow 2026-01-01-zone-note\n' | (cd "$WT/a" && /bin/bash "$CHECK") >/dev/null 2>&1 || rc=$?
+check "note names refused inside the zone" '[ "$rc" -ne 0 ]'
+
+: > "$WT/a/scratch.txt"
+refused "close stops on uncommitted changes in a zone submodule" "$WT" close
+rm "$WT/a/scratch.txt"
+
+mkdir -p "$WT/docs/apogee"
+: > "$WT/docs/apogee/zone-only.md"
 rc=0; (cd "$WT" && /bin/bash "$ZONE" close) >/dev/null 2>&1 || rc=$?
+check "close stops on local-only files in the worktree" '[ "$rc" -ne 0 ] && [ -e "$WT/docs/apogee/zone-only.md" ]'
+mv "$WT/docs/apogee/zone-only.md" "$ROOT/docs/apogee/zone-only.md"
+
+rc=0; (cd "$WT" && /bin/bash "$ZONE" close) >/dev/null 2>"$SANDBOX/close.err" || rc=$?
+[ "$rc" -eq 0 ] || sed 's/^/     close: /' "$SANDBOX/close.err"
 check "close succeeds" '[ "$rc" -eq 0 ]'
 check "worktree gone" '[ ! -e "$WT" ] && [ "$(git -C "$ROOT" worktree list | wc -l | tr -d " ")" = 1 ]'
 check "a merged into its develop" 'git -C "$ROOT/a" log --format=%s develop | grep -qx "work in a"'

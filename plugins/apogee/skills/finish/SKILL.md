@@ -97,7 +97,9 @@ tree, a failing gate, open steps), STOP and surface it.
    STOP and point at the main checkout.
 8. **Publish.** If a remote exists: `git push origin develop`, and delete the remote work branch
    (`git push origin --delete <type>/<slug>`) if it was published. In a superproject, push each
-   submodule's branch first. Never `main`, never tags.
+   submodule first: after a zone close that is each zone submodule's `develop`
+   (`git -C <path> push origin develop`, then delete its published work branch), since the
+   superproject's `develop` now pins those commits. Never `main`, never tags.
 9. **Close the epic** (beads): `br epic close-eligible`; log
    `br comments add <epicId> --message "finish: merged <branch> into develop"`.
 10. **Report:** branch, commit count, one-line summary, docs touched, worktrees removed, pushed or

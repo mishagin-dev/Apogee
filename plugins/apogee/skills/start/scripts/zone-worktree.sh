@@ -28,6 +28,10 @@ export GIT_OPTIONAL_LOCKS=0 GIT_MERGE_AUTOEDIT=no
 
 die() { echo "zone-worktree: $*" >&2; exit 1; }
 
+SKILLS="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+EXCLUDE_LIST="$SKILLS/../hooks/core/config/exclude-list.txt"
+CHECK_MESSAGE="$SKILLS/git-commit/scripts/check-message.sh"
+
 common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || die "not in a git repository"
 [ "$(basename "$common")" = ".git" ] || die "run it from the superproject, not from inside a submodule"
 root=$(dirname "$common")
@@ -63,7 +67,10 @@ open_zone() {
   [ "${#write[@]}" -gt 0 ] || die "name at least one path to work in"
   local wpaths rpaths=""
   wpaths=$(expand "${write[@]}" | sort -u)
-  [ "${#read[@]}" -gt 0 ] && rpaths=$(expand "${read[@]}" | sort -u | grep -vxF -f <(printf '%s\n' "$wpaths") || true)
+  if [ "${#read[@]}" -gt 0 ]; then
+    rpaths=$(expand "${read[@]}" | sort -u)
+    rpaths=$(printf '%s\n' "$rpaths" | grep -vxF -f <(printf '%s\n' "$wpaths") || true)
+  fi
 
   for p in $wpaths $rpaths; do
     [ -e "$root/$p/.git" ] || die "$p is not initialised in the main checkout"
@@ -76,7 +83,7 @@ open_zone() {
   local wt="$root/worktrees/$slug"
   [ -e "$wt" ] && die "$wt already exists"
   local exclude
-  exclude=$(git -C "$root" rev-parse --git-path info/exclude)
+  exclude=$(git -C "$root" rev-parse --path-format=absolute --git-path info/exclude)
   grep -qxF '/worktrees/' "$exclude" 2>/dev/null || echo '/worktrees/' >> "$exclude"
 
   if git -C "$root" rev-parse --verify -q "refs/heads/$branch" >/dev/null; then
@@ -121,8 +128,22 @@ close_zone() {
   branch=$(git -C "$wt" branch --show-current)
   type=${branch%%/*}; slug=${branch#*/}
 
+  # A path whose worktree is gone was merged, pinned and removed by an earlier, interrupted
+  # close; without its .git, git -C would fall through to the superproject worktree.
+  live() { [ -e "$wt/$1/.git" ]; }
+
   [ -z "$(git -C "$wt" status --porcelain --ignore-submodules=all)" ] || die "uncommitted changes in the superproject worktree"
+  # Removing the worktree deletes ignored files with it, and the local-only tooling is ignored.
+  local notes
+  local names
+  names=$(sed -e '/^#/d' -e '/^[[:space:]]*$/d' -e 's#^/##' -e 's#/$##' "$EXCLUDE_LIST")
+  # Files, not directories: an empty docs/apogee/ left after moving the notes out is no loss.
+  notes=$(git -C "$wt" status --porcelain --ignored=traditional --untracked-files=all \
+      --ignore-submodules=all | sed -n 's/^!! //p' | grep -F -f <(printf '%s\n' "$names") || true)
+  [ -z "$notes" ] || die "local-only files in the worktree would be deleted; move them to $root first:
+$notes"
   for p in $wpaths $rpaths; do
+    live "$p" || continue
     [ -z "$(git -C "$wt/$p" status --porcelain)" ] || die "uncommitted changes in $p"
   done
   [ "$(git -C "$root" branch --show-current)" = "$(develop_of "$root")" ] ||
@@ -135,29 +156,28 @@ close_zone() {
   done
 
   for p in $wpaths; do
-    local dev ahead
+    live "$p" || continue
+    local dev
     dev=$(develop_of "$root/$p")
     git -C "$wt/$p" checkout -q --detach
     # A branch already gone was merged by an earlier, interrupted close.
-    if ! git -C "$root/$p" rev-parse --verify -q "refs/heads/$branch" >/dev/null; then
-      ahead=-1
-    else
-      ahead=$(git -C "$root/$p" rev-list --count "$dev..$branch")
-    fi
-    if [ "$ahead" -lt 0 ]; then
-      :
-    elif [ "$ahead" -gt 0 ]; then
-      (cd "$root/$p" && git flow "$type" finish "$slug")
-    else
-      git -C "$root/$p" branch -q -d "$branch"
+    if git -C "$root/$p" rev-parse --verify -q "refs/heads/$branch" >/dev/null; then
+      if [ "$(git -C "$root/$p" rev-list --count "$dev..$branch")" -gt 0 ]; then
+        (cd "$root/$p" && git flow "$type" finish "$slug")
+      else
+        git -C "$root/$p" branch -q -d "$branch"
+      fi
     fi
     git -C "$wt/$p" checkout -q --detach "$dev"
     git -C "$wt" add "$p"
   done
   if ! git -C "$wt" diff --cached --quiet; then
-    git -C "$wt" commit -q -m "chore: Pin the submodules of $slug to develop"
+    local msg="chore: Pin the zone submodules to develop"
+    printf '%s\n' "$msg" | (cd "$wt" && bash "$CHECK_MESSAGE") >/dev/null
+    git -C "$wt" commit -q -m "$msg"
   fi
   for p in $wpaths $rpaths; do
+    live "$p" || continue
     git -C "$root/$p" worktree remove "$wt/$p"
     mkdir "$wt/$p"
   done
