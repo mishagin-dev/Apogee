@@ -52,6 +52,14 @@ tree, a failing gate, open steps), STOP and surface it.
    `git diff --stat`, and offer: commit named files, discard, abort. **Never `git add -A`.** This
    has no exception, autonomous or not (ADR 0006): a dirty tree at this point means commit
    discipline broke somewhere.
+
+   **Clean history.** Before the merge is the last point where a bad message is cheap to fix. In
+   the repo and in each submodule with commits on the branch:
+   `bash "${CLAUDE_PLUGIN_ROOT}/skills/git-commit/scripts/check-local-names.sh" --range <base>..HEAD`.
+   `FAIL` → STOP, list the commits. Rewording a published branch needs a force push, so it is the
+   user's call: ask through `AskUserQuestion` (reword, or finish as is), and give the commands
+   (`git rebase -i <base>` with `reword`, then `git push --force-with-lease origin <branch>`).
+   Don't finish until they answer.
 5. **Tracker** (beads projects). The epic linked to this branch (`external_ref`) should have all
    steps closed. Open steps → close the ones actually done, ask about the rest; don't close
    unfinished work to get past this.

@@ -283,7 +283,7 @@ echo "Stage 8 done."
 # Stage 9: hook integration smoke against real br + git-flow sandboxes.
 #          Skipped when either binary is missing (CI).
 # ---------------------------------------------------------------------------
-echo "=== Stage 9: run-plan backstop smoke, cleanup inventory ==="
+echo "=== Stage 9: run-plan backstop smoke, cleanup inventory, local-names check ==="
 if command -v br >/dev/null 2>&1 && command -v git-flow >/dev/null 2>&1; then
     if bash "${REPO_ROOT}/tests/smoke-run-plan.sh" >/dev/null 2>&1; then
         echo "ok  tests/smoke-run-plan.sh"
@@ -298,6 +298,12 @@ if bash "${REPO_ROOT}/tests/cleanup-inventory.sh" >/dev/null 2>&1; then
     echo "ok  tests/cleanup-inventory.sh"
 else
     echo "FAIL tests/cleanup-inventory.sh (run it directly for details)"
+    fail=1
+fi
+if bash "${REPO_ROOT}/tests/check-local-names.sh" >/dev/null 2>&1; then
+    echo "ok  tests/check-local-names.sh"
+else
+    echo "FAIL tests/check-local-names.sh (run it directly for details)"
     fail=1
 fi
 echo "Stage 9 done."
