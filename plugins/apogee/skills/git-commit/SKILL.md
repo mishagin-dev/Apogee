@@ -62,7 +62,9 @@ driven by two scripts:
 
    It prints `OK` (exit 0) when valid, or `FAIL: …` lines (exit 1) for each
    violation. Fix every failure and re-validate. `WARN` (subject 51–72 chars)
-   does not block but prefer ≤ 50.
+   does not block but prefer ≤ 50. It also refuses names of the local-only AI tooling
+   (`CLAUDE.md`, `docs/apogee`, `.claude/`, `.beads`, a note's file name, …) unless the repo
+   tracks them: describe the change itself, not the notes behind it.
 
 5. **Create the commit** with the message on stdin, `-F -` (not `-m`, which
    mangles the multi-line body), using the exact text that passed validation:

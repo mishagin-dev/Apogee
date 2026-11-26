@@ -54,6 +54,8 @@ Settled decisions live in `docs/decisions/` (ADRs). Don't relitigate them; cite 
   call Apogee a fork in docs or manifests.
 - In this repo, commit only when asked (the scaffold's pre-authorization for feature branches
   is for host projects, not the toolkit itself). Commits go through the `git-commit` skill.
+  Commits here name `CLAUDE.md`, `.claude/`, `.beads` as the subject matter, so this clone sets
+  `git config apogee.commitLocalNames allow`; a fresh clone needs it set again.
 - Don't edit the user's global `~/.claude/` without explicit approval (it's machine-wide).
 - Don't reintroduce per-project hook copying — machinery is the plugin, enabled not copied.
 
