@@ -25,6 +25,8 @@ git -c user.name=t -c user.email=t@t commit -q --allow-empty -m "chore: Init"
 mkdir -p docs/apogee/research
 : > docs/apogee/research/2026-11-20-gateway-migration.md
 : > docs/apogee/handoff.md
+mkdir -p docs/apogee/ai-context
+: > docs/apogee/ai-context/project-structure.md
 
 expect ok   "clean message"            "fix(net): Retry the handshake once"
 expect fail "CLAUDE.md"                "fix(net): Retry once, as CLAUDE.md says"
@@ -32,6 +34,7 @@ expect fail "docs/apogee path"         "fix(net): Retry once per docs/apogee/spe
 expect fail ".beads"                   "chore: Sync .beads issues"
 expect fail "note stem"                "fix(net): Follow 2026-11-20-gateway-migration"
 expect ok   "short note stem ignored"  "fix(net): Write the handoff code"
+expect ok   "undated doc name ignored" "refactor(cli): Split the project-structure command"
 
 : > CLAUDE.md
 git add CLAUDE.md
@@ -47,5 +50,8 @@ rc=0; /bin/bash "$CHECK" --range HEAD~2..HEAD >/dev/null 2>&1 || rc=$?
 if [ "$rc" -ne 0 ]; then echo "ok   range finds the commit"; else echo "FAIL range"; fails=$((fails + 1)); fi
 rc=0; /bin/bash "$CHECK" --range HEAD~2..HEAD~1 >/dev/null 2>&1 || rc=$?
 if [ "$rc" -eq 0 ]; then echo "ok   range clean"; else echo "FAIL range clean"; fails=$((fails + 1)); fi
+
+rc=0; printf 'fix(net): Retry once\n\nSee .scratch/notes\n' | bash "${REPO_ROOT}/plugins/apogee/skills/git-commit/scripts/check-message.sh" >/dev/null 2>&1 || rc=$?
+if [ "$rc" -ne 0 ]; then echo "ok   check-message.sh refuses it too"; else echo "FAIL check-message.sh"; fails=$((fails + 1)); fi
 
 [ "$fails" -eq 0 ]

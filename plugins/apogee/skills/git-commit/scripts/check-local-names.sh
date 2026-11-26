@@ -31,18 +31,30 @@ root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "OK"; exit 0; }
 while sup=$(git -C "$root" rev-parse --show-superproject-working-tree 2>/dev/null) && [ -n "$sup" ]; do
   root=$sup
 done
+# In a linked worktree of the superproject (a zone), docs/apogee is in the main checkout.
+if [ ! -d "$root/docs/apogee" ]; then
+  common=$(git -C "$root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) &&
+    root=$(dirname "$common")
+fi
+
+# The local-only names, from the list setup.sh and the session-start hook keep excluded.
+EXCLUDE_LIST="$(dirname "${BASH_SOURCE[0]}")/../../../hooks/core/config/exclude-list.txt"
+names=$(sed -e '/^#/d' -e '/^[[:space:]]*$/d' -e 's#^/##' -e 's#/$##' "$EXCLUDE_LIST")
 
 tracked=$(git ls-files 2>/dev/null)
 patterns=""
-for t in CLAUDE.md GEMINI.md AGENTS.md docs/apogee ai-context .claude/ .beads .scratch; do
-  printf '%s\n' "$tracked" | grep -qiF -- "$t" && continue
+for t in $names; do
+  grep -qiF -- "$t" <<< "$tracked" && continue   # a here-string: grep -q in a pipe trips pipefail
   patterns="$patterns$t"$'\n'
 done
-# Note names: dated or hyphenated stems long enough not to be ordinary words.
+# Note names: the dated ones (YYYY-MM-DD-<slug>); undated names like project-structure are
+# ordinary words too.
 if [ -d "$root/docs/apogee" ]; then
   while IFS= read -r f; do
     stem=$(basename "$f" .md)
-    case "$stem" in *-*) [ "${#stem}" -ge 12 ] && patterns="$patterns$stem"$'\n' ;; esac
+    if printf '%s' "$stem" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-.'; then
+      patterns="$patterns$stem"$'\n'
+    fi
   done < <(find "$root/docs/apogee" -maxdepth 3 -type f -name '*.md' 2>/dev/null)
 fi
 patterns=$(printf '%s' "$patterns" | sed '/^$/d' | sort -u)
